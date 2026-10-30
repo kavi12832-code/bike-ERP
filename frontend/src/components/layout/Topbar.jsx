@@ -40,15 +40,15 @@ export function Topbar() {
 
         <BranchSwitcher />
 
-        {/* GSTIN Badge Chip - only displayed on wider screens to prevent squishing the search bar */}
-        <div className="hidden 2xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-subtle border border-border text-[11px] font-mono text-text-muted shrink-0">
+        {/* GSTIN Badge Chip - Always visible in Topbar */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-[11px] font-mono text-text-muted shrink-0 shadow-xs">
           <span className="font-sans font-medium text-text-subtle">GSTIN:</span>
-          <span className="text-text-main font-semibold">{currentBranch?.gstin || '29AABCB1829M1ZK'}</span>
+          <span className="text-text-main font-semibold tracking-wide">{currentBranch?.gstin || '29AABCB1829M1ZK'}</span>
         </div>
       </div>
 
       {/* Middle: Command Palette Search Input (Ctrl+K) */}
-      <div className="hidden md:flex items-center flex-1 max-w-md min-w-0 mx-2 lg:mx-4">
+      <div className="hidden lg:flex items-center flex-1 max-w-sm xl:max-w-md min-w-0 mx-2 xl:mx-4">
         <button
           onClick={() => setCommandPaletteOpen(true)}
           className="w-full h-9 flex items-center justify-between px-3 py-1.5 rounded-input bg-surface-subtle border border-border text-xs text-text-muted hover:border-primary/40 hover:bg-surface-muted transition-colors overflow-hidden"
@@ -56,7 +56,7 @@ export function Topbar() {
           <div className="flex items-center gap-2 min-w-0 truncate">
             <Search className="w-4 h-4 text-text-muted shrink-0" />
             <span className="truncate whitespace-nowrap text-left">
-              Search leads, VIN, jobs, invoices...
+              Search leads, VIN, jobs...
             </span>
           </div>
           <kbd className="ml-2 px-1.5 py-0.5 rounded border border-border bg-surface text-[10px] font-mono text-text-muted shadow-xs shrink-0 whitespace-nowrap">

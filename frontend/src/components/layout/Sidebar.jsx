@@ -109,8 +109,8 @@ export function Sidebar() {
               <span className="font-bold text-sm tracking-tight text-white truncate">
                 {dealership?.name || 'AKASH Bajaj'}
               </span>
-              <span className="text-[10px] text-blue-200/70 uppercase tracking-wider font-semibold">
-                ERP & Service Hub
+              <span className="text-[10px] text-blue-200/80 font-mono tracking-wider font-medium">
+                GSTIN: {dealership?.gstin || '29AABCB1829M1ZK'}
               </span>
             </div>
           )}

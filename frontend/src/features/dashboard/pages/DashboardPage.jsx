@@ -90,9 +90,15 @@ export function DashboardPage() {
           <h1 className="text-xl font-bold text-text-main mt-1">
             Welcome back, {currentUser?.name || 'Administrator'}!
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Operational Overview for <strong>{(state.branches || []).find((b) => b.id === state.activeBranchId)?.name || '—'}</strong>
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-xs text-text-muted">
+              Operational Overview for <strong>{(state.branches || []).find((b) => b.id === state.activeBranchId)?.name || 'Bangalore Central Flagship'}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-subtle border border-border text-[11px] font-mono text-text-muted shadow-xs">
+              <span className="font-sans font-medium text-text-subtle">GSTIN:</span>
+              <strong className="text-text-main font-semibold">{(state.branches || []).find((b) => b.id === state.activeBranchId)?.gstin || state.dealership?.gstin || '29AABCB1829M1ZK'}</strong>
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5">
