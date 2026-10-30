@@ -42,21 +42,22 @@ export function Topbar() {
 
         {/* GSTIN Badge Chip - Always visible in Topbar */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-[11px] font-mono text-text-muted shrink-0 shadow-xs">
-          <span className="font-sans font-medium text-text-subtle">GSTIN:</span>
-          <span className="text-text-main font-semibold tracking-wide">{currentBranch?.gstin || '29AABCB1829M1ZK'}</span>
+          <span className="font-sans font-medium text-text-subtle text-[10px]">GSTIN:</span>
+          <span className="text-text-main font-semibold tracking-tight text-[11px]">{currentBranch?.gstin || '29AABCB1829M1ZK'}</span>
         </div>
       </div>
 
       {/* Middle: Command Palette Search Input (Ctrl+K) */}
-      <div className="hidden lg:flex items-center flex-1 max-w-sm xl:max-w-md min-w-0 mx-2 xl:mx-4">
+      <div className="hidden md:flex items-center flex-1 max-w-xs md:max-w-sm xl:max-w-md min-w-[160px] mx-2 xl:mx-4">
         <button
           onClick={() => setCommandPaletteOpen(true)}
           className="w-full h-9 flex items-center justify-between px-3 py-1.5 rounded-input bg-surface-subtle border border-border text-xs text-text-muted hover:border-primary/40 hover:bg-surface-muted transition-colors overflow-hidden"
         >
           <div className="flex items-center gap-2 min-w-0 truncate">
             <Search className="w-4 h-4 text-text-muted shrink-0" />
-            <span className="truncate whitespace-nowrap text-left">
-              Search leads, VIN, jobs...
+            <span className="truncate whitespace-nowrap text-left text-xs">
+              <span className="hidden xl:inline">Search leads, VIN, jobs...</span>
+              <span className="inline xl:hidden">Search...</span>
             </span>
           </div>
           <kbd className="ml-2 px-1.5 py-0.5 rounded border border-border bg-surface text-[10px] font-mono text-text-muted shadow-xs shrink-0 whitespace-nowrap">
@@ -67,8 +68,8 @@ export function Topbar() {
 
       {/* Right Tools: Clock, Language, Theme, Notifications, Role Switcher */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {/* Live IST Clock */}
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-xs text-text-main font-medium tabular-nums shrink-0 whitespace-nowrap">
+        {/* Live IST Clock - only show on large 2xl screens (>= 1536px) to avoid taking precious space on laptops */}
+        <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-xs text-text-main font-medium tabular-nums shrink-0 whitespace-nowrap">
           <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
           <span>
             {format(time, 'hh')}
