@@ -6,15 +6,17 @@ import React from 'react';
  * Features: icon, uppercase small label, bold large number, one line of descriptive text, optional onClick.
  */
 export function KpiCard({
-  icon: Icon,
+  icon,
   label,
   value,
   subtext,
+  helperText,
   onClick = null,
   active = false,
   variant = 'default', // default | success | warning | danger | info | purple
   className = '',
 }) {
+  const description = subtext || helperText;
   const variantStyles = {
     default: {
       card: 'bg-surface border-border hover:border-slate-300',
@@ -50,6 +52,18 @@ export function KpiCard({
 
   const Component = onClick ? 'button' : 'div';
 
+  const renderIcon = () => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
+    if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null)) {
+      const IconComp = icon;
+      return <IconComp className="w-4 h-4" />;
+    }
+    return null;
+  };
+
   return (
     <Component
       type={onClick ? 'button' : undefined}
@@ -62,9 +76,9 @@ export function KpiCard({
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider line-clamp-1">
           {label}
         </span>
-        {Icon && (
+        {icon && (
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${variantStyles.iconBox}`}>
-            <Icon className="w-4 h-4" />
+            {renderIcon()}
           </div>
         )}
       </div>
@@ -73,9 +87,9 @@ export function KpiCard({
         <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums ${variantStyles.valueColor}`}>
           {value != null ? value : '—'}
         </div>
-        {subtext && (
+        {description && (
           <p className="text-[11px] text-text-muted mt-1 line-clamp-1 font-normal">
-            {subtext}
+            {description}
           </p>
         )}
       </div>
