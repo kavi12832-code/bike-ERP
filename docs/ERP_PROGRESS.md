@@ -61,9 +61,9 @@
 | **Job Cards Kanban** | `/service/jobs` | Workshop | `done` | PageHeader, plain KPIs, 6-stage progression, customer OTP simulator, dual QC gate | 2026-11-01 |
 | **Live Bay Board** | `/service/bays` | Workshop | `done` | PageHeader, plain KPIs, unified 12 bays, live SLA timers, mutual exclusivity invariant | 2026-11-01 |
 | **Digital Inspection (DVI)** | `/service/dvi` | Workshop | `done` | PageHeader, plain KPIs, 360 photo dent pin-map, Red/Amber/Green items, WhatsApp approval | 2026-11-01 |
-| **Pickup & Drop** | `/service/pickup` | Workshop | `not started` | Driver assignment, time windows, live tracking, OTP handover | 2026-11-01 |
-| **Recalls & Bulletins** | `/service/recalls` | Workshop | `not started` | OEM bulletins, VIN range filter, customer notifications | 2026-11-01 |
-| **Technician My Jobs** | `/service/my-jobs` | Workshop | `not started` | Technician-only view, timer, checklists, parts request | 2026-11-01 |
+| **Pickup & Drop** | `/service/pickup` | Workshop | `done` | PageHeader, plain KPIs, driver assignment, time windows, OTP handover verification, AMC waivers | 2026-11-01 |
+| **Recalls & Bulletins** | `/service/recalls` | Workshop | `done` | PageHeader, plain KPIs, OEM circulars, matched chassis range, WhatsApp notice, FOC tracking | 2026-11-01 |
+| **Technician My Jobs** | `/service/my-jobs` | Workshop | `done` | PageHeader, plain KPIs, mobile-first bay cards, parts requisition slips, supervisor QC submission | 2026-11-01 |
 
 ---
 
