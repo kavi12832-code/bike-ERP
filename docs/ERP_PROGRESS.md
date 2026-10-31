@@ -47,9 +47,9 @@
 | **Digital Showroom** | `/showroom` | Operations | `done` | PageHeader, plain KPIs, 3-bike spec compare, PIN kiosk lock, on-road tax & EMI simulator | 2026-11-01 |
 | **Fleet & B2B Sales** | `/sales/fleet` | Operations | `done` | PageHeader, plain KPIs, B2B institutional pipeline, corporate discount slabs, multi-batch delivery | 2026-11-01 |
 | **Accessories Counter (POS)** | `/counter` | Operations | `done` | PageHeader, plain KPIs, barcode scanner, preset bundles, cash float, thermal receipt printer | 2026-11-01 |
-| **Vehicle Inventory** | `/stock/vehicles` | Operations | `not started` | 17-char VIN master, ageing, yard location, transfer | 2026-11-01 |
-| **Spare Parts & Stock** | `/stock/parts` | Operations | `not started` | Bin cards, reorder levels, stock ledger, cost masking | 2026-11-01 |
-| **Purchases & GRN** | `/purchases` | Operations | `not started` | Purchase orders, GRN inspection, 3-way matching | 2026-11-01 |
+| **Vehicle Inventory** | `/stock/vehicles` | Operations | `done` | PageHeader, plain KPIs, 17-char VIN master, ageing, transfer, cost masking gate | 2026-11-01 |
+| **Spare Parts & Stock** | `/stock/parts` | Operations | `done` | PageHeader, plain KPIs, bin cards, fast/slow velocity, reorder alerts, stock adjust | 2026-11-01 |
+| **Purchases & GRN** | `/purchases` | Operations | `done` | PageHeader, plain KPIs, factory POs, consignment in-transit, 3-way match, GRN modal | 2026-11-01 |
 
 ---
 

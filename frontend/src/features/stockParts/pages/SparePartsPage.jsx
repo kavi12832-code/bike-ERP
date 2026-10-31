@@ -5,6 +5,8 @@ import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import {
   Wrench,
   Search,
@@ -179,53 +181,53 @@ export function SparePartsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-primary" />
-            Spare Parts &amp; Genuine OEM Inventory
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Rack &amp; bin locator, fast/slow/dead analysis, and strict low-stock reorder triggers
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Spare Parts & Stock', path: '/stock/parts' },
+        ]}
+        title="Spare Parts & Genuine OEM Inventory"
+        subtitle="Rack & bin locator, fast/slow/dead analysis, and strict low-stock reorder triggers."
+        actions={
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={handleOpenAddPart}
+            className="bg-primary hover:bg-primary-hover text-white"
+          >
+            Add Spare Part
+          </Button>
+        }
+      />
 
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
-          onClick={handleOpenAddPart}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          Add Spare Part
-        </Button>
-      </div>
-
-      {/* KPI Cards */}
+      {/* 2. Plain KPI Cards per Section 0.5 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Catalogue Line Items</div>
-          <div className="text-2xl font-bold text-text-main mt-1 tabular-nums">{partsStock.length} SKUs</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Low Stock (Below Reorder)</div>
-          <div className="text-2xl font-bold text-status-red mt-1 tabular-nums">
-            {partsStock.filter((p) => (p.stockQty ?? p.currentStock ?? 0) < (p.reorderLevel || 5)).length} Items
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Fast Moving Velocity</div>
-          <div className="text-2xl font-bold text-status-green mt-1 tabular-nums">
-            {partsStock.filter((p) => p.movementVelocity === 'FAST').length} SKUs
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Dead Stock Items</div>
-          <div className="text-2xl font-bold text-text-muted mt-1 tabular-nums">
-            {partsStock.filter((p) => p.movementVelocity === 'DEAD').length} SKUs
-          </div>
-        </Card>
+        <KpiCard
+          label="Catalogue Line Items"
+          value={`${partsStock.length} SKUs`}
+          helperText="Active spares catalog"
+          icon={<Wrench className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Low Stock Alerts"
+          value={`${partsStock.filter((p) => (p.stockQty ?? p.currentStock ?? 0) < (p.reorderLevel || 5)).length} SKUs`}
+          helperText="Below reorder threshold"
+          icon={<AlertTriangle className="w-5 h-5 text-rose-500" />}
+        />
+        <KpiCard
+          label="Fast Moving Velocity"
+          value={`${partsStock.filter((p) => p.movementVelocity === 'FAST').length} SKUs`}
+          helperText="High turnaround parts"
+          icon={<ArrowDownUp className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Dead Stock Items"
+          value={`${partsStock.filter((p) => p.movementVelocity === 'DEAD').length} SKUs`}
+          helperText="> 90 days no movement"
+          icon={<TrendingDown className="w-5 h-5 text-amber-500" />}
+        />
       </div>
 
       {/* Filter and Search Bar */}

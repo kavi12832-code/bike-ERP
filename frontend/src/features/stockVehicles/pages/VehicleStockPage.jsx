@@ -6,6 +6,8 @@ import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Warehouse,
@@ -230,64 +232,63 @@ export function VehicleStockPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <Warehouse className="w-6 h-6 text-primary" />
-            Vehicle Stock &amp; Chassis Inventory
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Unit-level physical tracking with 17-char VIN barcodes, ageing analysis and inter-branch transfers
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Vehicle Inventory', path: '/stock/vehicles' },
+        ]}
+        title="Vehicle Stock & Chassis Inventory"
+        subtitle="Unit-level physical tracking with 17-char VIN barcodes, ageing analysis and inter-branch transfers."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Upload}
+              onClick={() => setGrnModalOpen(true)}
+            >
+              OEM Consignment GRN
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={handleOpenAddVehicle}
+              className="bg-primary hover:bg-primary-hover text-white"
+            >
+              Add Vehicle Unit
+            </Button>
+          </div>
+        }
+      />
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Upload}
-            onClick={() => setGrnModalOpen(true)}
-          >
-            OEM Consignment GRN
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Plus}
-            onClick={handleOpenAddVehicle}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Add Vehicle Unit
-          </Button>
-        </div>
-      </div>
-
-      {/* Stock Summary Metrics */}
+      {/* 2. Plain KPI Cards per Section 0.5 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Total Vehicles on Hand</div>
-          <div className="text-2xl font-bold text-text-main mt-1 tabular-nums">{vehicleStock.length} Units</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Available for Booking</div>
-          <div className="text-2xl font-bold text-status-green mt-1 tabular-nums">
-            {vehicleStock.filter((v) => v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Units
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Chassis Allocated</div>
-          <div className="text-2xl font-bold text-status-blue mt-1 tabular-nums">
-            {vehicleStock.filter((v) => v.allocatedBookingId).length} Units
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Ageing &gt; 45 Days</div>
-          <div className="text-2xl font-bold text-status-amber mt-1 tabular-nums">
-            {vehicleStock.filter((v) => (v.daysInStock || 0) > 45).length} Units
-          </div>
-        </Card>
+        <KpiCard
+          label="Total on Hand"
+          value={`${vehicleStock.length} Units`}
+          helperText="Gross physical stock"
+          icon={<Warehouse className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Available (Free)"
+          value={`${vehicleStock.filter((v) => v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Units`}
+          helperText="Ready for booking allocation"
+          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Chassis Allocated"
+          value={`${vehicleStock.filter((v) => v.allocatedBookingId).length} Units`}
+          helperText="Reserved for delivery"
+          icon={<ArrowRightLeft className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Ageing > 45 Days"
+          value={`${vehicleStock.filter((v) => (v.daysInStock || 0) > 45).length} Units`}
+          helperText="Yard holding risk"
+          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+        />
       </div>
 
       {/* Filter and Search Bar */}
