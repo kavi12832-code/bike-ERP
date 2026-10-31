@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   Truck, 
   CheckCircle2, 
@@ -106,6 +106,15 @@ export function DeliveryDeskPage() {
   const [customerSigned, setCustomerSigned] = useState(false);
   const [deliveryPhotoUploaded, setDeliveryPhotoUploaded] = useState(false);
   const [showGatePass, setShowGatePass] = useState(false);
+
+  // Plain KPI calculations per Section 0.5
+  const kpis = useMemo(() => {
+    const total = salesOrders.length;
+    const pdiPending = salesOrders.filter((_, idx) => idx === 0 || idx === 1).length;
+    const readyHandover = salesOrders.filter((_, idx) => idx === 2 || idx === 3).length;
+    const delivered = salesOrders.filter((_, idx) => idx >= 4).length;
+    return { total, pdiPending, readyHandover, delivered };
+  }, [salesOrders]);
 
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);

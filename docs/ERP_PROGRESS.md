@@ -42,11 +42,11 @@
 | **Quotations** | `/quotations` | Operations | `done` | On-road pricing breakdown fixed, discount approval, WhatsApp share, PDF | 2026-11-01 |
 | **Bookings** | `/bookings` | Operations | `done` | Weekly table fixed, token receipts, single VIN gate, cancellation modal | 2026-11-01 |
 | **Test Rides** | `/test-rides` | Operations | `done` | PageHeader, plain KPIs, DL check, consent waiver, odometer in/out, reviews | 2026-11-01 |
-| **Vehicle Sales Orders** | `/sales` | Operations | `not started` | 6-stage deal sheet, locked pricing, payment split, KYC | 2026-11-01 |
-| **Delivery & PDI Desk** | `/delivery` | Operations | `not started` | 5-stage queue, 25-point PDI, handover checklist & photo | 2026-11-01 |
-| **Digital Showroom** | `/showroom` | Operations | `not started` | Model catalog, color customizer, EMI calculator, leads | 2026-11-01 |
-| **Fleet & B2B Sales** | `/sales/fleet` | Operations | `not started` | Corporate GST accounts, bulk discounts, multi-VIN batch | 2026-11-01 |
-| **Accessories Counter (POS)** | `/counter` | Operations | `not started` | Quick search, barcode scanner, cash denomination shift close | 2026-11-01 |
+| **Vehicle Sales Orders** | `/sales` | Operations | `done` | PageHeader, plain KPIs, FilterBar, StatusChip, 6-stage deal sheet, PDI & Gate Pass modal | 2026-11-01 |
+| **Delivery & PDI Desk** | `/delivery` | Operations | `done` | PageHeader, plain KPIs, 5-stage queue board, 25-point PDI, digital signature, QR gate pass | 2026-11-01 |
+| **Digital Showroom** | `/showroom` | Operations | `done` | PageHeader, plain KPIs, 3-bike spec compare, PIN kiosk lock, on-road tax & EMI simulator | 2026-11-01 |
+| **Fleet & B2B Sales** | `/sales/fleet` | Operations | `done` | PageHeader, plain KPIs, B2B institutional pipeline, corporate discount slabs, multi-batch delivery | 2026-11-01 |
+| **Accessories Counter (POS)** | `/counter` | Operations | `done` | PageHeader, plain KPIs, barcode scanner, preset bundles, cash float, thermal receipt printer | 2026-11-01 |
 | **Vehicle Inventory** | `/stock/vehicles` | Operations | `not started` | 17-char VIN master, ageing, yard location, transfer | 2026-11-01 |
 | **Spare Parts & Stock** | `/stock/parts` | Operations | `not started` | Bin cards, reorder levels, stock ledger, cost masking | 2026-11-01 |
 | **Purchases & GRN** | `/purchases` | Operations | `not started` | Purchase orders, GRN inspection, 3-way matching | 2026-11-01 |
