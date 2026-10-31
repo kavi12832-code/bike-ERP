@@ -10,7 +10,9 @@ import {
   Plus, 
   Search, 
   ShieldAlert,
-  X
+  X,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
@@ -23,7 +25,7 @@ const COMPLAINT_STAGES = [
   { id: 'CLOSED', label: 'Closed & Verified', color: 'border-emerald-500 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40' },
 ];
 
-const SAMPLE_COMPLAINTS = [
+const INITIAL_COMPLAINTS = [
   {
     id: 'cmp-001',
     ticketNo: 'CMP/2627/0042',
@@ -33,10 +35,11 @@ const SAMPLE_COMPLAINTS = [
     category: 'Service Quality',
     issue: 'Engine oil leakage observed immediately after 2nd general service.',
     stage: 'OPEN',
-    createdAt: new Date(Date.now() - 32 * 3600000).toISOString(), // 32 hours ago
+    createdAt: new Date(Date.now() - 32 * 3600000).toISOString(),
     slaHoursRemaining: 16,
-    escalationLevel: 'SERVICE_MANAGER', // ADVISOR (<24h), SERVICE_MANAGER (24-48h), PRINCIPAL (>48h)
+    escalationLevel: 'SERVICE_MANAGER',
     assignedTo: 'Karthik Raja (Service Manager)',
+    resolutionNote: '',
   },
   {
     id: 'cmp-002',
@@ -51,6 +54,7 @@ const SAMPLE_COMPLAINTS = [
     slaHoursRemaining: 38,
     escalationLevel: 'ADVISOR',
     assignedTo: 'Deepak Rao (Sales Executive)',
+    resolutionNote: '',
   },
   {
     id: 'cmp-003',
@@ -61,10 +65,11 @@ const SAMPLE_COMPLAINTS = [
     category: 'Part Delay',
     issue: 'Rear shock absorber replacement part delayed over 14 days.',
     stage: 'UNDER_INVESTIGATION',
-    createdAt: new Date(Date.now() - 52 * 3600000).toISOString(), // 52 hours ago -> SLA breach!
+    createdAt: new Date(Date.now() - 52 * 3600000).toISOString(),
     slaHoursRemaining: -4,
     escalationLevel: 'DEALER_PRINCIPAL',
     assignedTo: 'Rajesh Varma (Dealer Principal)',
+    resolutionNote: '',
   },
   {
     id: 'cmp-004',
@@ -84,11 +89,34 @@ const SAMPLE_COMPLAINTS = [
 ];
 
 export function ComplaintsPage() {
-  const [complaints, setComplaints] = useState(SAMPLE_COMPLAINTS);
+  const [complaints, setComplaints] = useState(INITIAL_COMPLAINTS);
   const [search, setSearch] = useState('');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [resolutionText, setResolutionText] = useState('');
+  
+  // Modals
   const [showNewModal, setShowNewModal] = useState(false);
+  const [newGrievance, setNewGrievance] = useState({
+    customerName: '',
+    phone: '',
+    vehicle: '',
+    category: 'Service Quality',
+    issue: '',
+    assignedTo: 'Karthik Raja (Service Manager)',
+  });
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingComplaint, setEditingComplaint] = useState(null);
+  const [editForm, setEditForm] = useState({
+    customerName: '',
+    phone: '',
+    vehicle: '',
+    category: '',
+    issue: '',
+    stage: 'OPEN',
+    assignedTo: '',
+    resolutionNote: '',
+  });
 
   const handleAdvanceStage = (complaintId, nextStage) => {
     setComplaints(prev => prev.map(c => {
@@ -120,6 +148,103 @@ export function ComplaintsPage() {
     setResolutionText('');
   };
 
+  const handleCreateGrievance = (e) => {
+    e.preventDefault();
+    if (!newGrievance.customerName.trim() || !newGrievance.phone.trim() || !newGrievance.issue.trim()) {
+      toast.error('Customer Name, Phone, and Issue Description are required.');
+      return;
+    }
+
+    const newTicketNo = `CMP/2627/00${44 + complaints.length}`;
+    const newRecord = {
+      id: `cmp-${Date.now().toString(36)}`,
+      ticketNo: newTicketNo,
+      customerName: newGrievance.customerName,
+      phone: newGrievance.phone,
+      vehicle: newGrievance.vehicle || 'Bajaj Pulsar (Registration Pending)',
+      category: newGrievance.category,
+      issue: newGrievance.issue,
+      stage: 'OPEN',
+      createdAt: new Date().toISOString(),
+      slaHoursRemaining: 48,
+      escalationLevel: 'ADVISOR',
+      assignedTo: newGrievance.assignedTo,
+      resolutionNote: '',
+    };
+
+    setComplaints(prev => [newRecord, ...prev]);
+    toast.success(`New Grievance ${newTicketNo} logged successfully!`);
+    setShowNewModal(false);
+    setNewGrievance({
+      customerName: '',
+      phone: '',
+      vehicle: '',
+      category: 'Service Quality',
+      issue: '',
+      assignedTo: 'Karthik Raja (Service Manager)',
+    });
+  };
+
+  const openEditModal = (ticket, e) => {
+    if (e) e.stopPropagation();
+    setEditingComplaint(ticket);
+    setEditForm({
+      customerName: ticket.customerName || '',
+      phone: ticket.phone || '',
+      vehicle: ticket.vehicle || '',
+      category: ticket.category || 'Service Quality',
+      issue: ticket.issue || '',
+      stage: ticket.stage || 'OPEN',
+      assignedTo: ticket.assignedTo || '',
+      resolutionNote: ticket.resolutionNote || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditComplaint = (e) => {
+    e.preventDefault();
+    if (!editForm.customerName.trim() || !editForm.phone.trim()) {
+      toast.error('Customer name and phone number are required');
+      return;
+    }
+
+    setComplaints(prev => prev.map(c => {
+      if (c.id !== editingComplaint.id) return c;
+      return {
+        ...c,
+        customerName: editForm.customerName,
+        phone: editForm.phone,
+        vehicle: editForm.vehicle,
+        category: editForm.category,
+        issue: editForm.issue,
+        stage: editForm.stage,
+        assignedTo: editForm.assignedTo,
+        resolutionNote: editForm.resolutionNote,
+      };
+    }));
+
+    if (selectedComplaint && selectedComplaint.id === editingComplaint.id) {
+      setSelectedComplaint(prev => ({
+        ...prev,
+        ...editForm,
+      }));
+    }
+
+    toast.success(`Complaint ${editingComplaint.ticketNo} updated successfully!`);
+    setShowEditModal(false);
+  };
+
+  const handleDeleteComplaint = (ticketId, ticketNo, e) => {
+    if (e) e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete grievance ticket ${ticketNo}?`)) {
+      setComplaints(prev => prev.filter(c => c.id !== ticketId));
+      if (selectedComplaint && selectedComplaint.id === ticketId) {
+        setSelectedComplaint(null);
+      }
+      toast.info(`Complaint ${ticketNo} deleted.`);
+    }
+  };
+
   const filtered = complaints.filter(c => 
     c.customerName.toLowerCase().includes(search.toLowerCase()) ||
     c.ticketNo.toLowerCase().includes(search.toLowerCase()) ||
@@ -141,6 +266,17 @@ export function ComplaintsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search complaints, customer, vehicle..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-2 text-xs border rounded-lg bg-surface text-text-main w-64 border-border"
+            />
+          </div>
+
           <button
             onClick={() => setShowNewModal(true)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
@@ -188,21 +324,37 @@ export function ComplaintsPage() {
                     <div
                       key={ticket.id}
                       onClick={() => setSelectedComplaint(ticket)}
-                      className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:shadow-md transition cursor-pointer space-y-2 text-xs"
+                      className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:shadow-md transition cursor-pointer space-y-2 text-xs group"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-mono font-bold text-blue-600">
                           {ticket.ticketNo}
                         </span>
-                        {ticket.slaHoursRemaining < 0 ? (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800">
-                            SLA BREACH
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-500 font-mono">
-                            {ticket.slaHoursRemaining}h left
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {ticket.slaHoursRemaining < 0 ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800">
+                              SLA BREACH
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              {ticket.slaHoursRemaining}h left
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => openEditModal(ticket, e)}
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-white"
+                            title="Edit Ticket"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteComplaint(ticket.id, ticket.ticketNo, e)}
+                            className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-white"
+                            title="Delete Ticket"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="font-bold text-slate-900 dark:text-white">
@@ -237,9 +389,23 @@ export function ComplaintsPage() {
                   {selectedComplaint.customerName} — {selectedComplaint.category}
                 </h3>
               </div>
-              <button onClick={() => setSelectedComplaint(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => openEditModal(selectedComplaint)} 
+                  className="p-1.5 rounded-lg border text-slate-600 hover:text-blue-600 hover:bg-slate-100 flex items-center gap-1 text-xs font-semibold"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button 
+                  onClick={(e) => handleDeleteComplaint(selectedComplaint.id, selectedComplaint.ticketNo, e)} 
+                  className="p-1.5 rounded-lg border text-slate-600 hover:text-red-600 hover:bg-slate-100 flex items-center gap-1 text-xs font-semibold"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+                <button onClick={() => setSelectedComplaint(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
@@ -247,6 +413,7 @@ export function ComplaintsPage() {
               <p><strong>Phone:</strong> {selectedComplaint.phone}</p>
               <p><strong>Owner:</strong> {selectedComplaint.assignedTo}</p>
               <p><strong>Issue Reported:</strong> {selectedComplaint.issue}</p>
+              <p><strong>Current Stage:</strong> <span className="font-bold text-blue-600">{selectedComplaint.stage}</span></p>
             </div>
 
             {selectedComplaint.escalationLevel === 'DEALER_PRINCIPAL' && (
@@ -268,7 +435,7 @@ export function ComplaintsPage() {
                     placeholder="Describe action taken, goodwill discount, or part replacement..."
                     value={resolutionText}
                     onChange={(e) => setResolutionText(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -303,6 +470,246 @@ export function ComplaintsPage() {
                 <p>{selectedComplaint.resolutionNote}</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Log New Grievance Modal */}
+      {showNewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-850 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <MessageSquareWarning className="w-5 h-5 text-red-500" />
+                Log New Customer Grievance
+              </h3>
+              <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateGrievance} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Customer Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Anand Murthy"
+                    value={newGrievance.customerName}
+                    onChange={(e) => setNewGrievance({ ...newGrievance, customerName: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Contact Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="+91 98450 12345"
+                    value={newGrievance.phone}
+                    onChange={(e) => setNewGrievance({ ...newGrievance, phone: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Vehicle &amp; Reg No</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Pulsar NS200 (KA-05-EV-4091)"
+                    value={newGrievance.vehicle}
+                    onChange={(e) => setNewGrievance({ ...newGrievance, vehicle: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Grievance Category</label>
+                  <select
+                    value={newGrievance.category}
+                    onChange={(e) => setNewGrievance({ ...newGrievance, category: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  >
+                    <option value="Service Quality">Service Quality</option>
+                    <option value="Billing Discrepancy">Billing Discrepancy</option>
+                    <option value="Part Delay">Part Delay</option>
+                    <option value="Delivery PDI">Delivery PDI</option>
+                    <option value="Staff Behavior">Staff Behavior</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Issue Description *</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Detail the complaint reported by customer..."
+                  value={newGrievance.issue}
+                  onChange={(e) => setNewGrievance({ ...newGrievance, issue: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Assigned Case Officer</label>
+                <input
+                  type="text"
+                  value={newGrievance.assignedTo}
+                  onChange={(e) => setNewGrievance({ ...newGrievance, assignedTo: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="px-3 py-1.5 rounded-lg border hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
+                >
+                  Create Grievance Ticket
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Grievance Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-850 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-blue-600" />
+                Edit Grievance Ticket: {editingComplaint?.ticketNo}
+              </h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditComplaint} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Customer Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.customerName}
+                    onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Contact Phone</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Vehicle &amp; Reg No</label>
+                  <input
+                    type="text"
+                    value={editForm.vehicle}
+                    onChange={(e) => setEditForm({ ...editForm, vehicle: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Stage</label>
+                  <select
+                    value={editForm.stage}
+                    onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  >
+                    <option value="OPEN">Open</option>
+                    <option value="ASSIGNED">Assigned</option>
+                    <option value="UNDER_INVESTIGATION">Under Investigation</option>
+                    <option value="RESOLUTION_PROPOSED">Resolution Proposed</option>
+                    <option value="CLOSED">Closed &amp; Verified</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Grievance Category</label>
+                  <select
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  >
+                    <option value="Service Quality">Service Quality</option>
+                    <option value="Billing Discrepancy">Billing Discrepancy</option>
+                    <option value="Part Delay">Part Delay</option>
+                    <option value="Delivery PDI">Delivery PDI</option>
+                    <option value="Staff Behavior">Staff Behavior</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Assigned Case Officer</label>
+                  <input
+                    type="text"
+                    value={editForm.assignedTo}
+                    onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Issue Description</label>
+                <textarea
+                  rows={2}
+                  value={editForm.issue}
+                  onChange={(e) => setEditForm({ ...editForm, issue: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Resolution Note</label>
+                <textarea
+                  rows={2}
+                  placeholder="Resolution details or customer satisfaction comments..."
+                  value={editForm.resolutionNote}
+                  onChange={(e) => setEditForm({ ...editForm, resolutionNote: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-text-main"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-3 py-1.5 rounded-lg border hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
+                >
+                  Save Ticket Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

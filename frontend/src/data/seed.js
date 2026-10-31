@@ -1,3 +1,7 @@
+import { SEEDED_APPROVALS } from './approvalsSeed';
+import { DEFAULT_POLICIES } from '../approvals/policies';
+import { SEEDED_USERS } from './usersSeed';
+import { SEEDED_HR_STAFF, SEEDED_PERFORMANCE_TREND, SEEDED_PAYROLL_RUNS, SEEDED_INCENTIVE_RULES, SEEDED_MONTHLY_ATTENDANCE } from './hrSeed';
 import { DEALERSHIP_INFO, BRANCHES } from '../config/constants';
 import { ROLE_PRESETS } from '../config/roles';
 import { BIKE_CATALOG } from './catalogs/bikes';
@@ -8,11 +12,25 @@ import { PDI_CHECKLIST_TEMPLATE, SERVICE_CHECKIN_INSPECTION } from './catalogs/i
 import { SEEDED_CUSTOMERS } from './factories/people';
 import { SEEDED_VEHICLE_UNITS } from './factories/bikes';
 import { SEEDED_PARTS } from './factories/parts';
-import { SEEDED_LEADS, SEEDED_QUOTATIONS, SEEDED_BOOKINGS, SEEDED_SALES_ORDERS } from './factories/orders';
+import { SEEDED_QUOTATIONS } from './quotationsSeed';
+import { SEEDED_BOOKINGS } from './bookingsSeed';
+import { SEEDED_VEHICLE_STOCK } from './stockSeed';
+import { SEEDED_LEADS, SEEDED_SALES_ORDERS } from './factories/orders';
 import { SEEDED_APPOINTMENTS, SEEDED_BAYS, SEEDED_JOB_CARDS } from './factories/jobs';
 import { SEEDED_INVOICES, SEEDED_CHART_OF_ACCOUNTS, SEEDED_JOURNAL_ENTRIES } from './factories/invoices';
 import { SEEDED_WHATSAPP_CONVERSATIONS, SEEDED_WA_TEMPLATES } from './factories/messages';
 import { relativeDateIso } from '../lib/dates';
+import {
+  SEEDED_IMPORT_HISTORY,
+  SEEDED_EXPORT_HISTORY,
+  SEEDED_SCHEDULED_JOBS,
+  SEEDED_SYNC_INTEGRATIONS,
+} from './importExportSeed';
+import {
+  SEEDED_TASKS,
+  SEEDED_CANCELLATIONS,
+  DEFAULT_DASHBOARD_SETTINGS,
+} from './dashboardSeed';
 
 export function getInitialSeedData() {
   return {
@@ -28,8 +46,10 @@ export function getInitialSeedData() {
       pdiTemplate: PDI_CHECKLIST_TEMPLATE,
       serviceInspectionTemplate: SERVICE_CHECKIN_INSPECTION,
     },
+    users: SEEDED_USERS,
+    userDrafts: [],
     customers: SEEDED_CUSTOMERS,
-    vehicleStock: SEEDED_VEHICLE_UNITS,
+    vehicleStock: SEEDED_VEHICLE_STOCK,
     partsStock: SEEDED_PARTS,
     leads: SEEDED_LEADS,
     quotations: SEEDED_QUOTATIONS,
@@ -43,22 +63,8 @@ export function getInitialSeedData() {
     journalEntries: SEEDED_JOURNAL_ENTRIES,
     whatsappConversations: SEEDED_WHATSAPP_CONVERSATIONS,
     whatsappTemplates: SEEDED_WA_TEMPLATES,
-    approvals: [
-      {
-        id: 'appr-001',
-        type: 'discount',
-        entityId: 'qt-2627-002',
-        title: 'Special Discount Request for Sanjay Reddy (Himalayan 450)',
-        requestedBy: 'Deepak Rao',
-        requestedAt: relativeDateIso(-1, 14, 30),
-        amountPaise: 500000, // ₹5,000
-        thresholdPaise: 200000,
-        status: 'PENDING', // PENDING, APPROVED, REJECTED
-        reason: 'Customer comparing with Triumph Scrambler 400X. Closing today if ₹5,000 discount approved.',
-        reviewedBy: null,
-        reviewedAt: null,
-      },
-    ],
+    approvals: SEEDED_APPROVALS,
+    approvalPolicies: DEFAULT_POLICIES,
     auditLogs: [
       {
         id: 'aud-001',
@@ -87,6 +93,19 @@ export function getInitialSeedData() {
         ipAddress: '192.168.1.102',
       },
     ],
+    importHistory: SEEDED_IMPORT_HISTORY,
+    exportHistory: SEEDED_EXPORT_HISTORY,
+    scheduledJobs: SEEDED_SCHEDULED_JOBS,
+    syncIntegrations: SEEDED_SYNC_INTEGRATIONS,
+    tasks: SEEDED_TASKS,
+    cancellations: SEEDED_CANCELLATIONS,
+    settings: DEFAULT_DASHBOARD_SETTINGS,
+    lastImportMappings: {},
+    hrStaff: SEEDED_HR_STAFF,
+    hrPerformanceTrend: SEEDED_PERFORMANCE_TREND,
+    hrPayrollRuns: SEEDED_PAYROLL_RUNS,
+    hrIncentiveRules: SEEDED_INCENTIVE_RULES,
+    hrAttendance: SEEDED_MONTHLY_ATTENDANCE,
     notifications: [
       {
         id: 'notif-1',

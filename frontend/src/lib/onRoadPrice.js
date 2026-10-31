@@ -145,6 +145,9 @@ export function calculateOnRoadPrice({
     .reduce((sum, l) => sum + l.amountPaise, 0);
 
   const netOnRoadPricePaise = Math.max(0, totalAdditions - totalDeductions);
+  const grossTotalPaise = (exShowroomPaise || 0) + (accessoriesTotalPaise || 0);
+  const statutoryTotalPaise =
+    (roadTaxPaise || 0) + (rtoFeePaise || 0) + (insurancePaise || 0) + (handlingPaise || 0);
 
   return {
     lines,
@@ -159,5 +162,18 @@ export function calculateOnRoadPrice({
     totalAdditionsPaise: totalAdditions,
     totalDeductionsPaise: totalDeductions,
     netOnRoadPricePaise,
+    grossTotalPaise,
+    statutoryTotalPaise,
+    taxBreakdown: {
+      roadTaxPaise,
+      registrationFeePaise: rtoFeePaise,
+      rtoFeePaise,
+    },
+    insuranceBreakdown: {
+      totalPaise: insurancePaise,
+    },
+    otherCharges: {
+      handlingFeePaise: handlingPaise,
+    },
   };
 }

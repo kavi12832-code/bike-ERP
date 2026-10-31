@@ -1,492 +1,548 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../../store';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { Modal } from '../../../components/ui/Modal';
-import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { formatMoney, formatDate } from '../../../lib/format';
 import {
-  BookmarkCheck,
-  PlusCircle,
-  FileText,
-  XCircle,
-  CheckCircle,
-  AlertTriangle,
-  CreditCard,
-  Repeat,
-  Warehouse,
-  Search,
+  Calendar,
+  Plus,
+  Download,
+  CalendarDays,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { hasPermission } from '../../../lib/rbac';
+import { PERMISSIONS } from '../../../config/permissions';
+import {
+  advanceSimulatedClock,
+  resetSimulatedClock,
+  runHoldExpiryCheck,
+} from '../../../bookings/engine';
+import {
+  getBookingsKpis,
+  getBookingTabCounts,
+  filterBookings,
+  sortBookings,
+  getBookingStatusBreakdown,
+  getBookingWeeklyActivity,
+} from '../../../bookings/selectors';
+
+// Components
+import { BookingsKpis } from '../components/BookingsKpis';
+import { BookingsTabs } from '../components/BookingsTabs';
+import { BookingsFilterBar } from '../components/BookingsFilterBar';
+import { BookingsTable } from '../components/BookingsTable';
+import { BookingsPagination } from '../components/BookingsPagination';
+import { BookingsBulkBar } from '../components/BookingsBulkBar';
+import { BookingStatusDistribution } from '../components/BookingStatusDistribution';
+import { BookingActivityTable } from '../components/BookingActivityTable';
+import { BookingQuickActions } from '../components/BookingQuickActions';
+
+// Modals & Drawers
+import { BookingDetailsDrawer } from '../components/BookingDetailsDrawer';
+import { CheckAvailabilityDialog } from '../components/CheckAvailabilityDialog';
+import { CreateBookingModal } from '../components/CreateBookingModal';
+import { AllocateChassisDialog } from '../components/AllocateChassisDialog';
+import { RecordTokenPaymentModal } from '../components/RecordTokenPaymentModal';
+import { RescheduleDeliveryModal } from '../components/RescheduleDeliveryModal';
+import { CancelBookingModal } from '../components/CancelBookingModal';
+import { BookingsReportModal } from '../components/BookingsReportModal';
+
 import { toast } from 'sonner';
 
 export function BookingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const state = useAppStore();
-  const bookings = state.bookings || [];
+
+  const rawBookings = state.bookings || [];
   const vehicleStock = state.vehicleStock || [];
-  const bikeCatalog = state.catalogs.bikes || [];
+  const branches = state.branches || [];
+  const models = state.catalogs?.bikes || [
+    { id: 're-classic-350', name: 'Royal Enfield Classic 350' },
+    { id: 're-hunter-350', name: 'Royal Enfield Hunter 350' },
+    { id: 're-himalayan-450', name: 'Royal Enfield Himalayan 450' },
+    { id: 'pulsar-ns200', name: 'Bajaj Pulsar NS200' },
+    { id: 'pulsar-150', name: 'Bajaj Pulsar 150' },
+    { id: 'chetak-premium', name: 'Bajaj Chetak Premium' },
+    { id: 'honda-shine-125', name: 'Honda Shine 125' },
+    { id: 'tvs-apache-160', name: 'TVS Apache RTR 160' },
+  ];
   const currentUser = state.currentUser;
+
+  // Store actions
+  const addBooking = state.addBooking;
+  const updateBooking = state.updateBooking;
+  const recordTokenPayment = state.recordTokenPayment;
   const allocateChassisToBooking = state.allocateChassisToBooking;
   const deallocateChassis = state.deallocateChassis;
+  const confirmBooking = state.confirmBooking;
+  const deliverBooking = state.deliverBooking;
+  const cancelBooking = state.cancelBooking;
+  const expireHoldsCatchup = state.expireHoldsCatchup;
 
-  const [allocationModalOpen, setAllocationModalOpen] = useState(false);
+  // Periodic hold expiry check (every 60s)
+  useEffect(() => {
+    if (expireHoldsCatchup) {
+      expireHoldsCatchup();
+    }
+    const interval = setInterval(() => {
+      if (expireHoldsCatchup) expireHoldsCatchup();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [expireHoldsCatchup]);
+
+  // Permissions
+  const canViewFullPhone =
+    hasPermission(currentUser, PERMISSIONS.BOOKINGS_VIEW_CUSTOMER_PHONE) ||
+    currentUser?.role === 'SUPER_ADMIN';
+  const canAllocateChassis =
+    hasPermission(currentUser, PERMISSIONS.BOOKINGS_ALLOCATE_CHASSIS) ||
+    currentUser?.role === 'SUPER_ADMIN' ||
+    currentUser?.role === 'BRANCH_MANAGER';
+  const canCancel =
+    hasPermission(currentUser, PERMISSIONS.BOOKINGS_CANCEL) ||
+    currentUser?.role === 'SUPER_ADMIN' ||
+    currentUser?.role === 'BRANCH_MANAGER';
+
+  // Filters State
+  const [filters, setFilters] = useState({
+    searchQuery: searchParams.get('q') || '',
+    branch: searchParams.get('branch') || 'ALL',
+    status: searchParams.get('status') || 'ALL',
+    datePreset: searchParams.get('range') || 'THIS_MONTH',
+    includeAllOpenBookings: true,
+    modelName: 'ALL',
+    allocationStatus: 'ALL',
+    deliveryTiming: 'ALL',
+  });
+
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'ALL');
+  const [sortField, setSortField] = useState('bookingDate');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Row selection
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Modals & Drawers state
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [allocateModalOpen, setAllocateModalOpen] = useState(false);
+  const [recordTokenModalOpen, setRecordTokenModalOpen] = useState(false);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [tokenReceiptOpen, setTokenReceiptOpen] = useState(false);
-  const [activeBooking, setActiveBooking] = useState(null);
-  const [selectedChassis, setSelectedChassis] = useState('');
-  const [cancelReason, setCancelReason] = useState('Customer opted for car purchase');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [createPrefill, setCreatePrefill] = useState(null);
 
-  // Summary Metrics
-  const totalBookings = bookings.length;
-  const totalTokenPaise = bookings.reduce((sum, b) => sum + (b.tokenAmountPaise || 0), 0);
-  const allocatedCount = bookings.filter((b) => b.allocatedChassisNumber).length;
-  const unallocatedCount = totalBookings - allocatedCount;
+  // Sync state to URL search parameters
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeTab !== 'ALL') params.set('tab', activeTab);
+    if (filters.status !== 'ALL') params.set('status', filters.status);
+    if (filters.branch !== 'ALL') params.set('branch', filters.branch);
+    if (filters.searchQuery) params.set('q', filters.searchQuery);
+    if (filters.datePreset !== 'THIS_MONTH') params.set('range', filters.datePreset);
+    setSearchParams(params, { replace: true });
+  }, [activeTab, filters, setSearchParams]);
 
-  // Filtered Bookings
-  const filteredBookings = bookings.filter((b) => {
-    const matchesSearch =
-      !searchTerm ||
-      b.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.phone?.includes(searchTerm) ||
-      b.modelName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.allocatedChassisNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Handle URL prefill (e.g. ?quotation=QT/... or ?lead=...)
+  useEffect(() => {
+    const quotationParam = searchParams.get('quotation');
+    if (quotationParam && state.quotations) {
+      const q = state.quotations.find((item) => item.quotationNumber === quotationParam || item.id === quotationParam);
+      if (q) {
+        setCreatePrefill({
+          quotationId: q.id,
+          customerName: q.customerName,
+          customerPhone: q.customerPhone,
+          customerEmail: q.customerEmail,
+          modelName: q.modelName,
+          colour: q.colour,
+          variant: q.variant,
+          branchName: q.branchName,
+        });
+        setCreateModalOpen(true);
+      }
+    }
+  }, [searchParams, state.quotations]);
 
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ALLOCATED' && b.allocatedChassisNumber) ||
-      (statusFilter === 'UNALLOCATED' && !b.allocatedChassisNumber) ||
-      b.status === statusFilter;
+  // Pure selectors computations
+  const kpis = useMemo(() => getBookingsKpis(rawBookings), [rawBookings]);
+  const tabCounts = useMemo(() => getBookingTabCounts(rawBookings), [rawBookings]);
+  const statusBreakdown = useMemo(() => getBookingStatusBreakdown(rawBookings), [rawBookings]);
+  const weeklyActivity = useMemo(() => getBookingWeeklyActivity(rawBookings), [rawBookings]);
 
-    return matchesSearch && matchesStatus;
-  });
+  // Filtered & sorted bookings
+  const filteredList = useMemo(() => {
+    const effectiveFilters = {
+      ...filters,
+      tab: activeTab,
+    };
+    const list = filterBookings(rawBookings, effectiveFilters);
+    return sortBookings(list, sortField, sortDirection);
+  }, [rawBookings, filters, activeTab, sortField, sortDirection]);
 
-  // Available chassis for the active booking model
-  const eligibleChassisUnits = vehicleStock.filter((v) => {
-    if (!activeBooking) return false;
-    return (
-      v.modelId === activeBooking.modelId &&
-      (v.status === 'IN_STOCK' || v.chassisNumber === activeBooking.allocatedChassisNumber)
+  // Paginated subset
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredList.slice(start, start + pageSize);
+  }, [filteredList, currentPage, pageSize]);
+
+  // Handlers
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab !== 'ALL') {
+      setFilters((prev) => ({ ...prev, status: tab }));
+    } else {
+      setFilters((prev) => ({ ...prev, status: 'ALL' }));
+    }
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    if (newFilters.status && newFilters.status !== activeTab) {
+      setActiveTab(newFilters.status);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleSelectRow = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
-  });
-
-  const handleOpenAllocation = (booking) => {
-    setActiveBooking(booking);
-    setSelectedChassis(booking.allocatedChassisNumber || eligibleChassisUnits[0]?.chassisNumber || '');
-    setAllocationModalOpen(true);
   };
 
-  const handleConfirmAllocation = () => {
-    if (!selectedChassis) {
-      toast.error('Select an available chassis unit');
-      return;
-    }
-
-    try {
-      allocateChassisToBooking(selectedChassis, activeBooking.id);
-      setAllocationModalOpen(false);
-      toast.success(`Chassis ${selectedChassis} successfully allocated to Booking ${activeBooking.bookingNumber}`);
-    } catch (err) {
-      toast.error(err.message);
+  const handleSelectAll = () => {
+    if (paginatedList.every((b) => selectedIds.includes(b.id))) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !paginatedList.some((b) => b.id === id))
+      );
+    } else {
+      const newIds = [...selectedIds];
+      paginatedList.forEach((b) => {
+        if (!newIds.includes(b.id)) newIds.push(b.id);
+      });
+      setSelectedIds(newIds);
     }
   };
 
-  const handleCancelBooking = () => {
-    if (!activeBooking) return;
-    if (activeBooking.allocatedUnitId) {
-      deallocateChassis(activeBooking.allocatedUnitId);
-    }
+  // Clock simulation handlers
+  const handleAdvanceClock = (days) => {
+    advanceSimulatedClock(days);
+    if (expireHoldsCatchup) expireHoldsCatchup();
+    toast.info(`Simulated clock advanced by ${days} day(s)`);
+  };
 
-    state.updateLeadStage(activeBooking.id, 'CANCELLED');
-    setCancelModalOpen(false);
-    toast.warning(`Booking ${activeBooking.bookingNumber} cancellation submitted. Refund pending approver sign-off.`);
+  const handleResetClock = () => {
+    resetSimulatedClock();
+    if (expireHoldsCatchup) expireHoldsCatchup();
+    toast.success('Simulated clock reset to current time');
+  };
+
+  // Booking actions
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    setDetailsDrawerOpen(true);
+  };
+
+  const handleOpenRecordToken = (booking) => {
+    setSelectedBooking(booking);
+    setRecordTokenModalOpen(true);
+  };
+
+  const handleOpenAllocate = (booking) => {
+    setSelectedBooking(booking);
+    setAllocateModalOpen(true);
+  };
+
+  const handleOpenReschedule = (booking) => {
+    setSelectedBooking(booking);
+    setRescheduleModalOpen(true);
+  };
+
+  const handleOpenCancel = (booking) => {
+    setSelectedBooking(booking);
+    setCancelModalOpen(true);
+  };
+
+  const handleConfirmBooking = (booking) => {
+    if (confirmBooking) {
+      confirmBooking(booking.id);
+      toast.success(`Booking ${booking.bookingNumber} confirmed successfully!`);
+    }
+  };
+
+  const handleDeliverBooking = (booking) => {
+    if (deliverBooking) {
+      deliverBooking(booking.id);
+      toast.success(`Booking ${booking.bookingNumber} marked as Delivered!`);
+    }
+  };
+
+  // Bulk actions
+  const handleBulkReminders = () => {
+    toast.success(
+      `Delivery reminder push sent via WhatsApp to ${selectedIds.length} customer(s)`
+    );
+    setSelectedIds([]);
+  };
+
+  const handleBulkPrint = () => {
+    toast.info(`Preparing print bundle for ${selectedIds.length} booking form(s)`);
+    setSelectedIds([]);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <BookmarkCheck className="w-5 h-5 text-primary shrink-0" />
-            Vehicle Reservations &amp; Bookings
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Token receipts, single-unit chassis allocation gates and delivery reservations
-          </p>
+    <div className="space-y-5 pb-12 animate-in fade-in duration-200">
+      {/* Breadcrumb & Header */}
+      <div>
+        <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium">
+          <span className="hover:text-slate-700 cursor-pointer">Operations</span>
+          <span>&gt;</span>
+          <span className="text-slate-800 font-semibold">Bookings</span>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            variant="primary"
-            size="sm"
-            icon={PlusCircle}
-            onClick={() => toast.info('To create a booking, please convert an active lead or quotation.')}
-          >
-            Create New Booking
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                Vehicle Reservations & Bookings
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Token receipts, single-unit chassis allocation gates and delivery reservations.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setCreatePrefill(null);
+                setCreateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Booking</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-slate-500" />
+              <span>Export</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toast.info('Delivery Calendar view available under Tasks & Calendar')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <CalendarDays className="w-4 h-4 text-slate-500" />
+              <span>View Calendar</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 4 Summary Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface p-4 rounded-card border border-border shadow-soft">
-          <div className="text-xs text-text-muted">Total Reservations</div>
-          <div className="text-2xl font-bold text-text-main mt-1 tabular-nums">{totalBookings} Active</div>
-          <div className="text-[11px] text-text-muted mt-0.5">Confirmed showroom bookings</div>
+      {/* KPI Cards (No Graph Design: Plain, Reconciled) */}
+      <BookingsKpis
+        kpis={kpis}
+        activeTab={activeTab}
+        onSelectTab={handleTabChange}
+      />
+
+      {/* Filter Bar with Dev Clock */}
+      <BookingsFilterBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        branches={branches}
+        models={models}
+        onAdvanceClock={handleAdvanceClock}
+        onResetClock={handleResetClock}
+      />
+
+      {/* Tabs Row */}
+      <BookingsTabs
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        counts={tabCounts}
+      />
+
+      {/* Bulk Action Bar */}
+      <BookingsBulkBar
+        selectedCount={selectedIds.length}
+        onClearSelection={() => setSelectedIds([])}
+        onExportSelected={() => setReportModalOpen(true)}
+        onSendReminders={handleBulkReminders}
+        onPrintForms={handleBulkPrint}
+      />
+
+      {/* Primary Table */}
+      <BookingsTable
+        bookings={paginatedList}
+        selectedIds={selectedIds}
+        onSelectRow={handleSelectRow}
+        onSelectAll={handleSelectAll}
+        onViewDetails={handleViewDetails}
+        onRecordToken={handleOpenRecordToken}
+        onAllocateChassis={handleOpenAllocate}
+        onRescheduleDelivery={handleOpenReschedule}
+        onConfirmBooking={handleConfirmBooking}
+        onDeliverBooking={handleDeliverBooking}
+        onCancelBooking={handleOpenCancel}
+        canViewFullPhone={canViewFullPhone}
+        canAllocateChassis={canAllocateChassis}
+        canCancel={canCancel}
+      />
+
+      {/* Pagination */}
+      <BookingsPagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={filteredList.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
+      />
+
+      {/* Bottom 3-Card Row (Replaces Line & Donut Graphs strictly with structured information) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-1">
+          <BookingActivityTable weeklyData={weeklyActivity} />
         </div>
 
-        <div className="bg-surface p-4 rounded-card border border-border shadow-soft">
-          <div className="text-xs text-text-muted">Total Token Advances</div>
-          <div className="text-2xl font-bold text-status-green mt-1 tabular-nums">
-            {formatMoney(totalTokenPaise)}
-          </div>
-          <div className="text-[11px] text-status-green font-semibold mt-0.5">Adjustable in final invoice</div>
-        </div>
-
-        <div className="bg-surface p-4 rounded-card border border-border shadow-soft">
-          <div className="text-xs text-text-muted">Chassis VIN Allocated</div>
-          <div className="text-2xl font-bold text-primary mt-1 tabular-nums">
-            {allocatedCount} of {totalBookings}
-          </div>
-          <div className="text-[11px] text-text-muted mt-0.5">Single-chassis locked to stock</div>
-        </div>
-
-        <div className="bg-surface p-4 rounded-card border border-border shadow-soft">
-          <div className="text-xs text-text-muted">Awaiting VIN Allocation</div>
-          <div className="text-2xl font-bold text-status-amber mt-1 tabular-nums">
-            {unallocatedCount} Units
-          </div>
-          <div className="text-[11px] text-status-amber font-semibold mt-0.5">Pending stock intake or transfer</div>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-card border border-border shadow-soft">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search booking #, customer, phone, or VIN..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-input bg-surface-subtle border border-border text-text-main placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
+        <div className="lg:col-span-1">
+          <BookingStatusDistribution
+            breakdown={statusBreakdown}
+            totalBookings={kpis.totalCount}
+            onSelectStatus={handleTabChange}
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: 'ALL', label: `All (${totalBookings})` },
-            { id: 'CONFIRMED', label: 'Confirmed' },
-            { id: 'ALLOCATED', label: `Allocated (${allocatedCount})` },
-            { id: 'UNALLOCATED', label: `Awaiting VIN (${unallocatedCount})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-button text-xs font-semibold whitespace-nowrap transition-colors ${
-                statusFilter === tab.id
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-surface-subtle text-text-muted hover:text-text-main border border-border'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="lg:col-span-1">
+          <BookingQuickActions
+            onCreateBooking={() => {
+              setCreatePrefill(null);
+              setCreateModalOpen(true);
+            }}
+            onCheckAvailability={() => setAvailabilityDialogOpen(true)}
+            onViewReports={() => setReportModalOpen(true)}
+            onOpenDeliveryDesk={() => toast.info('Delivery Desk: Check Ready for PDI bookings')}
+          />
         </div>
       </div>
 
-      {/* Bookings Table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-surface-subtle border-b border-border text-text-muted font-semibold uppercase text-[11px]">
-                <th className="px-4 py-3 whitespace-nowrap">Booking #</th>
-                <th className="px-4 py-3 whitespace-nowrap">Customer</th>
-                <th className="px-4 py-3 whitespace-nowrap">Model &amp; Colour</th>
-                <th className="px-4 py-3 whitespace-nowrap">Token Paid</th>
-                <th className="px-4 py-3 whitespace-nowrap">Allocated Chassis (VIN)</th>
-                <th className="px-4 py-3 whitespace-nowrap">Est. Delivery</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap pr-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-text-muted text-xs">
-                    No bookings found matching your search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-surface-subtle/70 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-primary whitespace-nowrap">
-                      {booking.bookingNumber}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="font-bold text-text-main">{booking.customerName}</div>
-                      <div className="text-[11px] font-mono text-text-muted whitespace-nowrap mt-0.5">
-                        {booking.phone}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="font-semibold text-text-main">{booking.modelName}</div>
-                      <div className="text-[11px] text-text-muted mt-0.5">{booking.colorName}</div>
-                    </td>
-                    <td className="px-4 py-3 tabular-nums whitespace-nowrap">
-                      <div className="font-bold text-status-green">
-                        {formatMoney(booking.tokenAmountPaise)}
-                      </div>
-                      <div className="text-[10px] uppercase font-semibold text-text-muted mt-0.5">
-                        {booking.paymentMode}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {booking.allocatedChassisNumber ? (
-                        <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-50 text-status-blue border border-blue-200 inline-flex items-center gap-1.5">
-                          <Warehouse className="w-3.5 h-3.5 shrink-0" />
-                          <span>{booking.allocatedChassisNumber}</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-semibold text-status-amber bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 inline-flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                          <span>Awaiting VIN</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
-                      {formatDate(booking.tentativeDeliveryDate)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <StatusBadge status={booking.status} />
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap pr-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="xs"
-                          variant="secondary"
-                          icon={FileText}
-                          onClick={() => {
-                            setActiveBooking(booking);
-                            setTokenReceiptOpen(true);
-                          }}
-                          title="Print or share token advance receipt"
-                        >
-                          Receipt
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="primary"
-                          icon={Warehouse}
-                          onClick={() => handleOpenAllocation(booking)}
-                          title="Allocate single physical chassis VIN"
-                        >
-                          {booking.allocatedChassisNumber ? 'Re-allocate' : 'Allocate VIN'}
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="danger"
-                          icon={XCircle}
-                          onClick={() => {
-                            setActiveBooking(booking);
-                            setCancelModalOpen(true);
-                          }}
-                          title="Cancel booking reservation"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Modals & Drawers */}
+      <BookingDetailsDrawer
+        booking={selectedBooking}
+        isOpen={detailsDrawerOpen}
+        onClose={() => setDetailsDrawerOpen(false)}
+        onRecordToken={handleOpenRecordToken}
+        onAllocateChassis={handleOpenAllocate}
+        onRescheduleDelivery={handleOpenReschedule}
+        onConfirmBooking={handleConfirmBooking}
+        onDeliverBooking={handleDeliverBooking}
+        onCancelBooking={handleOpenCancel}
+        canViewFullPhone={canViewFullPhone}
+        canAllocateChassis={canAllocateChassis}
+        canCancel={canCancel}
+      />
 
-      {/* Chassis Allocation Picker Modal (Blocks Double Allocation) */}
-      <Modal
-        isOpen={allocationModalOpen}
-        onClose={() => setAllocationModalOpen(false)}
-        title={activeBooking ? `Allocate VIN Chassis: ${activeBooking.bookingNumber}` : ''}
-        size="md"
-      >
-        <div className="space-y-4 text-xs">
-          <div className="p-3 rounded-card bg-surface-subtle border border-border">
-            <div className="font-semibold text-text-main">
-              Vehicle Model: <strong>{activeBooking?.modelName}</strong> ({activeBooking?.colorName})
-            </div>
-            <div className="text-[11px] text-text-muted mt-0.5">
-              Customer: {activeBooking?.customerName}
-            </div>
-          </div>
+      <CheckAvailabilityDialog
+        isOpen={availabilityDialogOpen}
+        onClose={() => setAvailabilityDialogOpen(false)}
+        vehicleStock={vehicleStock}
+        models={models}
+        branches={branches}
+        onSelectVinForBooking={(unit) => {
+          setCreatePrefill({
+            modelName: unit.modelName,
+            colour: unit.colour,
+            vin: unit.vin,
+            branchName: unit.branchName,
+          });
+          setCreateModalOpen(true);
+        }}
+      />
 
-          <div>
-            <label className="block font-semibold text-text-main mb-1.5">
-              Select Free Physical Chassis / VIN from Warehouse Stock
-            </label>
-            {eligibleChassisUnits.length === 0 ? (
-              <div className="p-4 text-center rounded bg-amber-50 border border-amber-200 text-status-amber">
-                No free units of this model currently in stock! Please check in-transit consignments or initiate branch transfer.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {eligibleChassisUnits.map((unit) => {
-                  const isCurrentAllocated = unit.allocatedBookingId === activeBooking?.id;
-                  const isBlockedByOther =
-                    unit.allocatedBookingId && unit.allocatedBookingId !== activeBooking?.id;
+      <CreateBookingModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        branches={branches}
+        models={models}
+        vehicleStock={vehicleStock}
+        prefill={createPrefill}
+        onCreateBooking={(bookingData) => {
+          if (addBooking) {
+            addBooking(bookingData);
+          }
+        }}
+      />
 
-                  return (
-                    <label
-                      key={unit.id}
-                      className={`p-3 rounded-card border flex items-center justify-between cursor-pointer transition-all ${
-                        isBlockedByOther
-                          ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed'
-                          : selectedChassis === unit.chassisNumber
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-border bg-surface hover:bg-surface-subtle'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="chassisSelect"
-                          disabled={isBlockedByOther}
-                          checked={selectedChassis === unit.chassisNumber}
-                          onChange={() => setSelectedChassis(unit.chassisNumber)}
-                        />
-                        <div>
-                          <div className="font-mono font-bold text-text-main">{unit.chassisNumber}</div>
-                          <div className="text-[10px] text-text-muted">
-                            Engine: {unit.engineNumber} • Location: {unit.location}
-                          </div>
-                        </div>
-                      </div>
+      <AllocateChassisDialog
+        booking={selectedBooking}
+        isOpen={allocateModalOpen}
+        onClose={() => setAllocateModalOpen(false)}
+        vehicleStock={vehicleStock}
+        onAllocate={(allocData) => {
+          if (allocateChassisToBooking) {
+            allocateChassisToBooking(allocData);
+          }
+        }}
+      />
 
-                      {isCurrentAllocated ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-status-blue">
-                          Current Allocation
-                        </span>
-                      ) : isBlockedByOther ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-status-red">
-                          Blocked ({unit.allocatedBookingId})
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-status-green">
-                          Free In Stock
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+      <RecordTokenPaymentModal
+        booking={selectedBooking}
+        isOpen={recordTokenModalOpen}
+        onClose={() => setRecordTokenModalOpen(false)}
+        onRecordPayment={(payData) => {
+          if (recordTokenPayment) {
+            recordTokenPayment(payData);
+          }
+        }}
+      />
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setAllocationModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirmAllocation}
-              disabled={eligibleChassisUnits.length === 0}
-            >
-              Lock Chassis Allocation
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <RescheduleDeliveryModal
+        booking={selectedBooking}
+        isOpen={rescheduleModalOpen}
+        onClose={() => setRescheduleModalOpen(false)}
+        onReschedule={(reschedData) => {
+          if (updateBooking) {
+            updateBooking(reschedData.bookingId, {
+              tentativeDeliveryDate: reschedData.newDate,
+            });
+          }
+        }}
+      />
 
-      {/* Token Receipt Printable Modal */}
-      <Modal
-        isOpen={tokenReceiptOpen}
-        onClose={() => setTokenReceiptOpen(false)}
-        title={activeBooking ? `Token Advance Receipt: ${activeBooking.bookingNumber}` : ''}
-        size="md"
-      >
-        {activeBooking && (
-          <div className="p-6 bg-white text-slate-900 border border-border rounded-card space-y-4 text-xs font-sans">
-            <div className="text-center border-b pb-3">
-              <h3 className="font-bold text-base text-navy-900">{state.dealership.name}</h3>
-              <p className="text-[11px] text-slate-500">{state.dealership.headOffice}</p>
-              <div className="text-[11px] font-mono text-slate-600 mt-1">
-                GSTIN: {state.dealership.gstin}
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded">
-              <div>
-                <span className="text-[10px] text-slate-500 block">Receipt Voucher:</span>
-                <span className="font-mono font-bold text-primary">{activeBooking.bookingNumber}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 block">Date of Advance:</span>
-                <span className="font-bold">{formatDate(activeBooking.bookingDate)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 py-2">
-              <div className="flex justify-between">
-                <span className="text-slate-600">Received from:</span>
-                <span className="font-bold">{activeBooking.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Mobile Phone:</span>
-                <span className="font-medium">{activeBooking.phone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Model Reserved:</span>
-                <span className="font-bold">{activeBooking.modelName} ({activeBooking.colorName})</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Payment Reference:</span>
-                <span className="font-mono">{activeBooking.paymentRef || activeBooking.paymentMode}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2 text-sm font-bold">
-                <span>Advance Token Amount:</span>
-                <span className="text-emerald-700 tabular-nums">
-                  {formatMoney(activeBooking.tokenAmountPaise)}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-500 border-t pt-2 italic leading-relaxed">
-              * Note: Token is adjustable against final ex-showroom on-road invoice. Booking cancellation is subject to dealership refund approval policy.
-            </p>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button variant="secondary" onClick={() => window.print()}>
-                Print Receipt
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  toast.success(`Token receipt dispatched to ${activeBooking.phone} via WhatsApp`);
-                  setTokenReceiptOpen(false);
-                }}
-              >
-                Share on WhatsApp
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Booking Cancellation & Refund Request Modal */}
-      <ConfirmDialog
+      <CancelBookingModal
+        booking={selectedBooking}
         isOpen={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
-        onConfirm={handleCancelBooking}
-        title="Cancel Vehicle Booking & Request Refund"
-        message={`Are you sure you want to cancel booking ${activeBooking?.bookingNumber} for ${activeBooking?.customerName}? This will de-allocate chassis ${activeBooking?.allocatedChassisNumber || 'unit'} and require refund approval.`}
-        confirmLabel="Confirm Cancellation"
-        danger={true}
+        onCancelReservation={(cancelData) => {
+          if (cancelBooking) {
+            cancelBooking(cancelData.bookingId, cancelData);
+          }
+        }}
+      />
+
+      <BookingsReportModal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        bookings={filteredList}
+        filteredCount={filteredList.length}
       />
     </div>
   );

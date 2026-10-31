@@ -1,3 +1,4 @@
+import { RouteErrorBoundary } from './components/layout/RouteErrorBoundary';
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
@@ -109,9 +110,14 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,
+        element: <DashboardPage />,
+      },
+      {
+        path: 'dashboard',
         element: <DashboardPage />,
       },
       // Operations
@@ -568,7 +574,7 @@ export const router = createBrowserRouter([
       {
         path: 'approvals',
         element: (
-          <RouteGuard permission={PERMISSIONS.APPROVALS_MANAGE}>
+          <RouteGuard permission={PERMISSIONS.APPROVALS_VIEW_OWN}>
             <ApprovalsPage />
           </RouteGuard>
         ),
@@ -576,7 +582,7 @@ export const router = createBrowserRouter([
       {
         path: 'admin/users',
         element: (
-          <RouteGuard permission={PERMISSIONS.USERS_MANAGE}>
+          <RouteGuard permission={PERMISSIONS.USERS_VIEW}>
             <UsersPage />
           </RouteGuard>
         ),
@@ -628,7 +634,7 @@ export const router = createBrowserRouter([
       {
         path: 'hr',
         element: (
-          <RouteGuard permission={PERMISSIONS.USERS_MANAGE}>
+          <RouteGuard permission={PERMISSIONS.HR_VIEW_OWN}>
             <HrIncentivesPage />
           </RouteGuard>
         ),
@@ -651,6 +657,14 @@ export const router = createBrowserRouter([
       },
       {
         path: 'admin/data',
+        element: (
+          <RouteGuard permission={PERMISSIONS.DATA_EXCHANGE_MANAGE}>
+            <DataExchangePage />
+          </RouteGuard>
+        ),
+      },
+      {
+        path: 'admin/import-export',
         element: (
           <RouteGuard permission={PERMISSIONS.DATA_EXCHANGE_MANAGE}>
             <DataExchangePage />

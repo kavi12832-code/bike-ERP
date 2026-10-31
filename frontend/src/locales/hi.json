@@ -14,7 +14,6 @@
     "stock_vehicles": "वाहन इन्वेंटरी",
     "stock_parts": "स्पेयर पार्ट्स एवं स्टॉक",
     "purchases": "खरीद एवं GRN",
-
     "workshop": "वर्कशॉप और सर्विस",
     "service_center": "सर्विस अपॉइंटमेंट",
     "job_cards": "जॉब कार्ड्स कानबन",
@@ -24,7 +23,6 @@
     "pickup": "पिकअप और ड्रॉप",
     "recalls": "रिकॉल और बुलेटिन",
     "my_jobs": "तकनीशियन के कार्य",
-
     "customer_care": "ग्राहक सेवा",
     "customers": "कस्टमर 360",
     "complaints": "शिकायतें और निवारण",
@@ -34,7 +32,6 @@
     "warranty_claims": "वारंटी, एएमसी और दावे",
     "warranty": "वारंटी, एएमसी और दावे",
     "documents": "दस्तावेज़ वॉल्ट",
-
     "finance_accounts": "वित्त और लेखा",
     "billing": "चालान और बिलिंग",
     "collections": "वसूली और प्राप्य",
@@ -52,7 +49,6 @@
     "vehicle_finance": "वाहन वित्त (ईएमआई)",
     "exchange": "एक्सचेंज और प्रयुक्त वाहन",
     "deal_profit": "सौदा लाभप्रदता",
-
     "growth_intelligence": "विकास और बुद्धिमत्ता",
     "lead_sources": "लीड स्रोत हब",
     "telecall": "टेलीकॉलिंग कंसोल",
@@ -62,7 +58,6 @@
     "oem_schemes": "ओईएम योजनाएं एवं स्कोरकार्ड",
     "ai_suite": "एआई सहायक और उपकरण",
     "reports": "रिपोर्ट और विश्लेषण",
-
     "administration": "प्रशासन",
     "approvals": "अनुमोदन केंद्र",
     "users": "उपयोगकर्ता प्रबंधन",
@@ -120,5 +115,21 @@
     "rejected": "अस्वीकृत",
     "draft": "प्रारूप",
     "closed": "बंद"
+  },
+  "dashboard": {
+    "title": "डैशबोर्ड",
+    "overview": "अवलोकन",
+    "gross_sales": "आज की सकल बिक्री",
+    "invoices_target": "चालान बनाम लक्ष्य",
+    "bay_utilisation": "सर्विस बे उपयोग",
+    "gst_output": "आज का जीएसटी आउटपुट",
+    "sales_performance": "बिक्री प्रदर्शन",
+    "lead_sources": "लीड स्रोत वितरण",
+    "top_performers": "शीर्ष प्रदर्शनकर्ता",
+    "ai_copilot": "एआई कोपायलट",
+    "upcoming_tasks": "आगामी कार्य",
+    "quick_actions": "त्वरित कार्रवाई",
+    "revenue_trajectory": "शोरूम राजस्व प्रक्षेपवक्र",
+    "booking_trends": "बुकिंग रुझान"
   }
 }

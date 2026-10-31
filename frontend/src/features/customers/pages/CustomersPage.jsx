@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Drawer } from '../../../components/ui/Drawer';
+import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatPhone, formatDate } from '../../../lib/format';
 import {
   Users,
@@ -20,16 +21,81 @@ import {
   MessageSquare,
   AlertTriangle,
   FolderOpen,
+  Edit3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function CustomersPage() {
   const customers = useAppStore((state) => state.customers || []);
   const currentUser = useAppStore((state) => state.currentUser);
+  const updateCustomer = useAppStore((state) => state.updateCustomer);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [activeTab, setActiveTab] = useState('OVERVIEW'); // 'OVERVIEW', 'BIKES', 'CONSENT', 'VAULT', 'TIMELINE'
+  const [editCustomerModalOpen, setEditCustomerModalOpen] = useState(false);
+
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: 'Bangalore',
+    pincode: '560095',
+    loyaltyPoints: 0,
+    csatScore: 5,
+    churnRisk: 'LOW',
+  });
+
+  const handleOpenEditCustomer = (cust) => {
+    setSelectedCustomer(cust);
+    setCustomerForm({
+      name: cust.name || '',
+      phone: cust.phone || '',
+      email: cust.email || '',
+      address: cust.address || '',
+      city: cust.city || 'Bangalore',
+      pincode: cust.pincode || '560095',
+      loyaltyPoints: cust.loyaltyPoints || 0,
+      csatScore: cust.csatScore || 5,
+      churnRisk: cust.churnRisk || 'LOW',
+    });
+    setEditCustomerModalOpen(true);
+  };
+
+  const handleSaveCustomer = () => {
+    if (!customerForm.name.trim() || !customerForm.phone.trim()) {
+      toast.error('Customer name and phone number are required');
+      return;
+    }
+    if (selectedCustomer && updateCustomer) {
+      updateCustomer(selectedCustomer.id, {
+        name: customerForm.name,
+        phone: customerForm.phone,
+        email: customerForm.email,
+        address: customerForm.address,
+        city: customerForm.city,
+        pincode: customerForm.pincode,
+        loyaltyPoints: Number(customerForm.loyaltyPoints),
+        csatScore: Number(customerForm.csatScore),
+        churnRisk: customerForm.churnRisk,
+      });
+      setSelectedCustomer({
+        ...selectedCustomer,
+        name: customerForm.name,
+        phone: customerForm.phone,
+        email: customerForm.email,
+        address: customerForm.address,
+        city: customerForm.city,
+        pincode: customerForm.pincode,
+        loyaltyPoints: Number(customerForm.loyaltyPoints),
+        csatScore: Number(customerForm.csatScore),
+        churnRisk: customerForm.churnRisk,
+      });
+      toast.success(`Customer profile for ${customerForm.name} updated successfully.`);
+    }
+    setEditCustomerModalOpen(false);
+  };
 
   const filteredCustomers = useMemo(() => {
     if (!searchTerm.trim()) return customers;
@@ -131,7 +197,17 @@ export function CustomersPage() {
                     <td className="p-3.5">
                       <StatusBadge status={cust.churnRisk} />
                     </td>
-                    <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={Edit3}
+                        onClick={() => handleOpenEditCustomer(cust)}
+                        title="Edit Customer Profile"
+                        className="text-slate-600 hover:text-blue-600 mr-1"
+                      >
+                        Edit
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -174,6 +250,15 @@ export function CustomersPage() {
               </div>
 
               <div className="text-right shrink-0">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  icon={Edit3}
+                  onClick={() => handleOpenEditCustomer(selectedCustomer)}
+                  className="mb-2"
+                >
+                  Edit Profile
+                </Button>
                 <div className="text-xs text-text-muted uppercase font-semibold">Lifetime Value</div>
                 <div className="text-xl font-bold text-primary tabular-nums mt-0.5">
                   {formatMoney(selectedCustomer.ltvPaise)}
@@ -385,6 +470,122 @@ export function CustomersPage() {
           </div>
         )}
       </Drawer>
+
+      {/* Edit Customer Profile Modal */}
+      <Modal
+        isOpen={editCustomerModalOpen}
+        onClose={() => setEditCustomerModalOpen(false)}
+        title={selectedCustomer ? `Edit Customer Profile — ${selectedCustomer.name}` : 'Edit Customer'}
+        size="md"
+      >
+        <div className="space-y-4 text-xs">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Customer Full Name</label>
+              <input
+                type="text"
+                value={customerForm.name}
+                onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Mobile Phone Number</label>
+              <input
+                type="text"
+                value={customerForm.phone}
+                onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="font-semibold text-text-main block mb-1">Email Address</label>
+            <input
+              type="email"
+              value={customerForm.email}
+              onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+            />
+          </div>
+
+          <div>
+            <label className="font-semibold text-text-main block mb-1">Residential Street Address</label>
+            <textarea
+              rows={2}
+              value={customerForm.address}
+              onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
+              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-text-main block mb-1">City</label>
+              <input
+                type="text"
+                value={customerForm.city}
+                onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Postal PIN Code</label>
+              <input
+                type="text"
+                value={customerForm.pincode}
+                onChange={(e) => setCustomerForm({ ...customerForm, pincode: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Loyalty Points</label>
+              <input
+                type="number"
+                value={customerForm.loyaltyPoints}
+                onChange={(e) => setCustomerForm({ ...customerForm, loyaltyPoints: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-bold tabular-nums"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">CSAT Rating (1-5)</label>
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={customerForm.csatScore}
+                onChange={(e) => setCustomerForm({ ...customerForm, csatScore: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-bold tabular-nums"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Churn Risk</label>
+              <select
+                value={customerForm.churnRisk}
+                onChange={(e) => setCustomerForm({ ...customerForm, churnRisk: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              >
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="secondary" onClick={() => setEditCustomerModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSaveCustomer} className="bg-blue-600 text-white">
+              Save Customer Profile
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

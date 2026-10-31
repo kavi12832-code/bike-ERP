@@ -1,328 +1,1375 @@
-import React, { useState } from 'react';
+// src/features/approvals/pages/ApprovalsPage.jsx
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
-import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { Modal } from '../../../components/ui/Modal';
 import { useAppStore } from '../../../store';
-import { approvalsService } from '../../../services/api/approvals';
-import { formatMoney } from '../../../lib/format';
 import {
+  APPROVAL_STATUS,
+  APPROVAL_TYPES,
+  APPROVAL_MODULES,
+  STATUS_COLORS,
+  TYPE_COLORS,
+  SHOW_KPI_TRENDS,
+} from '../../../approvals/config';
+import { canUserDecide, evaluateCompliance, evaluatePerformance } from '../../../approvals/engine';
+import { computeRequestSla, getSimulatedNow, advanceDevClock, resetDevClock } from '../../../approvals/sla';
+import { startApprovalsScheduler, stopApprovalsScheduler } from '../../../approvals/timer';
+import { formatMoney } from '../../../lib/format';
+import { hasPermission } from '../../../lib/rbac';
+import { PERMISSIONS } from '../../../config/permissions';
+import { ApprovalDetailsDrawer } from '../components/ApprovalDetailsDrawer';
+import { PolicyGuideDrawer } from '../components/PolicyGuideDrawer';
+import { ManageRulesModal } from '../components/ManageRulesModal';
+import { BulkActionModal } from '../components/BulkActionModal';
+import { DelegateModal } from '../components/DelegateModal';
+import { ExportApprovalsModal } from '../components/ExportApprovalsModal';
+import {
+  Home,
+  Shield,
+  ShieldCheck,
   CheckCircle2,
   XCircle,
+  RotateCcw,
   Clock,
-  ShieldAlert,
   AlertTriangle,
   User,
-  Filter,
-  FileText,
+  Users,
   Search,
+  Filter,
+  Download,
+  BookOpen,
+  Sliders,
+  MoreVertical,
+  Eye,
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Copy,
+  ExternalLink,
+  History,
+  Send,
+  Zap,
+  FastForward,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function ApprovalsPage() {
-  const state = useAppStore();
-  const currentUser = state.currentUser;
-  const approvals = state.approvals || [];
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState('PENDING_ME'); // 'PENDING_ME', 'REQUESTED_ME', 'HISTORY'
-  const [search, setSearch] = useState('');
-  const [selectedApproval, setSelectedApproval] = useState(null);
-  const [actionType, setActionType] = useState('APPROVE'); // 'APPROVE' or 'REJECT'
-  const [actionReason, setActionReason] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
+  // Store state & actions
+  const approvals = useAppStore((state) => state.approvals || []);
+  const policies = useAppStore((state) => state.approvalPolicies || []);
+  const currentUser = useAppStore((state) => state.currentUser);
+  const decideApproval = useAppStore((state) => state.decideApproval);
+  const cancelApproval = useAppStore((state) => state.cancelApproval);
+  const bulkDecideApprovals = useAppStore((state) => state.bulkDecideApprovals);
 
-  // Filter approvals by tab
-  const filteredApprovals = approvals.filter((item) => {
-    const isMine =
-      item.requestedById === currentUser?.id || item.requestedBy === currentUser?.name;
+  // Background timer tick
+  useEffect(() => {
+    startApprovalsScheduler();
+    return () => stopApprovalsScheduler();
+  }, []);
 
-    if (activeTab === 'PENDING_ME') {
-      if (item.status !== 'PENDING' || isMine) return false;
-    } else if (activeTab === 'REQUESTED_ME') {
-      if (!isMine) return false;
-    } else if (activeTab === 'HISTORY') {
-      if (item.status === 'PENDING') return false;
+  // Check if current user has permission to decide approvals
+  const canViewPendingTab = useMemo(() => {
+    return hasPermission(currentUser, PERMISSIONS.APPROVALS_VIEW_PENDING) ||
+      ['Super Admin', 'Branch Manager', 'Sales Manager', 'Service Manager', 'Accountant'].includes(currentUser?.role);
+  }, [currentUser]);
+
+  // URL Query Params state
+  const activeTab = searchParams.get('tab') || (canViewPendingTab ? 'PENDING_ME' : 'REQUESTED_ME');
+  const searchQuery = searchParams.get('q') || '';
+  const moduleFilter = searchParams.get('module') || 'ALL';
+  const statusFilter = searchParams.get('status') || 'ALL';
+  const dateRange = searchParams.get('dateRange') || 'ALL';
+  const limitPendingDate = searchParams.get('limitPendingDate') === 'true';
+  const filterExceptionsOnly = searchParams.get('exceptionsOnly') === 'true';
+  const sortBy = searchParams.get('sort') || 'createdAt';
+  const sortOrder = searchParams.get('order') || 'desc';
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
+  const pageSize = parseInt(searchParams.get('size') || '10', 10);
+  const openRequestId = searchParams.get('request') || null;
+
+  // Local drawer / modal states
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isManageRulesOpen, setIsManageRulesOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [delegatingRequest, setDelegatingRequest] = useState(null);
+  const [bulkActionType, setBulkActionType] = useState(null);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [lastRefreshedTime, setLastRefreshedTime] = useState(
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
+
+  // Helper to update search params
+  const updateParams = (updates) => {
+    const newParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, val]) => {
+      if (val === null || val === undefined || val === 'ALL' || val === '' || val === false) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(val));
+      }
+    });
+    if (!('page' in updates) && updates.page === undefined) {
+      newParams.delete('page');
     }
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const match =
-        item.title?.toLowerCase().includes(q) ||
-        item.requestedBy?.toLowerCase().includes(q) ||
-        item.type?.toLowerCase().includes(q) ||
-        item.id?.toLowerCase().includes(q);
-      if (!match) return false;
-    }
-
-    return true;
-  });
-
-  const handleOpenAction = (approval, type) => {
-    setSelectedApproval(approval);
-    setActionType(type);
-    setActionReason(type === 'APPROVE' ? 'Approved under managerial authority.' : '');
-    setModalOpen(true);
+    setSearchParams(newParams);
   };
 
-  const handleConfirmAction = () => {
-    if (!selectedApproval) return;
-    try {
-      if (actionType === 'APPROVE') {
-        approvalsService.approveRequest(selectedApproval.id, actionReason);
-        toast.success(`Approval granted for ${selectedApproval.title}`);
-      } else {
-        if (!actionReason.trim()) {
-          toast.error('Rejection reason is mandatory.');
-          return;
-        }
-        approvalsService.rejectRequest(selectedApproval.id, actionReason);
-        toast.error(`Request rejected: ${selectedApproval.title}`);
+  const handleTabChange = (newTab) => {
+    updateParams({ tab: newTab, page: 1, exceptionsOnly: null });
+    setSelectedUserIds([]);
+  };
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.row-action-menu')) {
+        setActiveMenuId(null);
       }
-      setModalOpen(false);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Compute 4 KPI counts (strictly plain numbers, no graphs, no sparklines)
+  const kpis = useMemo(() => {
+    const now = getSimulatedNow();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    // 1. Pending for Me: open requests current user is eligible to decide
+    const pendingForMeCount = approvals.filter((req) => {
+      if (![APPROVAL_STATUS.PENDING, APPROVAL_STATUS.ESCALATED].includes(req.status)) return false;
+      const policy = policies.find((p) => p.id === req.policyId);
+      return canUserDecide(currentUser, req, policy).canDecide;
+    }).length;
+
+    // 2. Requested by Me: my requests still open
+    const requestedByMeCount = approvals.filter((req) => {
+      const isMine =
+        req.requesterId === currentUser?.id ||
+        (req.requesterEmail && req.requesterEmail.toLowerCase() === (currentUser?.email || '').toLowerCase()) ||
+        req.requesterName === currentUser?.name;
+      return isMine && [APPROVAL_STATUS.PENDING, APPROVAL_STATUS.ESCALATED, APPROVAL_STATUS.RETURNED].includes(req.status);
+    }).length;
+
+    // 3. Approved Today within visibility scope
+    const approvedTodayCount = approvals.filter((req) => {
+      if (req.status !== APPROVAL_STATUS.APPROVED) return false;
+      const d = req.decidedAt ? req.decidedAt.slice(0, 10) : '';
+      return d === todayStr;
+    }).length;
+
+    // 4. Rejected Today within visibility scope
+    const rejectedTodayCount = approvals.filter((req) => {
+      if (req.status !== APPROVAL_STATUS.REJECTED) return false;
+      const d = req.decidedAt ? req.decidedAt.slice(0, 10) : '';
+      return d === todayStr;
+    }).length;
+
+    return {
+      pendingForMeCount,
+      requestedByMeCount,
+      approvedTodayCount,
+      rejectedTodayCount,
+    };
+  }, [approvals, policies, currentUser]);
+
+  // Bottom 4 Cards Metrics (Performance, Avg Time, Compliance)
+  const bottomMetrics = useMemo(() => {
+    const decidedRequests = approvals.filter((r) =>
+      [APPROVAL_STATUS.APPROVED, APPROVAL_STATUS.REJECTED].includes(r.status)
+    );
+
+    const compliance = evaluateCompliance(decidedRequests);
+    const performance = evaluatePerformance(decidedRequests);
+
+    return {
+      compliance,
+      performance,
+    };
+  }, [approvals]);
+
+  // Filtered requests based on active tab and filters
+  const filteredApprovals = useMemo(() => {
+    const now = getSimulatedNow();
+
+    return approvals.filter((req) => {
+      const isMine =
+        req.requesterId === currentUser?.id ||
+        (req.requesterEmail && req.requesterEmail.toLowerCase() === (currentUser?.email || '').toLowerCase()) ||
+        req.requesterName === currentUser?.name;
+
+      const policy = policies.find((p) => p.id === req.policyId);
+      const isEligibleToDecide = canUserDecide(currentUser, req, policy).canDecide;
+
+      // 1. Tab Scoping
+      if (activeTab === 'PENDING_ME') {
+        if (![APPROVAL_STATUS.PENDING, APPROVAL_STATUS.ESCALATED].includes(req.status)) return false;
+        if (!isEligibleToDecide) return false;
+      } else if (activeTab === 'REQUESTED_ME') {
+        if (!isMine) return false;
+      } else if (activeTab === 'HISTORY') {
+        // Closed requests or decisions history
+        if ([APPROVAL_STATUS.PENDING, APPROVAL_STATUS.ESCALATED].includes(req.status)) return false;
+
+        // Staff can only see their own history
+        if (!canViewPendingTab && !isMine) return false;
+      }
+
+      // Filter exceptions only (from Policy Compliance card click)
+      if (filterExceptionsOnly) {
+        if (!req.isEmergencyOverride && !(req.slaBreached && req.status === APPROVAL_STATUS.APPROVED)) {
+          return false;
+        }
+      }
+
+      // 2. Module Filter
+      if (moduleFilter !== 'ALL' && req.sourceModule !== moduleFilter) {
+        return false;
+      }
+
+      // 3. Status Filter
+      if (statusFilter !== 'ALL' && req.status !== statusFilter) {
+        return false;
+      }
+
+      // 4. Search Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesId = (req.id || '').toLowerCase().includes(q) || (req.legacyId || '').toLowerCase().includes(q);
+        const matchesTitle = (req.title || '').toLowerCase().includes(q);
+        const matchesRequester = (req.requesterName || '').toLowerCase().includes(q);
+        const matchesType = (req.type || '').toLowerCase().includes(q);
+        const matchesCustomer = (req.customerName || '').toLowerCase().includes(q);
+        const matchesVehicle = (req.vehicleModel || '').toLowerCase().includes(q);
+        if (!matchesId && !matchesTitle && !matchesRequester && !matchesType && !matchesCustomer && !matchesVehicle) {
+          return false;
+        }
+      }
+
+      // 5. Date Range Filter
+      // Rule: In Pending for Me, date range is ignored unless "limitPendingDate" is toggled
+      if (dateRange !== 'ALL') {
+        if (activeTab === 'PENDING_ME' && !limitPendingDate) {
+          // Ignore date filter on pending
+        } else {
+          const targetDateStr = activeTab === 'HISTORY' ? req.decidedAt || req.createdAt : req.createdAt;
+          if (targetDateStr) {
+            const targetDate = new Date(targetDateStr);
+            const diffDays = (now - targetDate) / (1000 * 60 * 60 * 24);
+
+            if (dateRange === 'TODAY' && diffDays > 1) return false;
+            if (dateRange === 'LAST_7_DAYS' && diffDays > 7) return false;
+            if (dateRange === 'LAST_30_DAYS' && diffDays > 30) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [
+    approvals,
+    policies,
+    currentUser,
+    activeTab,
+    canViewPendingTab,
+    filterExceptionsOnly,
+    moduleFilter,
+    statusFilter,
+    searchQuery,
+    dateRange,
+    limitPendingDate,
+  ]);
+
+  // Sort
+  const sortedApprovals = useMemo(() => {
+    return [...filteredApprovals].sort((a, b) => {
+      let valA, valB;
+      if (sortBy === 'amount') {
+        valA = a.amountPaise || 0;
+        valB = b.amountPaise || 0;
+      } else if (sortBy === 'requester') {
+        valA = (a.requesterName || '').toLowerCase();
+        valB = (b.requesterName || '').toLowerCase();
+      } else if (sortBy === 'type') {
+        valA = (a.type || '').toLowerCase();
+        valB = (b.type || '').toLowerCase();
+      } else if (sortBy === 'status') {
+        valA = (a.status || '').toLowerCase();
+        valB = (b.status || '').toLowerCase();
+      } else {
+        valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredApprovals, sortBy, sortOrder]);
+
+  // Pagination
+  const totalEntries = sortedApprovals.length;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedApprovals = sortedApprovals.slice(startIndex, startIndex + pageSize);
+
+  // Table row selection
+  const currentPageIds = paginatedApprovals.map((r) => r.id);
+  const isAllCurrentSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedUserIds.includes(id));
+
+  const handleToggleCurrentPage = () => {
+    if (isAllCurrentSelected) {
+      setSelectedUserIds((prev) => prev.filter((id) => !currentPageIds.includes(id)));
+    } else {
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...currentPageIds])));
+    }
+  };
+
+  const handleToggleRow = (id) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      updateParams({ sort: field, order: sortOrder === 'asc' ? 'desc' : 'asc' });
+    } else {
+      updateParams({ sort: field, order: 'asc' });
+    }
+  };
+
+  // Quick action buttons
+  const handleQuickDecision = (request, decision) => {
+    try {
+      decideApproval(request.id, decision, {
+        note: decision === 'APPROVE' ? 'Approved under managerial authority.' : '',
+      });
+      toast.success(`${request.id} ${decision.toLowerCase()}d successfully.`);
     } catch (err) {
       toast.error(err.message);
     }
   };
 
+  const handleExecuteBulkAction = (action, targetIds, note) => {
+    const results = bulkDecideApprovals(targetIds, action, note);
+    const successCount = results.filter((r) => r.success).length;
+    toast.success(`Bulk ${action.toLowerCase()} completed for ${successCount} requests.`);
+    setBulkActionType(null);
+    setSelectedUserIds([]);
+  };
+
+  const handleManualRefresh = () => {
+    setLastRefreshedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    toast.success('Approvals cache synchronized.');
+  };
+
+  // Dev clock advance
+  const handleAdvanceClock = (mins) => {
+    advanceDevClock(mins);
+    toast.info(`Simulated clock advanced by ${mins} minutes. Background timers updated.`);
+    // Trigger tick
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
+  };
+
+  const renderInitials = (name) => {
+    return (name || 'Staff')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0].toUpperCase())
+      .join('');
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-            Dual-Control Approvals Center
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Strict statutory governance: discounts, refunds, write-offs, journal entries, and campaigns.
-          </p>
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+      {/* 1. Breadcrumb & Header */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          <Home className="w-3.5 h-3.5 text-slate-400" />
+          <span>&gt;</span>
+          <span>Dashboard</span>
+          <span>&gt;</span>
+          <span className="text-slate-800 font-semibold">Approvals Center</span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Dual-Control Active: Requesters cannot self-approve.</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-sm">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                Dual-Control Approvals Center
+              </h1>
+              <p className="text-xs text-slate-500">
+                Strict statutory governance: discounts, refunds, write-offs, journal entries, and campaigns.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Dev Clock helper (subtle, clearly marked for testing) */}
+            <div className="hidden lg:flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1 text-[11px] font-semibold text-slate-600">
+              <span className="px-2 text-slate-500">Dev Clock:</span>
+              <button
+                type="button"
+                onClick={() => handleAdvanceClock(60)}
+                title="Advance clock by 1 hour to test SLA countdown and reminders"
+                className="px-2 py-0.5 bg-white hover:bg-slate-50 rounded border border-slate-200 text-blue-600 mr-1"
+              >
+                +1h
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAdvanceClock(240)}
+                title="Advance clock by 4 hours to test SLA breach and auto-escalation"
+                className="px-2 py-0.5 bg-white hover:bg-slate-50 rounded border border-slate-200 text-orange-600 mr-1"
+              >
+                +4h (Breach)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetDevClock();
+                  window.location.reload();
+                }}
+                title="Reset simulated clock back to current time"
+                className="px-1.5 py-0.5 text-slate-400 hover:text-slate-700"
+              >
+                Reset
+              </button>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsGuideOpen(true)}
+              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+              Approval Policy Guide
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExportOpen(true)}
+              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export Report
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-border space-x-2">
-        <button
-          onClick={() => setActiveTab('PENDING_ME')}
-          className={`py-2 px-4 rounded-t-lg font-medium text-xs sm:text-sm transition-all border-b-2 flex items-center gap-2 ${
-            activeTab === 'PENDING_ME'
-              ? 'border-primary text-primary bg-surface shadow-xs font-semibold'
-              : 'border-transparent text-text-muted hover:text-text-main'
+      {/* 2. Four KPI Cards (Plain Design: Icon, Label, Big Number, Subtext. No Graphs/Rings/Arrows) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Pending for Me */}
+        <Card
+          onClick={() => handleTabChange('PENDING_ME')}
+          className={`p-4 bg-white border hover:border-blue-400 cursor-pointer transition-all hover:shadow-sm ${
+            activeTab === 'PENDING_ME' ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'
           }`}
         >
-          <span>Pending for Me</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-slate-900 font-bold">
-            {approvals.filter((a) => a.status === 'PENDING' && a.requestedBy !== currentUser?.name).length}
-          </span>
-        </button>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Pending for Me</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.pendingForMeCount}</h3>
+              <p className="text-xs text-slate-500 mt-1">Requires your approval</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Card 2: Requested by Me */}
+        <Card
+          onClick={() => handleTabChange('REQUESTED_ME')}
+          className={`p-4 bg-white border hover:border-emerald-400 cursor-pointer transition-all hover:shadow-sm ${
+            activeTab === 'REQUESTED_ME' ? 'border-emerald-500 ring-1 ring-emerald-500/20' : 'border-slate-200'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Requested by Me</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.requestedByMeCount}</h3>
+              <p className="text-xs text-slate-500 mt-1">Awaiting other approval</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Card 3: Approved Today */}
+        <Card
+          onClick={() => {
+            handleTabChange('HISTORY');
+            updateParams({ status: APPROVAL_STATUS.APPROVED, dateRange: 'TODAY' });
+          }}
+          className="p-4 bg-white border-slate-200 hover:border-purple-400 cursor-pointer transition-all hover:shadow-sm"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Approved Today</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.approvedTodayCount}</h3>
+              <p className="text-xs text-slate-500 mt-1">Decisions made today (IST)</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Card 4: Rejected Today */}
+        <Card
+          onClick={() => {
+            handleTabChange('HISTORY');
+            updateParams({ status: APPROVAL_STATUS.REJECTED, dateRange: 'TODAY' });
+          }}
+          className="p-4 bg-white border-slate-200 hover:border-red-400 cursor-pointer transition-all hover:shadow-sm"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Rejected Today</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.rejectedTodayCount}</h3>
+              <p className="text-xs text-slate-500 mt-1">Decisions made today (IST)</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* 3. Navigation Tabs */}
+      <div className="flex items-center gap-3 border-b border-slate-200 pb-px">
+        {canViewPendingTab && (
+          <button
+            type="button"
+            onClick={() => handleTabChange('PENDING_ME')}
+            className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
+              activeTab === 'PENDING_ME'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>Pending for Me</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                kpis.pendingForMeCount > 0 ? 'bg-amber-500 text-slate-900' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {kpis.pendingForMeCount}
+            </span>
+          </button>
+        )}
 
         <button
-          onClick={() => setActiveTab('REQUESTED_ME')}
-          className={`py-2 px-4 rounded-t-lg font-medium text-xs sm:text-sm transition-all border-b-2 flex items-center gap-2 ${
+          type="button"
+          onClick={() => handleTabChange('REQUESTED_ME')}
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
             activeTab === 'REQUESTED_ME'
-              ? 'border-primary text-primary bg-surface shadow-xs font-semibold'
-              : 'border-transparent text-text-muted hover:text-text-main'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           <span>Requested by Me</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-700 font-medium">
-            {approvals.filter((a) => a.requestedBy === currentUser?.name).length}
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              kpis.requestedByMeCount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {kpis.requestedByMeCount}
           </span>
         </button>
 
         <button
-          onClick={() => setActiveTab('HISTORY')}
-          className={`py-2 px-4 rounded-t-lg font-medium text-xs sm:text-sm transition-all border-b-2 flex items-center gap-2 ${
+          type="button"
+          onClick={() => handleTabChange('HISTORY')}
+          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
             activeTab === 'HISTORY'
-              ? 'border-primary text-primary bg-surface shadow-xs font-semibold'
-              : 'border-transparent text-text-muted hover:text-text-main'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           <span>Approval History</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-medium">
-            {approvals.filter((a) => a.status !== 'PENDING').length}
-          </span>
+          {filterExceptionsOnly && (
+            <span className="text-[10px] bg-red-100 text-red-800 font-bold px-1.5 py-0.2 rounded">
+              Exceptions
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Search & Filter */}
-      <Card className="p-3.5">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search by Request ID, title, requester name, or type..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-surface-subtle border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+      {/* 4. Filter Bar */}
+      <Card className="p-3.5 bg-white border-slate-200">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by Request ID, title, requester name, customer, or type..."
+              value={searchQuery}
+              onChange={(e) => updateParams({ q: e.target.value })}
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800 placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => updateParams({ q: '' })}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Modules */}
+            <select
+              value={moduleFilter}
+              onChange={(e) => updateParams({ module: e.target.value })}
+              className="text-xs px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Modules</option>
+              {Object.values(APPROVAL_MODULES).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+
+            {/* Status */}
+            <select
+              value={statusFilter}
+              onChange={(e) => updateParams({ status: e.target.value })}
+              className="text-xs px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Status</option>
+              {Object.values(APPROVAL_STATUS).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+
+            {/* Date Range Selector */}
+            <select
+              value={dateRange}
+              onChange={(e) => updateParams({ dateRange: e.target.value })}
+              className="text-xs px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Time</option>
+              <option value="TODAY">Today</option>
+              <option value="LAST_7_DAYS">Last 7 Days</option>
+              <option value="LAST_30_DAYS">Last 30 Days</option>
+            </select>
+
+            {/* Toggle in Pending for Me: "Limit to this period" */}
+            {activeTab === 'PENDING_ME' && dateRange !== 'ALL' && (
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={limitPendingDate}
+                  onChange={(e) => updateParams({ limitPendingDate: e.target.checked })}
+                  className="rounded border-slate-300 text-blue-600"
+                />
+                <span>Limit to period</span>
+              </label>
+            )}
+
+            {/* Clear Filters */}
+            {(searchQuery || moduleFilter !== 'ALL' || statusFilter !== 'ALL' || dateRange !== 'ALL' || filterExceptionsOnly) && (
+              <button
+                onClick={() => updateParams({ q: '', module: 'ALL', status: 'ALL', dateRange: 'ALL', exceptionsOnly: null })}
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-2"
+              >
+                Clear filters
+              </button>
+            )}
+
+            {/* Manual Refresh Button */}
+            <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200">
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 text-xs"
+                title="Refresh approvals data"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[10px] text-slate-400 font-mono">
+                Updated {lastRefreshedTime}
+              </span>
+            </div>
+          </div>
         </div>
       </Card>
 
-      {/* Approvals Table */}
-      <Card className="overflow-hidden p-0">
+      {/* 5. Bulk Actions Bar (When Rows Selected) */}
+      {selectedUserIds.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">
+              {selectedUserIds.length} request{selectedUserIds.length > 1 ? 's' : ''} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setBulkActionType('APPROVE')}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-7 px-3 shadow-xs"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Approve Selected
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkActionType('REJECT')}
+              className="bg-white border-red-300 text-red-600 hover:bg-red-50 font-bold text-xs h-7 px-3"
+            >
+              <XCircle className="w-3.5 h-3.5 mr-1" />
+              Reject Selected
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkActionType('RETURN')}
+              className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50 font-bold text-xs h-7 px-2.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              Return Selected
+            </Button>
+
+            <button
+              onClick={() => setSelectedUserIds([])}
+              className="text-xs text-slate-500 hover:text-slate-800 ml-2"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Main Approvals Table */}
+      <Card className="bg-white border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-surface-subtle text-text-muted uppercase text-[10px] tracking-wider border-b border-border">
-              <tr>
-                <th className="p-3">Ref ID</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Request Summary</th>
-                <th className="p-3">Amount</th>
-                <th className="p-3">Requester</th>
-                <th className="p-3">Triggered Governance Rule</th>
-                <th className="p-3">SLA / Escalation</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 text-right">Actions</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllCurrentSelected}
+                    onChange={handleToggleCurrentPage}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+                <th
+                  onClick={() => handleSort('id')}
+                  className="py-3 px-3 cursor-pointer hover:text-slate-800"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Ref ID</span>
+                    {sortBy === 'id' && (
+                      sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('type')}
+                  className="py-3 px-3 cursor-pointer hover:text-slate-800"
+                >
+                  Type
+                </th>
+                <th className="py-3 px-4">Request Summary</th>
+                <th
+                  onClick={() => handleSort('amount')}
+                  className="py-3 px-4 cursor-pointer hover:text-slate-800"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Amount</span>
+                    {sortBy === 'amount' && (
+                      sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('requester')}
+                  className="py-3 px-4 cursor-pointer hover:text-slate-800"
+                >
+                  Requester
+                </th>
+                <th className="py-3 px-4">Triggered Governance Rule</th>
+
+                {/* Conditional Columns depending on Tab */}
+                {activeTab === 'HISTORY' ? (
+                  <>
+                    <th className="py-3 px-3">Decided By</th>
+                    <th className="py-3 px-3">Decided At</th>
+                    <th className="py-3 px-3">Turnaround</th>
+                  </>
+                ) : (
+                  <th className="py-3 px-3">SLA / Escalation</th>
+                )}
+
+                <th
+                  onClick={() => handleSort('status')}
+                  className="py-3 px-3 cursor-pointer hover:text-slate-800"
+                >
+                  Status
+                </th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
-              {filteredApprovals.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {paginatedApprovals.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-text-muted">
-                    No approval requests found in this view.
+                  <td colSpan={11} className="py-14 text-center text-slate-400">
+                    <ShieldCheck className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
+                    <p className="font-bold text-slate-700 text-sm">
+                      {activeTab === 'PENDING_ME'
+                        ? 'Nothing waiting for you'
+                        : activeTab === 'REQUESTED_ME'
+                        ? 'No open requests initiated by you'
+                        : 'No approval history found'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {activeTab === 'PENDING_ME'
+                        ? 'All statutory approval workflows are currently up to date.'
+                        : 'Adjust or clear your search filters above.'}
+                    </p>
                   </td>
                 </tr>
               ) : (
-                filteredApprovals.map((item) => (
-                  <tr key={item.id} className="hover:bg-surface-subtle/50 transition-colors">
-                    <td className="p-3 font-mono font-bold text-primary">{item.id}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {item.type.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div className="font-semibold text-text-main">{item.title}</div>
-                      <div className="text-[11px] text-text-muted mt-0.5">{item.reason}</div>
-                    </td>
-                    <td className="p-3 font-mono font-bold tabular-nums text-text-main">
-                      {item.amountPaise ? formatMoney(item.amountPaise) : 'N/A'}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-medium text-text-main">{item.requestedBy}</div>
-                      <div className="text-[10px] text-text-muted">{item.requestedByRole || 'Staff'}</div>
-                    </td>
-                    <td className="p-3 text-text-muted text-[11px] max-w-xs truncate">
-                      {item.ruleTriggered}
-                    </td>
-                    <td className="p-3 font-mono text-[11px] text-amber-600 flex items-center gap-1 mt-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {item.escalationHours ? `${item.escalationHours}h SLA` : '4h SLA'}
-                    </td>
-                    <td className="p-3">
-                      <StatusBadge
-                        status={
-                          item.status === 'APPROVED'
-                            ? 'Approved'
-                            : item.status === 'REJECTED'
-                            ? 'Rejected'
-                            : 'Pending'
-                        }
-                        label={item.status}
-                      />
-                    </td>
-                    <td className="p-3 text-right">
-                      {item.status === 'PENDING' ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() => handleOpenAction(item, 'APPROVE')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-7 px-2.5"
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenAction(item, 'REJECT')}
-                            className="text-red-600 hover:bg-red-50 text-[11px] h-7 px-2"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-text-muted">
-                          {item.reviewedBy ? `By ${item.reviewedBy}` : 'Processed'}
+                paginatedApprovals.map((req) => {
+                  const isSelected = selectedUserIds.includes(req.id);
+                  const sla = computeRequestSla(req);
+                  const policy = policies.find((p) => p.id === req.policyId);
+                  const check = canUserDecide(currentUser, req, policy);
+
+                  return (
+                    <tr
+                      key={req.id}
+                      onClick={() => updateParams({ request: req.id })}
+                      className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-blue-50/40' : ''
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <td
+                        className="py-3.5 px-4"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleRow(req.id);
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleRow(req.id)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+
+                      {/* Ref ID */}
+                      <td className="py-3.5 px-3">
+                        <span className="font-mono font-bold text-slate-900 hover:text-blue-600">
+                          {req.id}
                         </span>
+                        {req.legacyId && (
+                          <span className="block text-[10px] text-slate-400 font-mono">
+                            {req.legacyId}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Type Chip */}
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${
+                            TYPE_COLORS[req.type] || 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {req.type}
+                        </span>
+                      </td>
+
+                      {/* Summary */}
+                      <td className="py-3.5 px-4 max-w-xs">
+                        <p className="font-bold text-slate-900 truncate">{req.title}</p>
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                          {req.summary || req.justification}
+                        </p>
+                      </td>
+
+                      {/* Amount */}
+                      <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                        {req.amountPaise ? formatMoney(req.amountPaise) : 'N/A'}
+                        {req.percent > 0 && (
+                          <span className="block text-[10px] font-medium text-blue-600">
+                            {req.percent}% of price
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Requester */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+                            {renderInitials(req.requesterName)}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-800 block truncate max-w-[130px]">
+                              {req.requesterName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
+                              {req.requesterRole}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Rule */}
+                      <td className="py-3.5 px-4 max-w-xs">
+                        <span className="text-[11px] text-slate-600 font-medium line-clamp-1" title={req.ruleText}>
+                          {req.ruleText}
+                        </span>
+                      </td>
+
+                      {/* SLA or Decided Info depending on tab */}
+                      {activeTab === 'HISTORY' ? (
+                        <>
+                          <td className="py-3.5 px-3 font-medium text-slate-800">
+                            {req.decidedBy || 'System'}
+                          </td>
+                          <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                            {req.decidedAt
+                              ? new Date(req.decidedAt).toLocaleString([], {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                })
+                              : '—'}
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <span
+                              className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${sla.statusColor}`}
+                            >
+                              {sla.turnaroundText}
+                            </span>
+                          </td>
+                        </>
+                      ) : (
+                        <td className="py-3.5 px-3">
+                          <span
+                            title={sla.escalationText}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${sla.pillColor}`}
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>{sla.label}</span>
+                          </span>
+                        </td>
                       )}
-                    </td>
-                  </tr>
-                ))
+
+                      {/* Status */}
+                      <td className="py-3.5 px-3">
+                        <span
+                          className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded border ${
+                            STATUS_COLORS[req.status] || 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td
+                        className="py-3.5 px-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end gap-1.5 relative row-action-menu">
+                          {/* If in Pending for Me & user can decide */}
+                          {activeTab === 'PENDING_ME' && check.canDecide ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickDecision(req, 'APPROVE')}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickDecision(req, 'REJECT')}
+                                className="px-2 py-1 bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded text-xs font-bold"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => updateParams({ request: req.id })}
+                              className="px-2.5 py-1 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded text-xs font-semibold flex items-center gap-1"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </button>
+                          )}
+
+                          {/* ⋮ Menu */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === req.id ? null : req.id);
+                              }}
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {activeMenuId === req.id && (
+                              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-30 py-1 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    updateParams({ request: req.id });
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>View Details</span>
+                                </button>
+
+                                {check.canDecide && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      setDelegatingRequest(req);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                  >
+                                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Delegate Authority</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    const link = `${window.location.origin}/approvals?request=${req.id}`;
+                                    navigator.clipboard.writeText(link);
+                                    toast.success('Approval link copied.');
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Copy Link</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    navigate(`/admin/audit?q=${req.id}`);
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <History className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>View Audit Trail</span>
+                                </button>
+
+                                {/* Cancel request if mine and open */}
+                                {(req.requesterId === currentUser?.id || req.requesterName === currentUser?.name) &&
+                                  [APPROVAL_STATUS.PENDING, APPROVAL_STATUS.ESCALATED, APPROVAL_STATUS.RETURNED].includes(req.status) && (
+                                    <>
+                                      <div className="border-t border-slate-100 my-1" />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveMenuId(null);
+                                          cancelApproval(req.id, 'Withdrawn by requester');
+                                          toast.info(`Request ${req.id} cancelled.`);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                      >
+                                        <X className="w-3.5 h-3.5 text-red-500" />
+                                        <span>Withdraw Request</span>
+                                      </button>
+                                    </>
+                                  )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <div className="p-3.5 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
+          <div>
+            Showing <span className="font-semibold text-slate-900">{totalEntries > 0 ? startIndex + 1 : 0}</span> to{' '}
+            <span className="font-semibold text-slate-900">
+              {Math.min(startIndex + pageSize, totalEntries)}
+            </span>{' '}
+            of <span className="font-semibold text-slate-900">{totalEntries}</span> entries
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => updateParams({ size: e.target.value, page: 1 })}
+                className="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-800 font-medium"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </select>
+              <span>per page</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                disabled={safeCurrentPage <= 1}
+                onClick={() => updateParams({ page: safeCurrentPage - 1 })}
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pageNum = i + 1;
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= safeCurrentPage - 1 && pageNum <= safeCurrentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => updateParams({ page: pageNum })}
+                      className={`min-w-[28px] h-7 px-2 rounded text-xs font-semibold ${
+                        safeCurrentPage === pageNum
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                }
+                return null;
+              })}
+
+              <button
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => updateParams({ page: safeCurrentPage + 1 })}
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       </Card>
 
-      {/* Decision Modal */}
-      {modalOpen && selectedApproval && (
-        <Modal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={`${actionType === 'APPROVE' ? 'Approve' : 'Reject'} Request: ${selectedApproval.title}`}
-          size="md"
-        >
-          <div className="space-y-4 text-xs">
-            <div className="p-3 rounded-card bg-surface-subtle border border-border space-y-1">
-              <div>
-                <span className="text-text-muted">Requester:</span>{' '}
-                <strong>{selectedApproval.requestedBy}</strong> ({selectedApproval.requestedByRole})
-              </div>
-              <div>
-                <span className="text-text-muted">Amount Involved:</span>{' '}
-                <strong className="font-mono text-primary">
-                  {selectedApproval.amountPaise ? formatMoney(selectedApproval.amountPaise) : 'N/A'}
-                </strong>
-              </div>
-              <div>
-                <span className="text-text-muted">Justification:</span>{' '}
-                <span>{selectedApproval.reason}</span>
-              </div>
+      {/* 7. Bottom Row: Approval Performance, Avg Approval Time, Policy Compliance, Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Approval Performance */}
+        <Card className="p-4 bg-white border-slate-200 flex flex-col justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-500 block">Approval Performance</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-slate-900">
+                {bottomMetrics.performance.performanceRate}%
+              </span>
             </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {bottomMetrics.performance.withinSlaCount} of {bottomMetrics.performance.totalDecided} within SLA
+            </p>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100" title="Percentage of closed requests that were decided before their statutory business-hours SLA window elapsed.">
+            SLA window based on Mon-Sat 09:30-19:00 IST
+          </div>
+        </Card>
 
-            <div>
-              <label className="text-xs font-semibold text-text-main block mb-1">
-                {actionType === 'APPROVE'
-                  ? 'Managerial Approval Note (Optional)'
-                  : 'Mandatory Rejection Justification *'}
-              </label>
-              <textarea
-                rows={3}
-                value={actionReason}
-                onChange={(e) => setActionReason(e.target.value)}
-                placeholder={
-                  actionType === 'APPROVE'
-                    ? 'Add any conditions or remarks for audit logs...'
-                    : 'Explain why this discount, refund, or transaction is rejected...'
-                }
-                className="w-full bg-surface border border-border rounded-lg p-2.5 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
+        {/* Card 2: Avg Approval Time */}
+        <Card className="p-4 bg-white border-slate-200 flex flex-col justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-500 block">Avg Approval Time</span>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">
+              {bottomMetrics.performance.avgTurnaroundFormatted}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Median turnaround: <span className="font-semibold text-slate-700">{bottomMetrics.performance.medianTurnaroundFormatted}</span>
+            </p>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100">
+            Calculated over actual business hours
+          </div>
+        </Card>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant={actionType === 'APPROVE' ? 'primary' : 'danger'}
-                onClick={handleConfirmAction}
-                className={actionType === 'APPROVE' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}
+        {/* Card 3: Policy Compliance */}
+        <Card className="p-4 bg-white border-slate-200 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500">Policy Compliance</span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                  bottomMetrics.compliance.complianceRate === 100
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-amber-50 text-amber-700'
+                }`}
               >
-                {actionType === 'APPROVE' ? 'Confirm Approval' : 'Confirm Rejection'}
+                {bottomMetrics.compliance.complianceRate === 100 ? '100% Verified' : 'Exceptions Found'}
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">
+              {bottomMetrics.compliance.complianceRate}%
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {bottomMetrics.compliance.exceptionsCount === 0 ? (
+                <span className="text-emerald-600 font-semibold">Zero exceptions detected</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleTabChange('HISTORY');
+                    updateParams({ exceptionsOnly: true });
+                  }}
+                  className="text-red-600 font-bold hover:underline"
+                >
+                  {bottomMetrics.compliance.exceptionsCount} exception{bottomMetrics.compliance.exceptionsCount > 1 ? 's' : ''} (Click to filter)
+                </button>
+              )}
+            </p>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100">
+            Enforces dual-control, notes &amp; attachments
+          </div>
+        </Card>
+
+        {/* Card 4: Quick Actions */}
+        <Card className="p-4 bg-white border-slate-200 flex flex-col justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-500 block mb-2">Governance Actions</span>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/reports?dataset=approvals')}
+                className="text-xs h-9 font-semibold border-slate-200 hover:bg-slate-50"
+              >
+                View Reports
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => setIsManageRulesOpen(true)}
+                className="text-xs h-9 font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs"
+              >
+                Manage Rules
               </Button>
             </div>
           </div>
-        </Modal>
+          <p className="text-[10px] text-slate-400 mt-2">
+            Configure thresholds, Maker-Checker &amp; simulators
+          </p>
+        </Card>
+      </div>
+
+      {/* 8. Modals & Slide-Over Drawers */}
+      {/* Details Drawer */}
+      {openRequestId && (
+        <ApprovalDetailsDrawer
+          requestId={openRequestId}
+          isOpen={Boolean(openRequestId)}
+          onClose={() => updateParams({ request: null })}
+          onActionCompleted={() => {
+            updateParams({ request: null });
+            setSelectedUserIds([]);
+          }}
+        />
+      )}
+
+      {/* Policy Guide Drawer */}
+      {isGuideOpen && (
+        <PolicyGuideDrawer isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+      )}
+
+      {/* Manage Rules Modal */}
+      {isManageRulesOpen && (
+        <ManageRulesModal
+          isOpen={isManageRulesOpen}
+          onClose={() => setIsManageRulesOpen(false)}
+        />
+      )}
+
+      {/* Bulk Action Modal */}
+      {bulkActionType && (
+        <BulkActionModal
+          isOpen={Boolean(bulkActionType)}
+          actionType={bulkActionType}
+          selectedIds={selectedUserIds}
+          onClose={() => setBulkActionType(null)}
+          onConfirm={handleExecuteBulkAction}
+        />
+      )}
+
+      {/* Delegation Modal */}
+      {delegatingRequest && (
+        <DelegateModal
+          isOpen={Boolean(delegatingRequest)}
+          request={delegatingRequest}
+          onClose={() => setDelegatingRequest(null)}
+        />
+      )}
+
+      {/* Export Report Modal */}
+      {isExportOpen && (
+        <ExportApprovalsModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          filteredApprovals={filteredApprovals}
+        />
       )}
     </div>
   );
 }
 
 export default ApprovalsPage;
-

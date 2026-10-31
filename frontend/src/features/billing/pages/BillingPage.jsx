@@ -25,8 +25,8 @@ import { toast } from 'sonner';
 export function BillingPage() {
   const state = useAppStore();
   const invoices = state.invoices || [];
-  const taxRules = state.catalogs.taxRules || [];
-  const bikeCatalog = state.catalogs.bikes || [];
+  const taxRules = state.catalogs?.taxRules || [];
+  const bikeCatalog = state.catalogs?.bikes || [];
   const postInvoice = state.postInvoice;
   const currentUser = state.currentUser;
 

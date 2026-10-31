@@ -16,6 +16,11 @@ import {
   Users,
   Eye,
   ShieldCheck,
+  Pencil,
+  Trash2,
+  Play,
+  Pause,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -62,6 +67,60 @@ export function MarketingCampaignsPage() {
   const [campaignTitle, setCampaignTitle] = useState('New Hunter 350 Custom Colour Promotion');
   const [selectedTemplate, setSelectedTemplate] = useState('FESTIVAL_OFFER_DIWALI');
   const [csvUploaded, setCsvUploaded] = useState(false);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCamp, setEditingCamp] = useState(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    targetSegment: '',
+    status: 'COMPLETED',
+  });
+
+  const openEditModal = (camp) => {
+    setEditingCamp(camp);
+    setEditForm({
+      title: camp.title || '',
+      targetSegment: camp.targetSegment || '',
+      status: camp.status || 'COMPLETED',
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEditCampaign = () => {
+    if (!editForm.title.trim()) {
+      toast.error('Campaign title is required');
+      return;
+    }
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === editingCamp.id
+          ? {
+              ...c,
+              title: editForm.title,
+              targetSegment: editForm.targetSegment,
+              status: editForm.status,
+            }
+          : c
+      )
+    );
+    toast.success(`Campaign "${editForm.title}" updated.`);
+    setEditModalOpen(false);
+  };
+
+  const handleDeleteCampaign = (campId, title) => {
+    if (window.confirm(`Are you sure you want to delete campaign "${title}"?`)) {
+      setCampaigns((prev) => prev.filter((c) => c.id !== campId));
+      toast.info(`Campaign "${title}" deleted.`);
+    }
+  };
+
+  const handleToggleCampaignPause = (camp) => {
+    const nextStatus = camp.status === 'PAUSED' ? 'ACTIVE_DISPATCH' : 'PAUSED';
+    setCampaigns((prev) =>
+      prev.map((c) => (c.id === camp.id ? { ...c, status: nextStatus } : c))
+    );
+    toast.info(nextStatus === 'PAUSED' ? `Campaign "${camp.title}" broadcast paused.` : `Campaign "${camp.title}" broadcast resumed.`);
+  };
 
   const handleLaunchCampaign = () => {
     const newCamp = {
@@ -146,6 +205,7 @@ export function MarketingCampaignsPage() {
                 <th className="p-3.5">Revenue Booked</th>
                 <th className="p-3.5">Approver</th>
                 <th className="p-3.5">Status</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -167,6 +227,31 @@ export function MarketingCampaignsPage() {
                   <td className="p-3.5 text-text-muted text-[11px]">{camp.approvedBy}</td>
                   <td className="p-3.5">
                     <StatusBadge status={camp.status} />
+                  </td>
+                  <td className="p-3.5 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleToggleCampaignPause(camp)}
+                        className="p-1.5 rounded hover:bg-surface-subtle text-text-muted hover:text-primary"
+                        title={camp.status === 'PAUSED' ? 'Resume Campaign' : 'Pause Broadcast'}
+                      >
+                        {camp.status === 'PAUSED' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(camp)}
+                        className="p-1.5 rounded hover:bg-surface-subtle text-text-muted hover:text-primary"
+                        title="Edit Campaign"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCampaign(camp.id, camp.title)}
+                        className="p-1.5 rounded hover:bg-red-50 text-text-muted hover:text-status-red"
+                        title="Delete Campaign"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -218,30 +303,49 @@ export function MarketingCampaignsPage() {
 
           {wizardStep === 2 && (
             <div className="space-y-4">
-              <div className="p-4 rounded-card bg-surface-subtle border border-dashed border-border text-center space-y-2">
+              <div className="p-4 rounded-card bg-surface-subtle border border-dashed border-border text-center space-y-3">
                 <Upload className="w-6 h-6 text-text-muted mx-auto" />
-                <h4 className="font-semibold text-text-main">Audience List CSV / Excel Upload</h4>
+                <h4 className="font-semibold text-text-main">Audience List & DPDP Consent Filter</h4>
                 <p className="text-[11px] text-text-muted">
                   System filters opted-out numbers automatically to guarantee legal compliance.
                 </p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setCsvUploaded(true);
-                    toast.success('Audience validated: 92 Opted-in rows, 8 Opted-out rows excluded.');
-                  }}
-                >
-                  {csvUploaded ? '✓ 92 Opted-in Validated' : 'Upload Customer Audience File'}
-                </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      setCsvUploaded(true);
+                      toast.success('Live CRM audience loaded: 92 Opted-in recipients selected.');
+                    }}
+                    className="bg-blue-600 text-white font-bold"
+                  >
+                    ⚡ Select 92 Opted-in CRM Contacts
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setCsvUploaded(true);
+                      toast.success('Audience validated: 92 Opted-in rows, 8 Opted-out rows excluded.');
+                    }}
+                  >
+                    {csvUploaded ? '✓ 92 Opted-in Validated' : 'Upload Audience CSV'}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex justify-between pt-3">
                 <Button variant="secondary" onClick={() => setWizardStep(1)}>
                   Back
                 </Button>
-                <Button variant="primary" disabled={!csvUploaded} onClick={() => setWizardStep(3)}>
-                  Next: Cost & Dual-Control Sign-off
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (!csvUploaded) setCsvUploaded(true);
+                    setWizardStep(3);
+                  }}
+                >
+                  Next: Cost &amp; Dual-Control Sign-off
                 </Button>
               </div>
             </div>
@@ -274,13 +378,69 @@ export function MarketingCampaignsPage() {
                   Back
                 </Button>
                 <Button variant="primary" onClick={handleLaunchCampaign}>
-                  Authorize & Dispatch Campaign
+                  Authorize &amp; Dispatch Campaign
                 </Button>
               </div>
             </div>
           )}
         </div>
       </Modal>
+
+      {/* Edit Campaign Modal */}
+      {editModalOpen && (
+        <Modal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          title={`Edit Campaign: ${editingCamp?.title}`}
+          size="md"
+        >
+          <div className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-text-main mb-1">Campaign Title</label>
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-text-main mb-1">Target Segment</label>
+              <input
+                type="text"
+                value={editForm.targetSegment}
+                onChange={(e) => setEditForm({ ...editForm, targetSegment: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-text-main mb-1">Broadcast Status</label>
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              >
+                <option value="ACTIVE_DISPATCH">ACTIVE_DISPATCH</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="PAUSED">PAUSED</option>
+                <option value="SCHEDULED">SCHEDULED</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
+              <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSaveEditCampaign}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
+export default MarketingCampaignsPage;

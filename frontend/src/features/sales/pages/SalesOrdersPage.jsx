@@ -27,7 +27,7 @@ const ORDER_STEPS = ['BOOKED', 'ALLOCATED', 'PDI', 'INVOICED', 'RTO', 'DELIVERED
 export function SalesOrdersPage() {
   const state = useAppStore();
   const salesOrders = state.salesOrders || [];
-  const pdiTemplates = state.catalogs.pdiTemplate || [];
+  const pdiTemplates = state.catalogs?.pdiTemplate || [];
   const currentUser = state.currentUser;
 
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'PDI', 'INVOICED', 'DELIVERED'

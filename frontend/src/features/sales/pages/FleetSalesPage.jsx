@@ -119,8 +119,8 @@ export function FleetSalesPage() {
     setShowNewDealModal(false);
   };
 
-  const totalB2bPipelinePaise = fleetAccounts.reduce((sum, acc) => 
-    sum + acc.activeDeals.reduce((dSum, d) => dSum + d.totalDealValuePaise, 0), 0
+  const totalB2bPipelinePaise = (fleetAccounts || []).reduce((sum, acc) => 
+    sum + ((acc?.activeDeals || []).reduce((dSum, d) => dSum + (d?.totalDealValuePaise || 0), 0)), 0
   );
 
   return (
@@ -391,3 +391,4 @@ export function FleetSalesPage() {
 }
 
 export default FleetSalesPage;
+

@@ -1,56 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../../store';
-import { selectDashboardMetrics } from '../../../store/selectors/dashboard';
-import { DashboardKpis } from '../components/DashboardKpis';
-import { MiniBayBoard } from '../components/MiniBayBoard';
-import { SalesTrendChart } from '../components/SalesTrendChart';
-import { TopSellingBikes } from '../components/TopSellingBikes';
-import { AiInsightsStrip } from '../components/AiInsightsStrip';
-import { WhatsAppLivePhonePreview } from '../components/WhatsAppLivePhonePreview';
-import { SystemActivityPanel } from '../components/SystemActivityPanel';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { Modal } from '../../../components/ui/Modal';
-import { formatMoney, formatDate } from '../../../lib/format';
-import { useNavigate } from 'react-router-dom';
+import { hasPermission } from '../../../lib/rbac';
+import { PERMISSIONS } from '../../../config/permissions';
 import {
-  PlusCircle,
-  Wrench,
-  Calendar,
-  AlertCircle,
-  Warehouse,
-  FileText,
-  Clock,
-  ArrowUpRight,
-  ShieldCheck,
-} from 'lucide-react';
+  getDateRangePreset,
+  getGrossSalesToday,
+  getInvoicesVsTarget,
+  getServiceBayUtilisation,
+  getGstOutputToday,
+  getSalesPerformance,
+  getLeadSourceDistribution,
+  getShowroomRevenueTrajectory,
+  getBookingTrends,
+  getTopPerformers,
+  getDeterministicAiInsights,
+  getUpcomingTasks,
+} from '../../../dashboard/selectors';
+
+// Dashboard Components
+import { DashboardHeader } from '../components/DashboardHeader';
+import { HeroBanner } from '../components/HeroBanner';
+import { DashboardKpiCards } from '../components/DashboardKpiCards';
+import { SalesPerformanceChart } from '../components/SalesPerformanceChart';
+import { LeadSourceDonutChart } from '../components/LeadSourceDonutChart';
+import { TopPerformersCard } from '../components/TopPerformersCard';
+import { AiCopilotInsights } from '../components/AiCopilotInsights';
+import { UpcomingTasksCard } from '../components/UpcomingTasksCard';
+import { QuickActionsCard } from '../components/QuickActionsCard';
+import { PromoCarousel } from '../components/PromoCarousel';
+import { ShowroomRevenueChart } from '../components/ShowroomRevenueChart';
+import { BookingTrendsChart } from '../components/BookingTrendsChart';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
 import { toast } from 'sonner';
 
 export function DashboardPage() {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const state = useAppStore();
-  const metrics = selectDashboardMetrics(state);
-  const currentUser = state.currentUser;
-  const bookings = state.bookings || [];
-  const invoices = state.invoices || [];
-  const bays = state.bays || [];
-  const partsStock = state.partsStock || [];
-  const whatsappConversations = state.whatsappConversations || [];
 
+  const currentUser = state.currentUser;
+  const activeBranchId = state.activeBranchId || 'br-blr-central';
+  const invoices = state.invoices || [];
+  const leads = state.leads || [];
+  const bookings = state.bookings || [];
+  const cancellations = state.cancellations || [];
+  const bays = state.bays || [];
+  const jobCards = state.jobCards || [];
+  const purchases = state.purchases || [];
+  const hrStaff = state.hrStaff || [];
+  const hrPayrollRuns = state.hrPayrollRuns || [];
+  const tasks = state.tasks || [];
+  const settings = state.settings || {};
+
+  // Permissions
+  const hasFinancePermission = hasPermission(currentUser, PERMISSIONS.DASHBOARD_VIEW_FINANCE);
+  const hasTeamPermission = hasPermission(currentUser, PERMISSIONS.DASHBOARD_VIEW_TEAM);
+  const hasQuickActionsPermission = hasPermission(currentUser, PERMISSIONS.DASHBOARD_QUICK_ACTIONS);
+
+  // Date Range State (default: This Month)
+  const initialPresetKey = searchParams.get('dateRange') || 'this_month';
+  const [dateRange, setDateRange] = useState(() => getDateRangePreset(initialPresetKey));
+
+  // Chart local control state
+  const [salesPeriod, setSalesPeriod] = useState('this_week'); // 'this_week' | 'this_month' | 'last_month'
+  const [revenueTab, setRevenueTab] = useState('30_days'); // '7_days' | '30_days' | 'this_month'
+
+  // Bay Assignment Quick Modal
   const [bayModalOpen, setBayModalOpen] = useState(false);
   const [selectedBay, setSelectedBay] = useState('');
   const [selectedJobCardId, setSelectedJobCardId] = useState('');
 
-  // Only bays of the active branch that are free, and job cards still waiting for a bay.
   const freeBays = bays.filter(
-    (b) => b.status === 'FREE' && (!b.branchId || b.branchId === state.activeBranchId)
+    (b) => b.status === 'FREE' && (!b.branchId || b.branchId === activeBranchId)
   );
-  const unassignedJobCards = (state.jobCards || []).filter((jc) => !jc.bayNumber && jc.stage !== 'DELIVERED');
+  const unassignedJobCards = jobCards.filter((jc) => !jc.bayNumber && jc.stage !== 'DELIVERED');
 
   const openBayModal = () => {
-    // Default to real options; the old hardcoded defaults (Bay #1, jc-2627-005) could point at an
-    // occupied bay or a non-existent job card and silently overwrite the bay.
     setSelectedBay(freeBays[0]?.bayNumber ?? '');
     setSelectedJobCardId(unassignedJobCards[0]?.id ?? '');
     setBayModalOpen(true);
@@ -58,311 +84,222 @@ export function DashboardPage() {
 
   const handleQuickBayAssign = () => {
     if (!selectedBay || !selectedJobCardId) {
-      toast.error('Select a free bay and a job card first.');
+      toast.error('Select an available bay and a job card first.');
       return;
     }
     try {
       state.assignBayToJobCard(Number(selectedBay), selectedJobCardId);
       setBayModalOpen(false);
-      toast.success(`Assigned Bay #${selectedBay} to Job Card successfully!`);
+      toast.success(`Bay #${selectedBay} assigned to Job Card successfully!`);
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // Newest first; the raw list is in seed order, which starts with a 75-day-old invoice.
-  const recentPostedInvoices = invoices
-    .filter((inv) => inv.status === 'POSTED')
-    .sort((a, b) => new Date(b.date || b.postedAt) - new Date(a.date || a.postedAt))
-    .slice(0, 4);
+  // Pure Selector Memoized Derivations
+  const referenceDate = useMemo(() => new Date(), []);
 
-  const todayFormatted = formatDate(new Date(), 'EEEE, dd MMMM yyyy');
+  // 1. Pastel KPI Cards (Strictly TODAY, ignores dateRange picker)
+  const grossSalesToday = useMemo(
+    () => getGrossSalesToday(invoices, activeBranchId, referenceDate),
+    [invoices, activeBranchId, referenceDate]
+  );
+
+  const invoicesVsTarget = useMemo(
+    () => getInvoicesVsTarget(invoices, settings.dailyVehicleTarget, activeBranchId, referenceDate),
+    [invoices, settings.dailyVehicleTarget, activeBranchId, referenceDate]
+  );
+
+  const serviceBayUtilisation = useMemo(
+    () => getServiceBayUtilisation(bays, jobCards, activeBranchId, referenceDate),
+    [bays, jobCards, activeBranchId, referenceDate]
+  );
+
+  const gstOutputToday = useMemo(
+    () => getGstOutputToday(invoices, purchases, activeBranchId, referenceDate),
+    [invoices, purchases, activeBranchId, referenceDate]
+  );
+
+  // 2. Row 2 Charts (Follows selected period & dateRange)
+  const salesPerformance = useMemo(
+    () => getSalesPerformance(invoices, salesPeriod, activeBranchId, referenceDate),
+    [invoices, salesPeriod, activeBranchId, referenceDate]
+  );
+
+  const leadSourceDistribution = useMemo(
+    () => getLeadSourceDistribution(leads, activeBranchId, dateRange),
+    [leads, activeBranchId, dateRange]
+  );
+
+  const topPerformers = useMemo(
+    () => getTopPerformers(hrStaff, hrPayrollRuns, activeBranchId, dateRange),
+    [hrStaff, hrPayrollRuns, activeBranchId, dateRange]
+  );
+
+  // 3. Row 3 Supporting Intelligence & Actions
+  const aiInsights = useMemo(
+    () => getDeterministicAiInsights(state, activeBranchId),
+    [state, activeBranchId]
+  );
+
+  const upcomingTasks = useMemo(
+    () => getUpcomingTasks(tasks, currentUser, activeBranchId, referenceDate),
+    [tasks, currentUser, activeBranchId, referenceDate]
+  );
+
+  // 4. Row 4 Revenue & Booking Trends
+  const showroomRevenue = useMemo(
+    () => getShowroomRevenueTrajectory(invoices, revenueTab, activeBranchId, referenceDate),
+    [invoices, revenueTab, activeBranchId, referenceDate]
+  );
+
+  const bookingTrends = useMemo(
+    () => getBookingTrends(bookings, cancellations, activeBranchId, dateRange),
+    [bookings, cancellations, activeBranchId, dateRange]
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Header & Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface p-5 rounded-card border border-border shadow-soft">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>{todayFormatted}</span>
+    <div className="space-y-5 pb-8 max-w-7xl mx-auto">
+      {/* 1. Breadcrumb & Date Range Header */}
+      <DashboardHeader dateRange={dateRange} onDateRangeChange={setDateRange} />
+
+      {/* 2. Hero Operational Banner */}
+      <HeroBanner onQuickBayAssign={openBayModal} />
+
+      {/* 3. Four Pastel KPI Cards (Always Today's IST figures) */}
+      <DashboardKpiCards
+        grossSales={grossSalesToday}
+        invoicesVsTarget={invoicesVsTarget}
+        bayUtilisation={serviceBayUtilisation}
+        gstOutput={gstOutputToday}
+        hasFinancePermission={hasFinancePermission}
+      />
+
+      {/* 4. Row 2: Sales Performance, Lead Source Donut, Top Performers */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Sales Performance (Visible with Finance permission) */}
+        {hasFinancePermission ? (
+          <div className="lg:col-span-7 flex flex-col">
+            <SalesPerformanceChart
+              performanceData={salesPerformance}
+              selectedPeriod={salesPeriod}
+              onPeriodChange={setSalesPeriod}
+            />
           </div>
-          <h1 className="text-xl font-bold text-text-main mt-1">
-            Welcome back, {currentUser?.name || 'Administrator'}!
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Operational Overview for <strong>{(state.branches || []).find((b) => b.id === state.activeBranchId)?.name || 'Bangalore Central Flagship'}</strong>
-          </p>
+        ) : null}
+
+        {/* Lead Source Donut Chart */}
+        <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col' : 'lg:col-span-7 flex flex-col'}>
+          <LeadSourceDonutChart leadSourceData={leadSourceDistribution} />
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Wrench}
-            onClick={openBayModal}
-          >
-            Bay Allocation
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={PlusCircle}
-            onClick={() => navigate('/quotations')}
-          >
-            New Vehicle Sale
-          </Button>
+        {/* Top Performers (Visible with Team permission) */}
+        {hasTeamPermission && (
+          <div className={hasFinancePermission ? 'lg:col-span-12 xl:col-span-12 mt-1' : 'lg:col-span-5'}>
+            <TopPerformersCard performersData={topPerformers} hasTeamPermission={hasTeamPermission} />
+          </div>
+        )}
+      </div>
+
+      {/* 5. Row 3: AI Copilot Insights, Upcoming Tasks, Quick Actions, Promo Carousel */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <AiCopilotInsights insights={aiInsights} />
+        <UpcomingTasksCard tasks={upcomingTasks} />
+        <QuickActionsCard canPerformQuickActions={hasQuickActionsPermission} />
+        <PromoCarousel />
+      </div>
+
+      {/* 6. Row 4: Showroom Revenue Trajectory & Booking Trends */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Showroom Revenue Area Chart (Finance Protected) */}
+        {hasFinancePermission ? (
+          <div className="lg:col-span-7 flex flex-col">
+            <ShowroomRevenueChart
+              revenueData={showroomRevenue}
+              filterTab={revenueTab}
+              onTabChange={setRevenueTab}
+            />
+          </div>
+        ) : null}
+
+        {/* Booking vs Cancellation Trends */}
+        <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col' : 'lg:col-span-12 flex flex-col'}>
+          <BookingTrendsChart bookingTrendsData={bookingTrends} />
         </div>
       </div>
 
-      {/* 4 Core Top KPI Cards (All computed) */}
-      <DashboardKpis metrics={metrics} />
+      {/* Quick Bay Assignment Modal */}
+      {bayModalOpen && (
+        <Modal
+          title="Quick Service Bay Allocation"
+          open={bayModalOpen}
+          onClose={() => setBayModalOpen(false)}
+        >
+          <div className="space-y-4 pt-1">
+            <p className="text-xs text-text-muted">
+              Assign an available workshop lift to a check-in job card.
+            </p>
 
-      {/* AI Copilot Insights Strip (3 Cards) */}
-      <AiInsightsStrip />
-
-      {/* Primary 2-Column Operational Grid: Trajectory Chart & 12-Bay Board */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7">
-          <SalesTrendChart trendData={metrics.last7DaysTrend} hourlyData={metrics.hourlyTrend} />
-        </div>
-        <div className="lg:col-span-5">
-          <MiniBayBoard bays={bays} />
-        </div>
-      </div>
-
-      {/* Secondary Grid: Top Selling Bikes, Stock Overview & WhatsApp Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Top Selling Bikes */}
-        <div className="lg:col-span-4">
-          <TopSellingBikes />
-        </div>
-
-        {/* Stock Overview with Reorder Alerts */}
-        <div className="lg:col-span-4">
-          <Card className="h-full flex flex-col">
-            <CardHeader>
-              <div>
-                <CardTitle>Inventory Health & Reorder</CardTitle>
-                <p className="text-xs text-text-muted mt-0.5">Chassis stock & OEM spare parts alerts</p>
-              </div>
-              <button
-                onClick={() => navigate('/stock/parts')}
-                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+            <div>
+              <label className="block text-xs font-semibold text-text-main mb-1">
+                Select Available Service Bay *
+              </label>
+              <select
+                value={selectedBay}
+                onChange={(e) => setSelectedBay(e.target.value)}
+                className="w-full text-xs bg-surface-subtle border border-border rounded-lg p-2.5 text-text-main font-medium focus:ring-1 focus:ring-primary focus:outline-none"
               >
-                <span>Stock</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </button>
-            </CardHeader>
-            <CardContent className="divide-y divide-border/60 p-0">
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded bg-blue-50 text-status-blue">
-                    <Warehouse className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-text-main">Ready for Sale Vehicles</div>
-                    <div className="text-[10px] text-text-muted">Unallocated floor and yard stock</div>
-                  </div>
-                </div>
-                <div className="text-sm font-bold text-text-main tabular-nums">
-                  {metrics.stockSummary.freeVehiclesCount} Units
-                </div>
-              </div>
-
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded bg-amber-50 text-status-amber">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-text-main">Allocated to Bookings</div>
-                    <div className="text-[10px] text-text-muted">Awaiting PDI or RTO registration</div>
-                  </div>
-                </div>
-                <div className="text-sm font-bold text-text-main tabular-nums">
-                  {metrics.stockSummary.allocatedVehiclesCount} Units
-                </div>
-              </div>
-
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded bg-red-50 text-status-red">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-text-main">Low Stock Parts Alert</div>
-                    <div className="text-[10px] text-text-muted">Quantity below reorder threshold</div>
-                  </div>
-                </div>
-                <div className="text-sm font-bold text-status-red tabular-nums">
-                  {metrics.stockSummary.lowStockPartsCount} Parts
-                </div>
-              </div>
-
-              {/* Low stock part chips */}
-              <div className="p-4 bg-surface-subtle/50 space-y-2">
-                <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
-                  Critical Spares Requiring PO:
-                </div>
-                {partsStock
-                  .filter((p) => (p.stockQty || 0) < (p.reorderLevel || 0))
-                  .slice(0, 2)
-                  .map((p) => (
-                    <div
-                      key={p.id}
-                      onClick={() => navigate('/stock/parts')}
-                      className="flex items-center justify-between text-xs p-2 rounded bg-surface border border-border cursor-pointer hover:border-primary/40"
-                    >
-                      <span className="font-medium text-text-main truncate max-w-[180px]">{p.name}</span>
-                      <span className="text-[10px] font-bold text-status-red bg-red-100 px-2 py-0.5 rounded-full">
-                        {p.stockQty} / Min {p.reorderLevel}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Collapsible WhatsApp Live Phone Preview */}
-        <div className="lg:col-span-4">
-          <WhatsAppLivePhonePreview conversations={whatsappConversations} />
-        </div>
-      </div>
-
-      {/* Tertiary Row: Recent Bookings & Recent Invoices */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Bookings */}
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Recent Customer Bookings</CardTitle>
-              <p className="text-xs text-text-muted mt-0.5">Tokens collected & pending deliveries</p>
+                {freeBays.length === 0 ? (
+                  <option value="">No free bays available in this branch</option>
+                ) : (
+                  freeBays.map((bay) => (
+                    <option key={bay.id || bay.bayNumber} value={bay.bayNumber}>
+                      Bay #{bay.bayNumber} ({bay.type || 'Hydraulic Lift'})
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
-            <button
-              onClick={() => navigate('/bookings')}
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              <span>View All</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </CardHeader>
-          <CardContent className="divide-y divide-border/60 p-0">
-            {bookings.slice(0, 4).map((b) => (
-              <div key={b.id} className="p-4 flex items-center justify-between hover:bg-surface-subtle transition-colors">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-text-main">{b.customerName}</span>
-                    <span className="text-[10px] font-mono text-text-muted">{b.bookingNumber}</span>
-                  </div>
-                  <div className="text-xs text-text-muted mt-0.5">{b.modelName}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold text-text-main tabular-nums">
-                    Token: {formatMoney(b.tokenAmountPaise)}
-                  </div>
-                  <StatusBadge status={b.status} className="mt-1" />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
-        {/* Recent Invoices */}
-        <Card>
-          <CardHeader>
             <div>
-              <CardTitle>Recent Posted Invoices</CardTitle>
-              <p className="text-xs text-text-muted mt-0.5">Statutory tax invoices and settlements</p>
+              <label className="block text-xs font-semibold text-text-main mb-1">
+                Select Check-in Job Card *
+              </label>
+              <select
+                value={selectedJobCardId}
+                onChange={(e) => setSelectedJobCardId(e.target.value)}
+                className="w-full text-xs bg-surface-subtle border border-border rounded-lg p-2.5 text-text-main font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+              >
+                {unassignedJobCards.length === 0 ? (
+                  <option value="">No unassigned job cards waiting</option>
+                ) : (
+                  unassignedJobCards.map((jc) => (
+                    <option key={jc.id} value={jc.id}>
+                      {jc.jobCardNumber} — {jc.customerName} ({jc.regNumber || 'New'})
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
-            <button
-              onClick={() => navigate('/billing')}
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              <span>Billing Terminal</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </CardHeader>
-          <CardContent className="divide-y divide-border/60 p-0">
-            {recentPostedInvoices.map((inv) => (
-              <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-surface-subtle transition-colors">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-text-main">{inv.customerName}</span>
-                    <span className="text-[10px] font-mono text-primary font-semibold">{inv.invoiceNumber}</span>
-                  </div>
-                  <div className="text-[11px] text-text-muted mt-0.5">{formatDate(inv.date)} • {(inv.type || 'INVOICE').replace(/_/g, ' ')}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold text-text-main tabular-nums">
-                    {formatMoney(inv.grandTotalPaise)}
-                  </div>
-                  <StatusBadge status={inv.paymentStatus} className="mt-1" />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Backend health, API request log & audit trail */}
-      <SystemActivityPanel localMetrics={metrics} />
-
-      {/* Quick Bay Allocation Modal */}
-      <Modal
-        isOpen={bayModalOpen}
-        onClose={() => setBayModalOpen(false)}
-        title="Immediate Bay Allocation"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-text-main mb-1">Select Workshop Bay</label>
-            <select
-              value={selectedBay}
-              onChange={(e) => setSelectedBay(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-input border border-border bg-surface-subtle text-text-main"
-            >
-              {freeBays.length === 0 && <option value="">No free bays</option>}
-              {freeBays.map((b) => (
-                  <option key={b.bayNumber} value={b.bayNumber}>
-                    Bay #{b.bayNumber} ({b.type}) - Currently Free
-                  </option>
-                ))}
-            </select>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button variant="secondary" size="sm" onClick={() => setBayModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleQuickBayAssign}
+                disabled={freeBays.length === 0 || unassignedJobCards.length === 0}
+              >
+                Assign Bay Lift
+              </Button>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-text-main mb-1">Select Checked-In Job Card</label>
-            <select
-              value={selectedJobCardId}
-              onChange={(e) => setSelectedJobCardId(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-input border border-border bg-surface-subtle text-text-main"
-            >
-              {unassignedJobCards.length === 0 && <option value="">No job cards waiting for a bay</option>}
-              {unassignedJobCards.map((jc) => (
-                  <option key={jc.id} value={jc.id}>
-                    {jc.jobCardNumber} - {jc.registrationNumber} ({jc.customerName})
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setBayModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleQuickBayAssign}
-              disabled={!selectedBay || !selectedJobCardId}
-            >
-              Confirm Allocation
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }
+
+export default DashboardPage;

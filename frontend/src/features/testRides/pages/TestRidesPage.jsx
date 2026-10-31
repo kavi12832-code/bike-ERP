@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 
 export function TestRidesPage() {
   const navigate = useNavigate();
-  const bikeCatalog = useAppStore((state) => state.catalogs.bikes || []);
+  const bikeCatalog = useAppStore((state) => state.catalogs?.bikes || []);
   const currentUser = useAppStore((state) => state.currentUser);
 
   const [testRides, setTestRides] = useState([

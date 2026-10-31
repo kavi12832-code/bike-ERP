@@ -1,5 +1,5 @@
 export const DEALERSHIP_INFO = {
-  name: 'AKASH Bajaj',
+  name: 'AKASH BAJAJ',
   tagline: 'Authorized Two-Wheeler Sales, Service & Spares',
   headOffice: '142, Hosur Main Road, Koramangala, Bangalore - 560095',
   phone: '+91 80 4965 2000',
