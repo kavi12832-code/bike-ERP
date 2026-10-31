@@ -7,6 +7,8 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Drawer } from '../../../components/ui/Drawer';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatPhone, formatDate } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import {
   ClipboardList,
   PlusCircle,
@@ -82,17 +84,47 @@ export function JobCardsKanbanPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main">Workshop Job Cards & Repair Execution</h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Realtime kanban, customer digital OTP estimate authorizations and dual-control QC sign-offs
-          </p>
-        </div>
-        <Button variant="primary" size="sm" icon={PlusCircle} onClick={() => navigate('/service/jobs/new')}>
-          Create Job Card
-        </Button>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Job Cards Kanban', path: '/service/jobs' },
+        ]}
+        title="Workshop Job Cards & Repair Execution"
+        subtitle="Realtime kanban, customer digital OTP estimate authorizations and dual-control QC sign-offs."
+        actions={
+          <Button variant="primary" size="sm" icon={PlusCircle} onClick={() => navigate('/service/jobs/new')} className="bg-primary hover:bg-primary-hover text-white">
+            Create Job Card
+          </Button>
+        }
+      />
+
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Total Active Job Cards"
+          value={`${jobCards.length} Cards`}
+          helperText="All workflow stages"
+          icon={<ClipboardList className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Work In Progress (WIP)"
+          value={`${jobCards.filter((jc) => jc.stage === 'IN_PROGRESS').length} Active`}
+          helperText="Vehicles currently in bays"
+          icon={<Wrench className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Awaiting Estimate / QC"
+          value={`${jobCards.filter((jc) => jc.stage === 'ESTIMATE_SENT' || jc.stage === 'QUALITY_CHECK').length} Pending`}
+          helperText="Customer OTP or QC gate"
+          icon={<Clock className="w-5 h-5 text-amber-500" />}
+        />
+        <KpiCard
+          label="Ready for Delivery"
+          value={`${jobCards.filter((jc) => jc.stage === 'READY').length} Cleared`}
+          helperText="Washing & QC approved"
+          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
+        />
       </div>
 
       {/* Saved drafts from the Create Job Card form */}

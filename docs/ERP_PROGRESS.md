@@ -56,11 +56,11 @@
 ## 3. Workshop & Service (8 Modules)
 | Module Name | Route | Group | Status | Notes | Date |
 |---|---|---|---|---|---|
-| **Service Appointments** | `/service` | Workshop | `not started` | Capacity booking, Sunday validation, walk-in scheduling | 2026-11-01 |
-| **Create Job Card** | `/service/jobs/new` | Workshop | `not started` | Auto-fill from VIN, complaints, inspection photos, estimate | 2026-11-01 |
-| **Job Cards Kanban** | `/service/jobs` | Workshop | `not started` | 8-stage drag & drop, SLA timers, technician assignment | 2026-11-01 |
-| **Live Bay Board** | `/service/bays` | Workshop | `not started` | Unified 12 bays, occupancy, ETA, live utilisation % | 2026-11-01 |
-| **Digital Inspection (DVI)** | `/service/dvi` | Workshop | `not started` | Service checklists, photos, customer approval portal | 2026-11-01 |
+| **Service Appointments** | `/service` | Workshop | `done` | PageHeader, plain KPIs, capacity slots pacing, Sunday blocker, quick booking modal | 2026-11-01 |
+| **Create Job Card** | `/service/jobs/new` | Workshop | `done` | PageHeader, customer/VIN intake, 12-point inspection, dynamic estimate, draft save | 2026-11-01 |
+| **Job Cards Kanban** | `/service/jobs` | Workshop | `done` | PageHeader, plain KPIs, 6-stage progression, customer OTP simulator, dual QC gate | 2026-11-01 |
+| **Live Bay Board** | `/service/bays` | Workshop | `done` | PageHeader, plain KPIs, unified 12 bays, live SLA timers, mutual exclusivity invariant | 2026-11-01 |
+| **Digital Inspection (DVI)** | `/service/dvi` | Workshop | `done` | PageHeader, plain KPIs, 360 photo dent pin-map, Red/Amber/Green items, WhatsApp approval | 2026-11-01 |
 | **Pickup & Drop** | `/service/pickup` | Workshop | `not started` | Driver assignment, time windows, live tracking, OTP handover | 2026-11-01 |
 | **Recalls & Bulletins** | `/service/recalls` | Workshop | `not started` | OEM bulletins, VIN range filter, customer notifications | 2026-11-01 |
 | **Technician My Jobs** | `/service/my-jobs` | Workshop | `not started` | Technician-only view, timer, checklists, parts request | 2026-11-01 |

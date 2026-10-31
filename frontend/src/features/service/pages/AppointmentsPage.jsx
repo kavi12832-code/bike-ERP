@@ -7,6 +7,8 @@ import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { getAvailableSlotsForDate, isDateBlockedForService } from '../../../lib/slots';
 import { formatDate } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { relativeDateString } from '../../../lib/dates';
 import {
   CalendarClock,
@@ -135,38 +137,63 @@ export function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <CalendarClock className="w-6 h-6 text-primary" />
-            Workshop Service Appointments &amp; Capacity
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Strict bay slot capacity quotas (12 bays), operating hours &amp; Sunday holiday rules
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Service Appointments', path: '/service' },
+        ]}
+        title="Workshop Service Appointments & Scheduling"
+        subtitle="Manage customer service booking slots, capacity pacing, and one-click job card conversion."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Plus}
+              onClick={() => setQuickBookModalOpen(true)}
+            >
+              Quick Slot Booking
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={PlusCircle}
+              onClick={startBooking}
+              className="bg-primary hover:bg-primary-hover text-white"
+            >
+              Full Job Card Intake
+            </Button>
+          </div>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Plus}
-            onClick={() => setQuickBookModalOpen(true)}
-          >
-            Quick Slot Booking
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            icon={PlusCircle}
-            onClick={startBooking}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Full Job Card Intake
-          </Button>
-        </div>
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Total Bookings on Record"
+          value={`${appointments.length} Appointments`}
+          helperText="All historical & scheduled"
+          icon={<CalendarClock className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Scheduled for Date"
+          value={`${appointments.filter((a) => a.date === selectedDate).length} Booked`}
+          helperText={`Date: ${formatDate(selectedDate)}`}
+          icon={<Clock className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Daily Booking Capacity"
+          value={isSundayBlocked ? 'Closed (Sun)' : '48 Slots / Day'}
+          helperText={isSundayBlocked ? 'Emergency towing only' : 'Workshop service ceiling'}
+          icon={<Calendar className="w-5 h-5 text-amber-500" />}
+        />
+        <KpiCard
+          label="Available Slots Today"
+          value={isSundayBlocked ? '0 Slots' : `${slots.reduce((sum, s) => sum + s.available, 0)} Open`}
+          helperText="Unoccupied technician bays"
+          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
+        />
       </div>
 
       {/* Date Selector Banner */}

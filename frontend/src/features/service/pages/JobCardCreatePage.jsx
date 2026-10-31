@@ -21,6 +21,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useAppStore } from '../../../store';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { ApiError } from '../../../services/api/client';
 import { getAvailableSlotsForDate, isDateBlockedForService, isSlotInPast } from '../../../lib/slots';
 import { relativeDateString } from '../../../lib/dates';
@@ -423,52 +424,42 @@ export default function JobCardCreatePage() {
 
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mt-0.5 p-1 rounded hover:bg-surface-muted text-text-main"
-            aria-label="Back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-text-main">
-              {draft ? 'Continue Vehicle Service Job Card' : 'Create Vehicle Service Job Card'}
-            </h1>
-            <p className="text-xs text-text-muted mt-0.5">
-              Record customer details, vehicle information and service requirements to create a new job card.
-              {appointment && (
-                <span className="ml-1 text-primary font-semibold">
-                  From appointment {appointment.timeSlot} ({appointment.customerName})
-                </span>
-              )}
-            </p>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/jobs' },
+          { label: 'Job Cards Kanban', path: '/service/jobs' },
+          { label: draft ? 'Edit Job Card' : 'Create Job Card', path: '/service/jobs/new' },
+        ]}
+        title={draft ? 'Continue Vehicle Service Job Card' : 'Create Vehicle Service Job Card'}
+        subtitle={
+          appointment
+            ? `Intake initialized from appointment ${appointment.timeSlot} for ${appointment.customerName}`
+            : 'Record customer details, vehicle information and service requirements to create a new job card.'
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => submit(true)}
+              disabled={Boolean(saving)}
+              className="h-9 px-4 rounded-md bg-surface text-text-main border border-border hover:bg-surface-subtle text-xs font-semibold flex items-center gap-2 disabled:opacity-60 shadow-xs transition"
+            >
+              <Save className="w-4 h-4" />
+              {saving === 'draft' ? 'Saving…' : 'Save Draft'}
+            </button>
+            <button
+              type="button"
+              onClick={() => submit(false)}
+              disabled={Boolean(saving)}
+              className="h-9 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-2 disabled:opacity-60 shadow-sm transition"
+            >
+              <Plus className="w-4 h-4" />
+              {saving === 'create' ? 'Creating…' : bookingMode ? 'Book & Create Job Card' : 'Create Job Card'}
+            </button>
           </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => submit(true)}
-            disabled={Boolean(saving)}
-            className="h-9 px-4 rounded-md bg-primary hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-2 disabled:opacity-60"
-          >
-            <Save className="w-4 h-4" />
-            {saving === 'draft' ? 'Saving…' : 'Save Draft'}
-          </button>
-          <button
-            type="button"
-            onClick={() => submit(false)}
-            disabled={Boolean(saving)}
-            className="h-9 px-4 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-semibold flex items-center gap-2 disabled:opacity-60"
-          >
-            <Plus className="w-4 h-4" />
-            {saving === 'create' ? 'Creating…' : bookingMode ? 'Book & Create Job Card' : 'Create Job Card'}
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {bookingMode && (
         <Section number={0} title="Service Booking" icon={CalendarClock}>
