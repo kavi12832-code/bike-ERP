@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../../../store';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
+import { FilterBar } from '../../../components/ui/FilterBar';
+import { StatusChip } from '../../../components/ui/StatusChip';
 import {
   Building2,
   CheckCircle,
@@ -10,6 +14,11 @@ import {
   Pencil,
   Trash2,
   Sparkles,
+  MapPin,
+  Wrench,
+  Shield,
+  Layers,
+  ArrowRightLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +29,9 @@ export function BranchesPage() {
   const addBranch = useAppStore((state) => state.addBranch);
   const updateBranch = useAppStore((state) => state.updateBranch);
   const deleteBranch = useAppStore((state) => state.deleteBranch);
+
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newBranch, setNewBranch] = useState({
@@ -42,9 +54,37 @@ export function BranchesPage() {
     isHeadquarters: false,
   });
 
+  // Plain KPI metrics
+  const kpis = useMemo(() => {
+    const totalHubs = branches.length;
+    const totalBays = branches.reduce((sum, b) => sum + (Number(b.bays) || 0), 0);
+    const hq = branches.find((b) => b.isHeadquarters)?.name || 'Bangalore Central';
+    const active = branches.find((b) => b.id === activeBranchId)?.name || 'Bangalore Central';
+    return {
+      totalHubs,
+      totalBays,
+      hq,
+      active,
+    };
+  }, [branches, activeBranchId]);
+
+  // Filtered branches
+  const filteredBranches = useMemo(() => {
+    return branches.filter((b) => {
+      const q = search.toLowerCase();
+      const matchSearch =
+        !q ||
+        b.name?.toLowerCase().includes(q) ||
+        b.address?.toLowerCase().includes(q) ||
+        b.gstin?.toLowerCase().includes(q);
+      const matchType = typeFilter === 'ALL' || b.type?.includes(typeFilter);
+      return matchSearch && matchType;
+    });
+  }, [branches, search, typeFilter]);
+
   const handleAutoFillDemoBranch = () => {
     setNewBranch({
-      name: 'AKASH Bajaj - Whitefield Hub',
+      name: 'AKASH Bajaj - Whitefield Experience Hub',
       address: 'Plot 44, ITPL Main Road, Whitefield, Bangalore - 560066',
       gstin: '29AAACA1234F1Z8',
       bays: 10,
@@ -55,7 +95,7 @@ export function BranchesPage() {
   };
 
   const handleCreateBranch = () => {
-    const finalName = newBranch.name.trim() || 'AKASH Bajaj - Whitefield Hub';
+    const finalName = newBranch.name.trim() || 'AKASH Bajaj - Whitefield Experience Hub';
     const finalAddress = newBranch.address.trim() || 'Plot 44, ITPL Main Road, Whitefield, Bangalore - 560066';
     if (addBranch) {
       addBranch({
@@ -124,31 +164,79 @@ export function BranchesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" />
-            Multi-Branch Dealership Network &amp; Hubs
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Unified inventory visibility, inter-branch logistics and performance comparison across Bangalore
-          </p>
-        </div>
+      {/* 1. Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Administration', path: '/admin' },
+          { label: 'Branch Network', path: '/branches' },
+        ]}
+        title="Multi-Branch Dealership Network & Hubs"
+        subtitle="Unified inventory visibility, inter-branch logistics, service bay capacity, and GST compliance across Bangalore and Karnataka."
+        actions={[
+          {
+            label: 'Add Dealership Hub',
+            icon: Plus,
+            variant: 'primary',
+            onClick: () => setAddModalOpen(true),
+          },
+        ]}
+      />
 
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => setAddModalOpen(true)}
-          className="bg-primary text-white"
-        >
-          Add Dealership Hub
-        </Button>
+      {/* 2. Plain KPI Cards (Strictly no charts/arrows) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          icon={Building2}
+          label="Dealership Hubs"
+          value={kpis.totalHubs}
+          subtitle="Active network locations"
+        />
+        <KpiCard
+          icon={Wrench}
+          label="Total Workshop Bays"
+          value={kpis.totalBays}
+          subtitle="Combined bay throughput"
+        />
+        <KpiCard
+          icon={Shield}
+          label="Headquarters Hub"
+          value={kpis.hq}
+          subtitle="Central administrative hub"
+        />
+        <KpiCard
+          icon={MapPin}
+          label="Current Session Hub"
+          value={kpis.active}
+          subtitle="Active operating context"
+        />
       </div>
 
-      {/* Branches Grid */}
+      {/* 3. Filter Bar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search branch name, area address, or GSTIN..."
+        filters={[
+          {
+            label: 'Facility Type',
+            value: typeFilter,
+            onChange: setTypeFilter,
+            options: [
+              { label: 'All Facility Types', value: 'ALL' },
+              { label: '3S Facility (Sales & Service)', value: '3S' },
+              { label: 'Experience Hub', value: 'Experience' },
+              { label: 'Workshop & Spare Hub', value: 'Workshop' },
+            ],
+          },
+        ]}
+        onClear={() => {
+          setSearch('');
+          setTypeFilter('ALL');
+        }}
+      />
+
+      {/* 4. Branches Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {branches.map((b) => {
+        {filteredBranches.map((b) => {
           const isActive = b.id === activeBranchId;
           return (
             <Card
@@ -165,7 +253,7 @@ export function BranchesPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {b.isHeadquarters && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-status-blue">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-status-blue">
                         HQ
                       </span>
                     )}
@@ -179,7 +267,7 @@ export function BranchesPage() {
                     {!b.isHeadquarters && (
                       <button
                         onClick={() => handleDeleteBranch(b)}
-                        className="p-1 rounded text-text-muted hover:text-status-red hover:bg-red-50"
+                        className="p-1 rounded text-text-muted hover:text-status-red hover:bg-red-50 dark:hover:bg-red-950/40"
                         title="Delete Branch"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -230,7 +318,7 @@ export function BranchesPage() {
         })}
       </div>
 
-      {/* Add Branch Modal */}
+      {/* 5. Add Branch Modal */}
       <Modal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
@@ -238,8 +326,8 @@ export function BranchesPage() {
         size="md"
       >
         <div className="space-y-4 text-xs">
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 border border-blue-200">
-            <span className="text-[11px] text-blue-900 font-medium">
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
+            <span className="text-[11px] text-blue-900 dark:text-blue-200 font-medium">
               Demo sample branch details:
             </span>
             <button
@@ -248,72 +336,82 @@ export function BranchesPage() {
               className="px-2.5 py-1 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow-xs flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
-              Auto-Fill Demo Branch
+              <span>Autofill Sample Hub</span>
             </button>
           </div>
 
           <div>
-            <label className="font-semibold text-text-main block mb-1">Branch Name</label>
+            <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+              Branch / Hub Display Name *
+            </label>
             <input
               type="text"
+              placeholder="e.g. AKASH Bajaj - Whitefield Experience Hub"
               value={newBranch.name}
               onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
-              placeholder="e.g. AKASH Bajaj - Whitefield Hub"
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="font-semibold text-text-main block mb-1">Complete Address</label>
+            <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+              Complete Postal Address *
+            </label>
             <textarea
               rows={2}
+              placeholder="Plot No., Main Road, Suburb, Bangalore - Pincode"
               value={newBranch.address}
               onChange={(e) => setNewBranch({ ...newBranch, address: e.target.value })}
-              placeholder="e.g. Plot 44, ITPL Main Road, Whitefield, Bangalore - 560066"
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold text-text-main block mb-1">GSTIN</label>
+              <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+                State GSTIN Number *
+              </label>
               <input
                 type="text"
-                value={newBranch.gstin}
-                onChange={(e) => setNewBranch({ ...newBranch, gstin: e.target.value.toUpperCase() })}
                 placeholder="29AAACA1234F1Z8"
-                className="w-full p-2.5 font-mono uppercase rounded-input border border-border bg-surface text-text-main"
+                value={newBranch.gstin}
+                onChange={(e) => setNewBranch({ ...newBranch, gstin: e.target.value })}
+                className="w-full px-3 py-1.5 text-xs font-mono rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="font-semibold text-text-main block mb-1">Workshop Bays</label>
+              <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+                Workshop Bay Capacity *
+              </label>
               <input
                 type="number"
                 min={1}
-                max={30}
+                max={40}
                 value={newBranch.bays}
-                onChange={(e) => setNewBranch({ ...newBranch, bays: parseInt(e.target.value) || 0 })}
-                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-mono"
+                onChange={(e) => setNewBranch({ ...newBranch, bays: e.target.value })}
+                className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
           <div>
-            <label className="font-semibold text-text-main block mb-1">Facility Type</label>
+            <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+              Facility Classification
+            </label>
             <select
               value={newBranch.type}
               onChange={(e) => setNewBranch({ ...newBranch, type: e.target.value })}
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
             >
               <option value="Sales & Service 3S Facility">Sales &amp; Service 3S Facility</option>
-              <option value="Authorized Workshop (Service Only)">Authorized Workshop (Service Only)</option>
-              <option value="Showroom & Boutique (Sales Only)">Showroom &amp; Boutique (Sales Only)</option>
-              <option value="Spares Distribution Hub">Spares Distribution Hub</option>
+              <option value="Experience Hub (Showroom Only)">Experience Hub (Showroom Only)</option>
+              <option value="Workshop & Spares Hub">Workshop &amp; Spares Hub</option>
+              <option value="Stock Yard & PDI Hub">Stock Yard &amp; PDI Hub</option>
             </select>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setAddModalOpen(false)}>
+          <div className="pt-3 border-t border-border flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setAddModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" onClick={handleCreateBranch} className="bg-primary text-white">
@@ -323,77 +421,71 @@ export function BranchesPage() {
         </div>
       </Modal>
 
-      {/* Edit Branch Modal */}
+      {/* 6. Edit Branch Modal */}
       <Modal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title="Edit Dealership Branch Details"
+        title={`Edit Branch: ${editingBranch?.name}`}
         size="md"
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="font-semibold text-text-main block mb-1">Branch Name</label>
+            <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+              Branch Name
+            </label>
             <input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="font-semibold text-text-main block mb-1">Complete Address</label>
+            <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+              Address
+            </label>
             <textarea
               rows={2}
               value={editForm.address}
               onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold text-text-main block mb-1">GSTIN</label>
+              <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+                GSTIN
+              </label>
               <input
                 type="text"
                 value={editForm.gstin}
-                onChange={(e) => setEditForm({ ...editForm, gstin: e.target.value.toUpperCase() })}
-                className="w-full p-2.5 font-mono uppercase rounded-input border border-border bg-surface text-text-main"
+                onChange={(e) => setEditForm({ ...editForm, gstin: e.target.value })}
+                className="w-full px-3 py-1.5 text-xs font-mono rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="font-semibold text-text-main block mb-1">Workshop Bays</label>
+              <label className="block text-[11px] font-semibold text-text-muted uppercase mb-1">
+                Workshop Bays
+              </label>
               <input
                 type="number"
                 min={1}
-                max={30}
+                max={40}
                 value={editForm.bays}
-                onChange={(e) => setEditForm({ ...editForm, bays: parseInt(e.target.value) || 0 })}
-                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-mono"
+                onChange={(e) => setEditForm({ ...editForm, bays: e.target.value })}
+                className="w-full px-3 py-1.5 text-xs rounded-input border border-border bg-surface text-text-main focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          <div>
-            <label className="font-semibold text-text-main block mb-1">Facility Type</label>
-            <select
-              value={editForm.type}
-              onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
-            >
-              <option value="Sales & Service 3S Facility">Sales &amp; Service 3S Facility</option>
-              <option value="Authorized Workshop (Service Only)">Authorized Workshop (Service Only)</option>
-              <option value="Showroom & Boutique (Sales Only)">Showroom &amp; Boutique (Sales Only)</option>
-              <option value="Spares Distribution Hub">Spares Distribution Hub</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
+          <div className="pt-3 border-t border-border flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setEditModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" onClick={handleSaveEditBranch} className="bg-primary text-white">
-              Save Branch Details
+              Save Changes
             </Button>
           </div>
         </div>
@@ -401,4 +493,5 @@ export function BranchesPage() {
     </div>
   );
 }
+
 export default BranchesPage;

@@ -3,6 +3,8 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { KpiCard } from '../../components/ui/KpiCard';
 import { ROLES } from '../../config/roles';
 import { PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } from '../../config/permissions';
 import { useAppStore } from '../../store';
@@ -481,42 +483,60 @@ export default function AdminSecurityPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-blue-600" />
-            Security, RBAC &amp; Dealership Settings
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Configure fine-grained roles &amp; permissions, dual-control approval limits, integrations, and dealership legal master.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Administration', path: '/admin' },
+          { label: 'System Settings', path: '/admin' },
+        ]}
+        title="Security, RBAC & Dealership System Settings"
+        subtitle="Manage dealership legal profile, role-based authorization matrix, dual-control approval ceilings, and third-party API webhook bridges."
+        actions={[
+          {
+            label: 'Reset Defaults',
+            icon: RotateCcw,
+            variant: 'outline',
+            onClick: () => {
               setIntegrations(DEFAULT_INTEGRATIONS);
               setApprovalRules(DEFAULT_APPROVAL_RULES);
               toast.info('Reset to default system presets');
-            }}
-            className="text-xs"
-          >
-            <RotateCcw className="w-3.5 h-3.5 mr-1" />
-            Reset Defaults
-          </Button>
+            },
+          },
+          {
+            label: 'Save Changes',
+            icon: Save,
+            variant: 'primary',
+            onClick: handleMasterSave,
+          },
+        ]}
+      />
 
-          <Button
-            variant="primary"
-            onClick={handleMasterSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm"
-          >
-            <Save className="w-4 h-4 mr-1.5" />
-            Save Changes
-          </Button>
-        </div>
+      {/* 2. Plain KPI Cards (Strictly no charts/arrows) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          icon={Building}
+          label="Dealership Entity"
+          value="Active (KA)"
+          subtitle={profileForm.gstin || '29AABCB1829M1ZK'}
+        />
+        <KpiCard
+          icon={Key}
+          label="RBAC Roles"
+          value={baseRoleKeys.length + customRoles.length}
+          subtitle="Predefined & custom roles"
+        />
+        <KpiCard
+          icon={ShieldCheck}
+          label="Dual-Control Ceilings"
+          value={approvalRules.length}
+          subtitle="Active approval threshold limits"
+        />
+        <KpiCard
+          icon={Webhook}
+          label="API Bridges (Demo)"
+          value={`${integrations.filter((i) => i.status === 'ACTIVE').length} Active`}
+          subtitle="Simulated live webhooks"
+        />
       </div>
 
       {/* Tabs */}

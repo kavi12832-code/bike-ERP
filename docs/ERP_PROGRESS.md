@@ -26,11 +26,11 @@
 ## 1. Administration Core (5 Modules)
 | Module Name | Route | Group | Status | Notes | Date |
 |---|---|---|---|---|---|
-| **Users Management** | `/admin/users` | Administration | `in progress` | 4-step wizard, CRUD, privilege guard, security overview | 2026-11-01 |
-| **Approvals Center** | `/approvals` | Administration | `in progress` | Dual control, multi-level SLA, policy guide, delegation | 2026-11-01 |
-| **Immutable Audit Trail** | `/admin/audit` | Administration | `in progress` | SHA-256 hash chaining simulation, before/after diffs | 2026-11-01 |
-| **System Settings** | `/admin` | Administration | `in progress` | Dealership profile, tax rules, limits, demo mode toggle | 2026-11-01 |
-| **Branch Network** | `/branches` | Administration | `in progress` | Multi-branch CRUD, bay configs, stock transfer e-way bills | 2026-11-01 |
+| **Users Management** | `/admin/users` | Administration | `done` | 4-step wizard, CRUD, privilege guard, security overview, plain KPIs | 2026-11-01 |
+| **Approvals Center** | `/approvals` | Administration | `done` | Dual control, multi-level SLA, policy guide, delegation, plain KPIs | 2026-11-01 |
+| **Immutable Audit Trail** | `/admin/audit` | Administration | `done` | PageHeader, plain KPIs, SHA-256 hash chaining simulation, before/after diffs | 2026-11-01 |
+| **System Settings** | `/admin` | Administration | `done` | PageHeader, plain KPIs, Dealership profile, tax rules, limits, demo mode toggle | 2026-11-01 |
+| **Branch Network** | `/branches` | Administration | `done` | PageHeader, plain KPIs, multi-branch CRUD, bay configs, delete protections | 2026-11-01 |
 
 ---
 
