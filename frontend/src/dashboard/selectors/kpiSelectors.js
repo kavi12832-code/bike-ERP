@@ -131,10 +131,13 @@ export function getServiceBayUtilisation(
   const ref = parseDateSafe(referenceDate) || new Date();
 
   // Filter bays in scope
-  const branchBays = bays.filter((b) => matchesBranch(b, branchId));
-  const totalBays = branchBays.length > 0 ? branchBays.length : 12; // default 12 for flagship
-  const activeBays = branchBays.filter(
-    (b) => b.status === 'OCCUPIED' || b.status === 'IN_SERVICE' || b.currentJobCardId
+  const branchBays = branchId && branchId !== 'all' 
+    ? bays.filter((b) => !b.branchId || b.branchId === branchId) 
+    : bays;
+  const effectiveBays = branchBays.length > 0 ? branchBays : (bays.length > 0 ? bays : Array.from({ length: 12 }, (_, i) => ({ bayNumber: i + 1, status: 'FREE' })));
+  const totalBays = effectiveBays.length;
+  const activeBays = effectiveBays.filter(
+    (b) => b.status === 'OCCUPIED' || b.status === 'IN_SERVICE' || b.currentJobCardId || b.activeJobCardId
   ).length;
   const readyBays = Math.max(0, totalBays - activeBays);
 

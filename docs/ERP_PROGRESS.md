@@ -37,11 +37,11 @@
 ## 2. Operations (13 Modules)
 | Module Name | Route | Group | Status | Notes | Date |
 |---|---|---|---|---|---|
-| **Dashboard** | `/` (`/dashboard`) | Operations | `not started` | Role-specific dashboards (technician, advisor, sales) | 2026-11-01 |
-| **Leads & Enquiries** | `/leads` | Operations | `not started` | Duplicate phone detection, lead scoring, round-robin SLA | 2026-11-01 |
-| **Quotations** | `/quotations` | Operations | `in progress` | On-road computation fixed, discount approval, PDF/WA share | 2026-11-01 |
-| **Bookings** | `/bookings` | Operations | `in progress` | Weekly table fixed, advance receipts, single VIN gate | 2026-11-01 |
-| **Test Rides** | `/test-rides` | Operations | `not started` | Demo fleet calendar, DL capture, consent, odometer in/out | 2026-11-01 |
+| **Dashboard** | `/` (`/dashboard`) | Operations | `done` | Technician view (KD-01), bay selector fix (KD-04), dynamic store selectors (KD-05) | 2026-11-01 |
+| **Leads & Enquiries** | `/leads` | Operations | `done` | Duplicate phone detection, lead scoring, round-robin, Kanban & List views | 2026-11-01 |
+| **Quotations** | `/quotations` | Operations | `done` | On-road pricing breakdown fixed, discount approval, WhatsApp share, PDF | 2026-11-01 |
+| **Bookings** | `/bookings` | Operations | `done` | Weekly table fixed, token receipts, single VIN gate, cancellation modal | 2026-11-01 |
+| **Test Rides** | `/test-rides` | Operations | `done` | PageHeader, plain KPIs, DL check, consent waiver, odometer in/out, reviews | 2026-11-01 |
 | **Vehicle Sales Orders** | `/sales` | Operations | `not started` | 6-stage deal sheet, locked pricing, payment split, KYC | 2026-11-01 |
 | **Delivery & PDI Desk** | `/delivery` | Operations | `not started` | 5-stage queue, 25-point PDI, handover checklist & photo | 2026-11-01 |
 | **Digital Showroom** | `/showroom` | Operations | `not started` | Model catalog, color customizer, EMI calculator, leads | 2026-11-01 |

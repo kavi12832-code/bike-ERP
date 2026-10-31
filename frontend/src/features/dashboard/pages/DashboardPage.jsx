@@ -31,6 +31,7 @@ import { QuickActionsCard } from '../components/QuickActionsCard';
 import { PromoCarousel } from '../components/PromoCarousel';
 import { ShowroomRevenueChart } from '../components/ShowroomRevenueChart';
 import { BookingTrendsChart } from '../components/BookingTrendsChart';
+import { TechnicianDashboardView } from '../components/TechnicianDashboardView';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { toast } from 'sonner';
@@ -158,10 +159,17 @@ export function DashboardPage() {
     [bookings, cancellations, activeBranchId, dateRange]
   );
 
+  const isTechnician = currentUser?.role?.toLowerCase() === 'technician';
+
   return (
     <div className="space-y-5 pb-8 max-w-7xl mx-auto">
-      {/* 1. Breadcrumb & Date Range Header */}
-      <DashboardHeader dateRange={dateRange} onDateRangeChange={setDateRange} />
+      {/* If Technician, display dedicated operational view without sales / GST metrics */}
+      {isTechnician ? (
+        <TechnicianDashboardView />
+      ) : (
+        <>
+          {/* 1. Breadcrumb & Date Range Header */}
+          <DashboardHeader dateRange={dateRange} onDateRangeChange={setDateRange} />
 
       {/* 2. Hero Operational Banner */}
       <HeroBanner onQuickBayAssign={openBayModal} />
@@ -227,6 +235,8 @@ export function DashboardPage() {
           <BookingTrendsChart bookingTrendsData={bookingTrends} />
         </div>
       </div>
+      </>
+      )}
 
       {/* Quick Bay Assignment Modal */}
       {bayModalOpen && (
