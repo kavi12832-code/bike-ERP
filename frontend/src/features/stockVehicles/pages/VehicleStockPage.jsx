@@ -38,6 +38,43 @@ export function VehicleStockPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL', 'FREE', 'ALLOCATED', 'IN_TRANSIT'
+  const [selectedModelFilter, setSelectedModelFilter] = useState('ALL');
+
+  // Dynamic counting of vehicles separated by bike models
+  const modelCounts = useMemo(() => {
+    const counts = {};
+    vehicleStock.forEach((unit) => {
+      const model = unit.modelName || 'Other';
+      if (!counts[model]) {
+        counts[model] = {
+          modelName: model,
+          total: 0,
+          free: 0,
+          allocated: 0,
+          inTransit: 0,
+          showroomDisplay: 0,
+          yardStock: 0,
+        };
+      }
+      counts[model].total += 1;
+      if (unit.status === 'IN_STOCK' && !unit.allocatedBookingId) {
+        counts[model].free += 1;
+      }
+      if (unit.allocatedBookingId) {
+        counts[model].allocated += 1;
+      }
+      if (unit.status === 'IN_TRANSIT') {
+        counts[model].inTransit += 1;
+      }
+      if (unit.location && unit.location.toLowerCase().includes('display')) {
+        counts[model].showroomDisplay += 1;
+      } else {
+        counts[model].yardStock += 1;
+      }
+    });
+    // Sort by count descending, then alphabetical
+    return Object.values(counts).sort((a, b) => b.total - a.total || a.modelName.localeCompare(b.modelName));
+  }, [vehicleStock]);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [grnModalOpen, setGrnModalOpen] = useState(false);
@@ -72,6 +109,9 @@ export function VehicleStockPage() {
 
   const filteredStock = useMemo(() => {
     return vehicleStock.filter((unit) => {
+      if (selectedModelFilter !== 'ALL' && unit.modelName !== selectedModelFilter) {
+        return false;
+      }
       if (statusFilter === 'FREE' && (unit.status !== 'IN_STOCK' || unit.allocatedBookingId)) {
         return false;
       }
@@ -85,15 +125,16 @@ export function VehicleStockPage() {
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         return (
-          unit.chassisNumber.toLowerCase().includes(q) ||
-          unit.engineNumber.toLowerCase().includes(q) ||
-          unit.modelName.toLowerCase().includes(q) ||
-          unit.colorName.toLowerCase().includes(q)
+          (unit.chassisNumber || '').toLowerCase().includes(q) ||
+          (unit.engineNumber || '').toLowerCase().includes(q) ||
+          (unit.modelName || '').toLowerCase().includes(q) ||
+          (unit.colorName || '').toLowerCase().includes(q) ||
+          (unit.variantName || '').toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [vehicleStock, statusFilter, searchTerm]);
+  }, [vehicleStock, selectedModelFilter, statusFilter, searchTerm]);
 
   // Generate randomized realistic VIN
   const generateRandomVin = () => {
@@ -263,32 +304,59 @@ export function VehicleStockPage() {
         }
       />
 
-      {/* 2. Plain KPI Cards per Section 0.5 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KpiCard
-          label="Total on Hand"
-          value={`${vehicleStock.length} Units`}
-          helperText="Gross physical stock"
-          icon={<Warehouse className="w-5 h-5 text-primary" />}
-        />
-        <KpiCard
-          label="Available (Free)"
-          value={`${vehicleStock.filter((v) => v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Units`}
-          helperText="Ready for booking allocation"
-          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
-        />
-        <KpiCard
-          label="Chassis Allocated"
-          value={`${vehicleStock.filter((v) => v.allocatedBookingId).length} Units`}
-          helperText="Reserved for delivery"
-          icon={<ArrowRightLeft className="w-5 h-5 text-blue-500" />}
-        />
-        <KpiCard
-          label="Ageing > 45 Days"
-          value={`${vehicleStock.filter((v) => (v.daysInStock || 0) > 45).length} Units`}
-          helperText="Yard holding risk"
-          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
-        />
+      {/* 2. Model-Separated Vehicle Counting Cards */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+              <Bike className="w-3.5 h-3.5" />
+            </div>
+            <h3 className="text-xs font-bold text-text-main uppercase tracking-wider">
+              Vehicle Stock Counting Separated by Bike Model
+            </h3>
+            <span className="text-[11px] font-semibold text-text-muted bg-surface-subtle px-2 py-0.5 rounded-full border border-border">
+              {modelCounts.length} Models • {vehicleStock.length} Total Units
+            </span>
+          </div>
+
+          {selectedModelFilter !== 'ALL' && (
+            <button
+              onClick={() => setSelectedModelFilter('ALL')}
+              className="text-xs text-primary font-semibold hover:underline flex items-center gap-1 self-start sm:self-auto"
+            >
+              <span>Show All Models</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Model Counting Cards Grid (Cards separated by bike model) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+          {/* Card: All Models Overview */}
+          <KpiCard
+            label="All Bike Models"
+            value={`${vehicleStock.length} Units`}
+            helperText={`${vehicleStock.filter((v) => v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Free • ${vehicleStock.filter((v) => v.allocatedBookingId).length} Booked`}
+            icon={<Warehouse className="w-5 h-5 text-primary" />}
+            active={selectedModelFilter === 'ALL'}
+            onClick={() => setSelectedModelFilter('ALL')}
+            className="cursor-pointer"
+          />
+
+          {/* Individual Model Cards */}
+          {modelCounts.map((m) => (
+            <KpiCard
+              key={m.modelName}
+              label={m.modelName}
+              value={`${m.total} Units`}
+              helperText={`${m.free} Free • ${m.allocated} Booked • ${m.showroomDisplay} Display`}
+              icon={<Bike className="w-5 h-5 text-primary" />}
+              active={selectedModelFilter === m.modelName}
+              onClick={() => setSelectedModelFilter(selectedModelFilter === m.modelName ? 'ALL' : m.modelName)}
+              className="cursor-pointer"
+            />
+          ))}
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -304,27 +372,62 @@ export function VehicleStockPage() {
           />
         </div>
 
-        <div className="flex bg-surface-subtle border border-border rounded-button p-0.5 text-xs">
-          {[
-            { id: 'ALL', label: 'All Inventory' },
-            { id: 'FREE', label: 'Available (Free)' },
-            { id: 'ALLOCATED', label: 'Allocated' },
-            { id: 'IN_TRANSIT', label: 'In Transit' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1 font-medium rounded transition-all ${
-                statusFilter === tab.id
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Model Selector Dropdown */}
+          <select
+            value={selectedModelFilter}
+            onChange={(e) => setSelectedModelFilter(e.target.value)}
+            className="text-xs py-1.5 px-2.5 rounded-input border border-border bg-surface text-text-main font-semibold focus:ring-1 focus:ring-primary"
+          >
+            <option value="ALL">All Models ({vehicleStock.length} Units)</option>
+            {modelCounts.map((m) => (
+              <option key={m.modelName} value={m.modelName}>
+                {m.modelName} ({m.total} Units)
+              </option>
+            ))}
+          </select>
+
+          {/* Status Tabs */}
+          <div className="flex bg-surface-subtle border border-border rounded-button p-0.5 text-xs">
+            {[
+              { id: 'ALL', label: 'All Status' },
+              { id: 'FREE', label: 'Available (Free)' },
+              { id: 'ALLOCATED', label: 'Allocated' },
+              { id: 'IN_TRANSIT', label: 'In Transit' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-3 py-1 font-medium rounded transition-all ${
+                  statusFilter === tab.id
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-main'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Active Model Filter Banner if filtered */}
+      {selectedModelFilter !== 'ALL' && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-primary/5 rounded-lg border border-primary/20 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-text-muted">Filtered by Bike Model:</span>
+            <span className="font-bold text-primary">{selectedModelFilter}</span>
+            <span className="text-text-muted">({filteredStock.length} units listed)</span>
+          </div>
+          <button
+            onClick={() => setSelectedModelFilter('ALL')}
+            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+          >
+            <span>Reset to All Models</span>
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Main Stock Table */}
       <Card className="overflow-hidden p-0">
