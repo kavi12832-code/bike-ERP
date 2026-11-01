@@ -6,7 +6,7 @@ import { formatDate } from '../../../lib/format';
 import { Scale, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export function TaxRulesPage() {
-  const taxRules = useAppStore((state) => state.catalogs.taxRules || []);
+  const taxRules = useAppStore((state) => state.catalogs?.taxRules || []);
 
   return (
     <div className="space-y-6">

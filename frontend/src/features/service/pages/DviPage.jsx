@@ -94,6 +94,7 @@ export function DviPage() {
   const [showFullMapModal, setShowFullMapModal] = useState(false);
 
   const selectedJobCard = jobCards.find(jc => jc.id === selectedJcId) || jobCards[0];
+  const totalAdditionalCostPaise = items.filter(i => i.status !== 'GREEN').reduce((sum, i) => sum + (i.costPaise || 0), 0);
 
   const updateItemStatus = (id, newStatus) => {
     setItems(prev => prev.map(item => {
@@ -111,27 +112,51 @@ export function DviPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CheckSquare className="w-6 h-6 text-blue-600" />
-            Digital Vehicle Inspection (DVI)
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Multimedia technician inspection with Green/Amber/Red indicators, damage markings &amp; instant WhatsApp customer sign-off.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Digital Inspection (DVI)', path: '/service/dvi' },
+        ]}
+        title="Digital Vehicle Inspection (DVI)"
+        subtitle="Multimedia technician inspection with Green/Amber/Red indicators, damage markings and instant WhatsApp customer sign-off."
+        actions={
           <button
             onClick={handleSendApprovalLink}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition"
           >
             <Send className="w-4 h-4" />
             Send Customer WhatsApp Approval
           </button>
-        </div>
+        }
+      />
+
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Critical Failures (Red)"
+          value={`${items.filter((i) => i.status === 'RED').length} Critical`}
+          helperText="Immediate safety hazard"
+          icon={<XCircle className="w-5 h-5 text-rose-500" />}
+        />
+        <KpiCard
+          label="Advisory Items (Amber)"
+          value={`${items.filter((i) => i.status === 'AMBER').length} Advisory`}
+          helperText="Recommended maintenance"
+          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+        />
+        <KpiCard
+          label="Passed Checks (Green)"
+          value={`${items.filter((i) => i.status === 'GREEN').length} Passed`}
+          helperText="Components within tolerance"
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Additional Repair Est."
+          value={formatMoney(totalAdditionalCostPaise)}
+          helperText="Awaiting customer approval"
+          icon={<DollarSign className="w-5 h-5 text-primary" />}
+        />
       </div>
 
       {/* Vehicle Context Bar */}

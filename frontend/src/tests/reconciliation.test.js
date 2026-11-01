@@ -34,10 +34,11 @@ describe('Cross-Screen Financial & Inventory Reconciliation', () => {
   });
 
   it('strictly blocks double allocation of the same vehicle chassis', () => {
-    const targetChassis = 'ME3U3S5C8PRA10002'; // Already allocated to bk-2627-001
+    const targetChassis = 'ME3U3S5C8PRA00001';
+    useAppStore.getState().allocateChassisToBooking('bk-2627-001', targetChassis);
 
     expect(() => {
-      useAppStore.getState().allocateChassisToBooking(targetChassis, 'bk-2627-002');
+      useAppStore.getState().allocateChassisToBooking('bk-2627-002', targetChassis);
     }).toThrow(/already allocated/i);
   });
 

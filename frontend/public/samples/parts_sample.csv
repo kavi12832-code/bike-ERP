@@ -1,0 +1,7 @@
+Part Number,Description,Category,Stock Qty,Reorder Level,MRP,Bin Location
+BAJ-SP-101,Spark Plug Champion Platinum,Fast Moving,45,15,24500,A-12-04
+BAJ-BP-202,Front Disc Brake Pad Set,Fast Moving,28,10,65000,B-04-12
+BAJ-OF-303,Engine Oil Filter Element,Lubrication,60,20,18000,C-01-08
+BAJ-NEG-404,Negative Stock Part,Electrical,-5,5,12000,D-02-01
+,Missing SKU Description,Chassis,10,5,50000,E-03-02
+

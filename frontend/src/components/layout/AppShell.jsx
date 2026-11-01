@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { CommandPalette } from './CommandPalette';
 import { MobileBottomNav } from './MobileBottomNav';
+import { RouteErrorBoundary, ErrorBoundary } from './RouteErrorBoundary';
 import { useAppStore } from '../../store';
 import { backend } from '../../services/api/backend';
 import { onUnauthorized } from '../../services/api/client';
@@ -36,18 +37,20 @@ export function AppShell() {
   if (mustLogin) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-full w-full overflow-hidden bg-background fixed inset-0">
       {/* Deep Navy Left Sidebar */}
       <Sidebar />
 
       {/* Main Workspace Column */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-w-0 min-h-0 overflow-hidden">
         {/* Top Operational Bar */}
         <Topbar />
 
         {/* Dynamic Page Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 pb-20 lg:pb-8">
-          <Outlet />
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 pb-20 lg:pb-8">
+          <ErrorBoundary fallback={<RouteErrorBoundary />}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
         {/* Mobile First Bottom Navigation Bar */}

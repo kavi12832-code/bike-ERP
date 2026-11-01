@@ -12,7 +12,9 @@ import {
   Search, 
   ShieldCheck, 
   FileText,
-  X
+  X,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
@@ -93,6 +95,19 @@ export function ExpensesPettyCashPage() {
   const [vendorGstin, setVendorGstin] = useState('');
   const [isGstInvoice, setIsGstInvoice] = useState(false);
 
+  // Edit voucher modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState(null);
+  const [editForm, setEditForm] = useState({
+    category: '',
+    payee: '',
+    amountRupees: '',
+    status: 'PENDING_APPROVAL',
+    approvalTier: 'AUTO_APPROVED',
+    hasGstInvoice: false,
+    vendorGstin: '',
+  });
+
   const totalDisbursedFromFloatPaise = vouchers
     .filter(v => v.paidFromFloat && v.status === 'PAID')
     .reduce((sum, v) => sum + v.amountPaise, 0);
@@ -137,6 +152,53 @@ export function ExpensesPettyCashPage() {
     setVouchers(prev => [newVch, ...prev]);
     setShowAddModal(false);
     toast.success(`Expense voucher ${newVch.voucherNo} created with approval tier: ${tier}`);
+  };
+
+  const openEditModal = (v) => {
+    setEditingVoucher(v);
+    setEditForm({
+      category: v.category || 'Fuel',
+      payee: v.payee || '',
+      amountRupees: Math.round(v.amountPaise / 100).toString(),
+      status: v.status || 'PENDING_APPROVAL',
+      approvalTier: v.approvalTier || 'AUTO_APPROVED',
+      hasGstInvoice: Boolean(v.hasGstInvoice),
+      vendorGstin: v.vendorGstin || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditVoucher = (e) => {
+    e.preventDefault();
+    const paise = Math.round(Number(editForm.amountRupees) * 100);
+    if (!paise || paise <= 0) {
+      toast.error('Valid expense amount is required');
+      return;
+    }
+
+    setVouchers(prev => prev.map(v => {
+      if (v.id !== editingVoucher.id) return v;
+      return {
+        ...v,
+        category: editForm.category,
+        payee: editForm.payee,
+        amountPaise: paise,
+        status: editForm.status,
+        approvalTier: editForm.approvalTier,
+        hasGstInvoice: editForm.hasGstInvoice,
+        vendorGstin: editForm.hasGstInvoice ? editForm.vendorGstin : null,
+      };
+    }));
+
+    toast.success(`Voucher ${editingVoucher.voucherNo} updated successfully!`);
+    setShowEditModal(false);
+  };
+
+  const handleDeleteVoucher = (id, voucherNo) => {
+    if (window.confirm(`Are you sure you want to delete expense voucher ${voucherNo}?`)) {
+      setVouchers(prev => prev.filter(v => v.id !== id));
+      toast.info(`Voucher ${voucherNo} removed from ledger.`);
+    }
   };
 
   const handleReplenishFloat = () => {
@@ -198,19 +260,19 @@ export function ExpensesPettyCashPage() {
           <div className="text-2xl font-black text-blue-600 font-mono mt-1">
             {formatMoney(totalInputGstClaimablePaise)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">GST input credit from invoices</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Claimable on GST portal (GSTR-2B)</div>
         </div>
 
         <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Pending Tier Sign-off</div>
-          <div className="text-2xl font-black text-amber-600 mt-1">
-            {vouchers.filter(v => v.status === 'PENDING_APPROVAL').length} Vouchers
+          <div className="text-xs text-slate-500">Dual Control Threshold</div>
+          <div className="text-xl font-black text-amber-600 font-mono mt-1">
+            &gt; ₹10,000
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">&gt;₹2,000 requiring manager review</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Requires Dealer Principal sign-off</div>
         </div>
       </div>
 
-      {/* Vouchers Table */}
+      {/* Ledger Table */}
       <div className="bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-500 uppercase tracking-wider">
           Expense Vouchers Ledger ({vouchers.length})
@@ -226,7 +288,8 @@ export function ExpensesPettyCashPage() {
                 <th className="p-3.5">Amount</th>
                 <th className="p-3.5">Approval Tier</th>
                 <th className="p-3.5">GST / ITC Status</th>
-                <th className="p-3.5 text-right">Status</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -262,14 +325,33 @@ export function ExpensesPettyCashPage() {
                       <span className="text-slate-400">Cash Bill (No GST)</span>
                     )}
                   </td>
-                  <td className="p-3.5 text-right">
+                  <td className="p-3.5">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       v.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
                       v.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
+                      v.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                       'bg-amber-100 text-amber-800'
                     }`}>
                       {v.status.replace('_', ' ')}
                     </span>
+                  </td>
+                  <td className="p-3.5 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => openEditModal(v)}
+                        className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600"
+                        title="Edit Expense Voucher"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVoucher(v.id, v.voucherNo)}
+                        className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-500 hover:text-red-600"
+                        title="Delete Voucher"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -366,6 +448,132 @@ export function ExpensesPettyCashPage() {
                   className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
                 >
                   Commit Voucher
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Voucher Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-850 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-blue-600" />
+                Edit Voucher: {editingVoucher?.voucherNo}
+              </h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditVoucher} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Expense Category</label>
+                <select 
+                  value={editForm.category} 
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                >
+                  <option value="Fuel">Fuel &amp; Demo Bikes Petrol</option>
+                  <option value="Refreshments">Refreshments &amp; Pantry</option>
+                  <option value="Shop Floor Consumables">Shop Floor Consumables</option>
+                  <option value="Stationery">Stationery &amp; Printing Paper</option>
+                  <option value="Travel">Staff Travel &amp; RTO Transit</option>
+                  <option value="Utilities">Electricity &amp; Internet Utilities</option>
+                  <option value="Legal/CA">Legal, CA &amp; Statutory Retainer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Payee / Vendor Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.payee}
+                  onChange={(e) => setEditForm({ ...editForm, payee: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Amount (₹)</label>
+                <input
+                  type="number"
+                  required
+                  value={editForm.amountRupees}
+                  onChange={(e) => setEditForm({ ...editForm, amountRupees: e.target.value })}
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg font-mono font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1">Status</label>
+                  <select 
+                    value={editForm.status} 
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                  >
+                    <option value="PENDING_APPROVAL">Pending Approval</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PAID">Paid</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Approval Tier</label>
+                  <select 
+                    value={editForm.approvalTier} 
+                    onChange={(e) => setEditForm({ ...editForm, approvalTier: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                  >
+                    <option value="AUTO_APPROVED">Auto Approved (&le;₹2K)</option>
+                    <option value="BRANCH_MANAGER">Branch Manager (&le;₹10K)</option>
+                    <option value="DEALER_PRINCIPAL">Dealer Principal (&gt;₹10K)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Vendor GST Invoice (Claim ITC)</span>
+                  <input
+                    type="checkbox"
+                    checked={editForm.hasGstInvoice}
+                    onChange={(e) => setEditForm({ ...editForm, hasGstInvoice: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                </div>
+                {editForm.hasGstInvoice && (
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">Vendor GSTIN</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 29ABCDE1234F1Z5"
+                      value={editForm.vendorGstin}
+                      onChange={(e) => setEditForm({ ...editForm, vendorGstin: e.target.value })}
+                      className="w-full p-1.5 bg-white dark:bg-slate-900 border rounded text-xs font-mono uppercase"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-3 py-1.5 rounded-lg border hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700"
+                >
+                  Save Voucher Changes
                 </button>
               </div>
             </form>

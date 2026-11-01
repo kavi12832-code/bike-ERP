@@ -107,7 +107,7 @@ export default function CustomerPortalPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+      <div className="h-full overflow-y-auto bg-slate-900 flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
@@ -170,7 +170,7 @@ export default function CustomerPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F3F7FD] dark:bg-slate-950 pb-20">
+    <div className="h-full overflow-y-auto bg-[#F3F7FD] dark:bg-slate-950 pb-20">
       {/* Customer Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">

@@ -73,25 +73,51 @@ export function RecallsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-amber-500" />
-            OEM Safety Recalls &amp; Service Bulletins
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Track manufacturer safety campaigns, match sold &amp; stock chassis numbers, trigger automated WhatsApp advisories.
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Recalls & Bulletins', path: '/service/recalls' },
+        ]}
+        title="OEM Safety Recalls & Service Bulletins"
+        subtitle="Track manufacturer safety campaigns, match sold & stock chassis numbers, and trigger automated WhatsApp advisories."
+        actions={
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm transition"
+          >
+            <Plus className="w-4 h-4" />
+            Add OEM Circular
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          Add OEM Circular
-        </button>
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Active Bulletins"
+          value={`${bulletins.length} Circulars`}
+          helperText="OEM service advisories"
+          icon={<ShieldAlert className="w-5 h-5 text-amber-500" />}
+        />
+        <KpiCard
+          label="Matched Chassis Units"
+          value={`${bulletins.reduce((sum, b) => sum + (b.matchedUnits?.length || 0), 0)} Units`}
+          helperText="Chassis in affected ranges"
+          icon={<FileText className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Retrofits Completed"
+          value={`${bulletins.reduce((sum, b) => sum + (b.matchedUnits?.filter((u) => u.status === 'COMPLETED').length || 0), 0)} Completed`}
+          helperText="Repaired & verified"
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="OEM Reimbursement"
+          value="100% FOC"
+          helperText="Factory paid parts & labour"
+          icon={<Clock className="w-5 h-5 text-blue-500" />}
+        />
       </div>
 
       {/* Main Grid: Circulars list + Active Bulletin Matching Dossier */}

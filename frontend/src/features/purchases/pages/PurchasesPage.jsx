@@ -5,6 +5,8 @@ import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import {
   ShoppingBag,
   PlusCircle,
@@ -76,45 +78,53 @@ export function PurchasesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main">OEM Purchase Orders & Goods Receipt (GRN)</h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Procurement tracking for factory consignments and genuine spare parts distributors
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Purchases & GRN', path: '/purchases' },
+        ]}
+        title="OEM Purchase Orders & Goods Receipt (GRN)"
+        subtitle="Procurement tracking for factory consignments and genuine spare parts distributors."
+        actions={
+          <Button
+            variant="primary"
+            size="sm"
+            icon={PlusCircle}
+            onClick={() => toast.info('New PO creation wizard initialized')}
+            className="bg-primary hover:bg-primary-hover text-white"
+          >
+            Generate Purchase Order
+          </Button>
+        }
+      />
 
-        <Button
-          variant="primary"
-          size="sm"
-          icon={PlusCircle}
-          onClick={() => toast.info('New PO creation wizard initialized')}
-        >
-          Generate Purchase Order
-        </Button>
-      </div>
-
-      {/* KPI Cards */}
+      {/* 2. Plain KPI Cards per Section 0.5 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Active POs Issued</div>
-          <div className="text-2xl font-bold text-text-main mt-1 tabular-nums">{purchaseOrders.length} Orders</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Consignments In-Transit</div>
-          <div className="text-2xl font-bold text-status-blue mt-1 tabular-nums">
-            {purchaseOrders.filter((p) => p.status === 'IN_TRANSIT').length} In-Transit
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Monthly Inward Total</div>
-          <div className="text-2xl font-bold text-primary mt-1 tabular-nums">₹ 23.89 L</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">GRN Variance Alerts</div>
-          <div className="text-2xl font-bold text-status-green mt-1 tabular-nums">0 Discrepancy</div>
-        </Card>
+        <KpiCard
+          label="Active POs Issued"
+          value={`${purchaseOrders.length} Orders`}
+          helperText="Factory & spares orders"
+          icon={<ShoppingBag className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Consignments In-Transit"
+          value={`${purchaseOrders.filter((p) => p.status === 'IN_TRANSIT').length} In-Transit`}
+          helperText="Awaiting warehouse dock arrival"
+          icon={<Truck className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Committed Value"
+          value={formatMoney(purchaseOrders.reduce((sum, po) => sum + (po.totalAmountPaise || 0), 0))}
+          helperText="Total purchase commitments"
+          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="GRN Variance Alerts"
+          value="0 Discrepancy"
+          helperText="100% 3-way match pass rate"
+          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+        />
       </div>
 
       {/* Purchase Orders Table */}

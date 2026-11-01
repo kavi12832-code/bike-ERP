@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { formatMoney } from '../../../lib/format';
 import {
   Smartphone,
@@ -51,25 +53,47 @@ export function TechnicianMyJobsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Mobile-First Header */}
-      <div className="bg-surface p-5 rounded-card border border-border shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-[10px] uppercase font-bold text-primary tracking-wider flex items-center gap-1.5">
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Technician Mobile &amp; Bay Terminal</span>
-          </div>
-          <h2 className="text-xl font-bold text-text-main mt-0.5">
-            My Active Service Jobs ({currentUser?.name || 'Technician'})
-          </h2>
-          <p className="text-xs text-text-muted mt-0.5">
-            Realtime workshop job cards, spare parts issue requisitions &amp; supervisor QC submissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-status-blue border border-blue-200">
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Technician My Jobs', path: '/service/my-jobs' },
+        ]}
+        title={`My Active Service Jobs (${currentUser?.name || 'Technician'})`}
+        subtitle="Realtime workshop job cards, spare parts issue requisitions and supervisor QC submissions."
+        actions={
+          <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
             {myJobs.length} Assigned Jobs
           </span>
-        </div>
+        }
+      />
+
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Assigned Jobs"
+          value={`${myJobs.length} Cards`}
+          helperText="Under technician care"
+          icon={<Wrench className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="In Progress (WIP)"
+          value={`${myJobs.filter((j) => j.stage === 'IN_PROGRESS').length} Active`}
+          helperText="Currently on bay bench"
+          icon={<Play className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="In Quality Check"
+          value={`${myJobs.filter((j) => j.stage === 'QUALITY_CHECK').length} In QC`}
+          helperText="Awaiting supervisor sign-off"
+          icon={<Clock className="w-5 h-5 text-amber-500" />}
+        />
+        <KpiCard
+          label="Ready for Delivery"
+          value={`${myJobs.filter((j) => j.stage === 'READY').length} Cleared`}
+          helperText="QC approved & washed"
+          icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
+        />
       </div>
 
       {/* Jobs Grid (Responsive multi-column on desktop/tablet) */}

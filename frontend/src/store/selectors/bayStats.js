@@ -8,7 +8,10 @@
 export function selectBayStats(state, branchId = null) {
   const allBays = state?.bays || [];
   const targetBranch = branchId || state?.activeBranchId;
-  const bays = targetBranch ? allBays.filter((b) => !b.branchId || b.branchId === targetBranch) : allBays;
+  const filtered = targetBranch && targetBranch !== 'all'
+    ? allBays.filter((b) => !b.branchId || b.branchId === targetBranch)
+    : allBays;
+  const bays = filtered.length > 0 ? filtered : allBays;
   const jobCards = state?.jobCards || [];
 
   let occupied = 0;

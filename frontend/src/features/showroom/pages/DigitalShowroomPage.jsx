@@ -104,49 +104,65 @@ export function DigitalShowroomPage() {
 
   return (
     <div className={`p-4 sm:p-5 max-w-7xl mx-auto space-y-4 ${isCustomerMode ? 'bg-slate-50 dark:bg-slate-900 rounded-3xl p-6 border-4 border-blue-500/20' : ''}`}>
-      {/* Top Bar: Kiosk Header & Customer Mode Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Digital Showroom', path: '/showroom' },
+        ]}
+        title="AKASH Bajaj Digital Showroom Kiosk"
+        subtitle="Explore models, test colour combinations, compute regional on-road pricing and design tailored EMI plans."
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-              AKASH Bajaj Digital Showroom Kiosk
-            </h1>
-            {isCustomerMode ? (
-              <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1">
-                <Lock className="w-3 h-3" /> Customer Safe Mode Active
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                Staff Sales Mode
-              </span>
-            )}
+            <button
+              onClick={() => setShowComparison(!showComparison)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-main bg-surface border border-border rounded-lg hover:bg-surface-subtle shadow-xs transition"
+            >
+              <Layers className="w-3.5 h-3.5 text-primary" />
+              {showComparison ? 'Back to Configurator' : '3-Bike Spec Compare'}
+            </button>
+
+            <button
+              onClick={handleToggleCustomerMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border shadow-xs transition ${
+                isCustomerMode
+                  ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                  : 'bg-primary text-white border-primary hover:bg-primary-hover'
+              }`}
+            >
+              {isCustomerMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              {isCustomerMode ? 'Exit Customer Mode' : 'Lock Customer Kiosk'}
+            </button>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Explore models, test colour combinations, compute regional on-road pricing &amp; design tailored EMI plans.
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 shadow-sm transition"
-          >
-            <Layers className="w-4 h-4 text-blue-600" />
-            {showComparison ? 'Back to Configurator' : '3-Bike Spec Compare'}
-          </button>
-
-          <button
-            onClick={handleToggleCustomerMode}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg border shadow-sm transition ${
-              isCustomerMode
-                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
-                : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {isCustomerMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {isCustomerMode ? 'Exit Customer Mode' : 'Lock Customer Kiosk'}
-          </button>
-        </div>
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Models in Catalog"
+          value={BIKE_CATALOG.length}
+          helperText="Active showroom fleet"
+          icon={<Bike className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Ex-Showroom Starting"
+          value={formatMoney(selectedBike.exShowroomPaise)}
+          helperText={`${selectedBike.model} standard`}
+          icon={<Tag className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Calculated On-Road"
+          value={formatMoney(onRoadPricePaise)}
+          helperText={`State: ${stateRule.name.split(' ')[0]}`}
+          icon={<Gauge className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Estimated EMI / mo"
+          value={formatMoney(emiPaise)}
+          helperText={`${tenureMonths} mo @ ${interestRatePercent}%`}
+          icon={<CreditCard className="w-5 h-5 text-purple-500" />}
+        />
       </div>
 
       {showComparison ? (

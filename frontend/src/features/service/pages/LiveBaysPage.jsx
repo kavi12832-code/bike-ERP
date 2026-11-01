@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import {
   Wrench,
   Clock,
@@ -43,72 +45,48 @@ export function LiveBaysPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main">Workshop Live Bay Allocation (12 Bays)</h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Realtime mechanical bay monitoring, technician allocation and SLA breach alerts
-          </p>
-        </div>
-      </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Live Bay Board', path: '/service/bays' },
+        ]}
+        title="Workshop Live Bay Allocation (12 Bays)"
+        subtitle="Realtime mechanical bay monitoring, technician allocation and SLA breach alerts."
+      />
 
-      {/* Unified Mutually Exclusive Bay Stats Strip (A2 Invariant) */}
+      {/* 2. Plain KPI Cards per Section 0.5 */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Card className="p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-text-muted uppercase font-semibold">Occupied</div>
-            <div className="text-xl font-bold text-status-blue mt-0.5 tabular-nums">
-              {stats.occupied} Bays
-            </div>
-            <div className="text-[10px] text-text-muted mt-0.5">{stats.utilisation}% Utilisation</div>
-          </div>
-          <span className="w-3 h-3 rounded-full bg-status-blue" />
-        </Card>
-
-        <Card className="p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-text-muted uppercase font-semibold">Waiting Parts</div>
-            <div className="text-xl font-bold text-status-amber mt-0.5 tabular-nums">
-              {stats.waitingParts} Bays
-            </div>
-            <div className="text-[10px] text-text-muted mt-0.5">Awaiting OEM stock</div>
-          </div>
-          <span className="w-3 h-3 rounded-full bg-status-amber" />
-        </Card>
-
-        <Card className="p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-text-muted uppercase font-semibold">Quality Check</div>
-            <div className="text-xl font-bold text-purple-600 mt-0.5 tabular-nums">
-              {stats.qualityCheck} Bays
-            </div>
-            <div className="text-[10px] text-text-muted mt-0.5">Supervisor sign-off</div>
-          </div>
-          <span className="w-3 h-3 rounded-full bg-purple-500" />
-        </Card>
-
-        <Card className="p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-text-muted uppercase font-semibold">Ready for Delivery</div>
-            <div className="text-xl font-bold text-emerald-600 mt-0.5 tabular-nums">
-              {stats.readyForDelivery} Bays
-            </div>
-            <div className="text-[10px] text-text-muted mt-0.5">Completed & washed</div>
-          </div>
-          <span className="w-3 h-3 rounded-full bg-emerald-500" />
-        </Card>
-
-        <Card className="p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-text-muted uppercase font-semibold">Available</div>
-            <div className="text-xl font-bold text-status-green mt-0.5 tabular-nums">
-              {stats.available} Bays
-            </div>
-            <div className="text-[10px] text-text-muted mt-0.5">Ready for intake ({stats.total} total)</div>
-          </div>
-          <span className="w-3 h-3 rounded-full bg-status-green" />
-        </Card>
+        <KpiCard
+          label="Occupied Bays"
+          value={`${stats.occupied} / ${stats.total} Bays`}
+          helperText={`${stats.utilisation}% live utilisation`}
+          icon={<Wrench className="w-5 h-5 text-status-blue" />}
+        />
+        <KpiCard
+          label="Waiting Parts"
+          value={`${stats.waitingParts} Bays`}
+          helperText="Awaiting OEM stock"
+          icon={<AlertTriangle className="w-5 h-5 text-status-amber" />}
+        />
+        <KpiCard
+          label="Quality Check"
+          value={`${stats.qualityCheck} Bays`}
+          helperText="Supervisor sign-off"
+          icon={<Clock className="w-5 h-5 text-purple-500" />}
+        />
+        <KpiCard
+          label="Ready Delivery"
+          value={`${stats.readyForDelivery} Bays`}
+          helperText="Completed & washed"
+          icon={<Sparkles className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Available Bays"
+          value={`${stats.available} Bays`}
+          helperText="Ready for next intake"
+          icon={<CheckCircle className="w-5 h-5 text-status-green" />}
+        />
       </div>
 
       {/* 12-Bay Master Grid */}

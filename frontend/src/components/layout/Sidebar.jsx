@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { BrandLogo } from '../domain/BrandLogo';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../store';
 import { NAVIGATION_GROUPS } from '../../config/navigation';
 import { hasPermission } from '../../lib/rbac';
+import { canUserDecide } from '../../approvals/engine';
+import { getActionableQuotationsCount } from '../../quotations/selectors';
+import { getActionableBookingsCount } from '../../bookings/selectors';
+import { BrandLogo } from '../domain/BrandLogo';
 import * as LucideIcons from 'lucide-react';
 
 export function Sidebar() {
@@ -14,22 +17,34 @@ export function Sidebar() {
   const dealership = state.dealership;
   const sidebarCollapsed = state.sidebarCollapsed;
   const toggleSidebar = state.toggleSidebar;
+  const setCommandPaletteOpen = state.setCommandPaletteOpen;
 
   // Live count badges computed from store
   const approvals = state.approvals || [];
-  const pendingApprovalsCount = approvals.filter((a) => a.status === 'PENDING').length;
+  const policies = state.approvalPolicies || [];
+  const pendingApprovalsCount = approvals.filter((a) => {
+    if (a.status !== 'Pending' && a.status !== 'PENDING' && a.status !== 'Escalated') return false;
+    const policy = policies.find((p) => p.id === a.policyId);
+    return canUserDecide(currentUser, a, policy).canDecide;
+  }).length;
 
   const complaints = state.complaints || [];
   const openComplaintsCount = complaints.filter(
     (c) => c.status !== 'CLOSED' && c.status !== 'RESOLVED'
-  ).length || 2; // Default realistic 2 open grievances
+  ).length;
 
   const leads = state.leads || [];
   const overdueFollowupsCount = leads.filter(
     (l) => l.stage === 'FOLLOW_UP' || l.stage === 'CONTACTED'
   ).length;
 
-  // Search filter query
+  const quotations = state.quotations || [];
+  const actionableQuotationsCount = getActionableQuotationsCount(quotations, currentUser);
+
+  const bookings = state.bookings || [];
+  const actionableBookingsCount = getActionableBookingsCount(bookings, currentUser);
+
+  // Menu search filter query
   const [searchQuery, setSearchQuery] = useState('');
 
   // Group collapse state with persistence
@@ -52,13 +67,14 @@ export function Sidebar() {
     });
   };
 
-  // Pinned items with persistence
+  // Pinned items with persistence per user
   const [pinnedIds, setPinnedIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('bikeerp_pinned_nav_items');
-      return saved ? JSON.parse(saved) : ['dashboard', 'leads', 'job_cards', 'billing', 'approvals'];
+      const storageKey = `bikeerp_pinned_nav_items_${currentUser?.id || 'default'}`;
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['dashboard', 'leads', 'job_cards', 'billing', 'approvals'];
+      return [];
     }
   });
 
@@ -68,7 +84,8 @@ export function Sidebar() {
     setPinnedIds((prev) => {
       const next = prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId];
       try {
-        localStorage.setItem('bikeerp_pinned_nav_items', JSON.stringify(next));
+        const storageKey = `bikeerp_pinned_nav_items_${currentUser?.id || 'default'}`;
+        localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -80,7 +97,7 @@ export function Sidebar() {
     (item) => pinnedIds.includes(item.id) && (!item.permission || hasPermission(currentUser, item.permission))
   );
 
-  // Helper for badge display
+  // Helper for badge display - Approvals badge is orange with pending count, hidden if 0
   const getItemBadge = (itemId) => {
     if (itemId === 'approvals' && pendingApprovalsCount > 0) {
       return { text: pendingApprovalsCount, color: 'bg-amber-500 text-slate-900 font-bold' };
@@ -91,6 +108,12 @@ export function Sidebar() {
     if (itemId === 'leads' && overdueFollowupsCount > 0) {
       return { text: overdueFollowupsCount, color: 'bg-blue-500 text-white font-medium' };
     }
+    if (itemId === 'quotations' && actionableQuotationsCount > 0) {
+      return { text: actionableQuotationsCount, color: 'bg-blue-600 text-white font-semibold' };
+    }
+    if (itemId === 'bookings' && actionableBookingsCount > 0) {
+      return { text: actionableBookingsCount, color: 'bg-blue-600 text-white font-semibold' };
+    }
     return null;
   };
 
@@ -98,27 +121,30 @@ export function Sidebar() {
     <aside
       className={`bg-sidebar text-white flex flex-col shrink-0 transition-all duration-200 z-40 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
-      } h-screen sticky top-0`}
+      } h-full`}
     >
       {/* Brand Header */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <BrandLogo className="w-8 h-8 rounded-lg shadow-soft" />
+      <div className="h-14 flex items-center justify-between px-3 sm:px-4 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <BrandLogo className="w-8 h-8 rounded-lg shadow-soft shrink-0" />
           {!sidebarCollapsed && (
             <div className="flex flex-col truncate">
-              <span className="font-bold text-sm tracking-tight text-white truncate">
-                {dealership?.name || 'AKASH Bajaj'}
+              <span className="font-bold text-xs tracking-tight text-white uppercase truncate">
+                AKASH BAJAJ
               </span>
-              <span className="text-[10px] text-blue-200/80 font-mono tracking-wider font-medium">
-                GSTIN: {dealership?.gstin || '29AABCB1829M1ZK'}
+              <span className="text-[10px] text-blue-200/70 font-medium tracking-tight truncate">
+                ERP & Service Hub
               </span>
             </div>
           )}
         </div>
+
+        {/* Toggle Collapse Desktop / Close Drawer Mobile */}
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors hidden lg:block"
+          className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {sidebarCollapsed ? (
             <LucideIcons.ChevronRight className="w-4 h-4" />
@@ -135,15 +161,16 @@ export function Sidebar() {
             <LucideIcons.Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-blue-200/50" />
             <input
               type="text"
-              placeholder="Filter 50+ menu items..."
+              placeholder="Filter menu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2 top-2 text-blue-200/50 hover:text-white text-xs"
+                title="Clear filter"
               >
                 ✕
               </button>
@@ -153,7 +180,7 @@ export function Sidebar() {
       )}
 
       {/* Nav Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
         {/* Pinned Section (if not searching and items are pinned) */}
         {!searchQuery && pinnedItems.length > 0 && (
           <div className="space-y-1 pb-3 border-b border-white/10">
@@ -161,7 +188,7 @@ export function Sidebar() {
               <div className="flex items-center justify-between px-2 py-0.5 text-[10px] font-bold text-amber-300/80 uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <LucideIcons.Pin className="w-3 h-3 rotate-45" />
-                  Quick Access (Pinned)
+                  Quick Access
                 </span>
                 <span className="text-[9px] text-white/40">{pinnedItems.length}</span>
               </div>
@@ -176,7 +203,7 @@ export function Sidebar() {
                   <NavLink
                     key={`pinned-${item.id}`}
                     to={item.path}
-                    end
+                    end={item.path === '/' || item.path === '/dashboard'}
                     title={sidebarCollapsed ? t(item.labelKey, item.label) : undefined}
                     className={({ isActive }) =>
                       `group flex items-center justify-between px-2.5 py-1.5 rounded-button text-xs font-medium transition-all duration-150 select-none ${
@@ -216,9 +243,9 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Regular Nav Groups */}
+        {/* Regular Nav Groups (OPERATIONS, WORKSHOP, ADMINISTRATION, etc.) */}
         {NAVIGATION_GROUPS.map((group) => {
-          // Filter items by permission
+          // Strictly filter items by permission
           let visibleItems = group.items.filter((item) => {
             if (!item.permission) return true;
             return hasPermission(currentUser, item.permission);
@@ -245,7 +272,8 @@ export function Sidebar() {
                 >
                   <span>{t(group.titleKey, group.title)}</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-blue-300/50 tabular-nums">
+                    {/* Computed count matching only visible items for user's role */}
+                    <span className="text-[10px] text-blue-300/60 tabular-nums font-mono">
                       {visibleItems.length}
                     </span>
                     <LucideIcons.ChevronDown
@@ -268,8 +296,8 @@ export function Sidebar() {
                       <NavLink
                         key={item.id}
                         to={item.path}
-                        end
-                        title={sidebarCollapsed ? t(item.labelKey, item.label) : undefined}
+                        end={item.path === '/' || item.path === '/dashboard'}
+                        title={t(item.labelKey, item.label)}
                         className={({ isActive }) =>
                           `group flex items-center justify-between px-2.5 py-1.5 rounded-button text-xs font-medium transition-all duration-150 select-none ${
                             isActive
@@ -315,16 +343,25 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* User Persona Footer */}
-      <div className="p-3 border-t border-white/10 shrink-0 bg-navy-950/40">
+      {/* User Persona Footer with Initials Avatar & Green Online Dot */}
+      <div className="p-3 border-t border-white/10 shrink-0 bg-navy-950/50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 text-primary-light flex items-center justify-center font-bold text-xs shrink-0">
-            {currentUser?.avatar || 'RV'}
+          <div className="relative shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 text-primary-light flex items-center justify-center font-bold text-xs">
+              {currentUser?.avatar || 'RV'}
+            </div>
+            {/* Green Online Dot */}
+            <span
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-navy-950"
+              title="Online"
+            />
           </div>
           {!sidebarCollapsed && (
             <div className="flex-1 truncate">
-              <div className="text-xs font-semibold text-white truncate">{currentUser?.name}</div>
-              <div className="text-[10px] text-blue-200/70 truncate">{currentUser?.role}</div>
+              <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
+                <span>{currentUser?.name || 'Rajesh Varma'}</span>
+              </div>
+              <div className="text-[10px] text-blue-200/70 truncate">{currentUser?.role || 'Super Admin'}</div>
             </div>
           )}
         </div>
@@ -332,3 +369,5 @@ export function Sidebar() {
     </aside>
   );
 }
+
+export default Sidebar;

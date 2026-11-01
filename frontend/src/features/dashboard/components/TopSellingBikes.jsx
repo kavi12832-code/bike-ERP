@@ -44,22 +44,15 @@ export function TopSellingBikes() {
                   className="w-14 h-9"
                 />
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-text-main group-hover:text-primary transition-colors">
-                  {bike.brand} {bike.model}
-                </h4>
-                <div className="text-[11px] text-text-muted mt-0.5">
-                  {bike.displacementCc > 0 ? `${bike.displacementCc}cc` : 'EV Electric'} •{' '}
-                  <span className="capitalize">{bike.bodyType}</span>
-                </div>
-              </div>
+              <h4 className="text-xs font-bold text-text-main group-hover:text-primary transition-colors">
+                {bike.brand} {bike.model}
+              </h4>
             </div>
 
             <div className="text-right">
               <div className="text-xs font-bold text-text-main tabular-nums">
                 {formatMoney(bike.exShowroomPaise)}
               </div>
-              <div className="text-[10px] text-text-muted mt-0.5">Ex-Showroom</div>
             </div>
           </div>
         ))}

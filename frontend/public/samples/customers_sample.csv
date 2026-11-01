@@ -1,0 +1,8 @@
+Customer Name,Mobile Number,Email Address,City,PIN Code,GSTIN,Address,Branch ID,Marketing Consent
+Arjun Das,9845012345,arjun.das@example.com,Bangalore,560001,29AABCS8891H1Z9,12 Indiranagar 100ft Road,blr-main,true
+Meenakshi Sundaram,9844055112,meena.s@example.com,Bangalore,560034,29AAACR4412K1Z5,45 Koramangala 4th Block,blr-main,true
+Rohan Mehta,9820033441,rohan.m@example.com,Bangalore,560008,,88 MG Road,blr-main,false
+Invalid Phone Customer,12345,invalid.phone@test.com,Bangalore,560001,,10 Residency Road,blr-main,true
+Invalid GSTIN Buyer,9845099881,bad.gstin@test.com,Bangalore,560025,INVALID_GST_FORMAT,22 Richmond Town,blr-main,true
+,9845077662,missing.name@test.com,Bangalore,560001,,55 Lavelle Road,blr-main,true
+

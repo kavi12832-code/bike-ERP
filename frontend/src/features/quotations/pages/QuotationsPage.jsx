@@ -1,674 +1,572 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../../store';
-import { calculateOnRoadPrice } from '../../../lib/onRoadPrice';
-import { calculateEmi } from '../../../lib/emi';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { Modal } from '../../../components/ui/Modal';
-import { Drawer } from '../../../components/ui/Drawer';
-import { BikeThumb } from '../../../components/domain/BikeThumb';
-import { formatMoney, formatDate } from '../../../lib/format';
-import {
-  FileSpreadsheet,
-  PlusCircle,
-  FileDown,
-  MessageSquare,
-  Calculator,
-  ShieldCheck,
-  CheckCircle,
-  AlertCircle,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { FileText, Plus, FileSpreadsheet, FileDown, Home } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Config, Selectors & Engine
+import { QUOTATION_STATUSES } from '../../../quotations/config';
+import {
+  getQuotationsKpis,
+  filterQuotations,
+  sortQuotations,
+  getQuotationStatusBreakdown,
+  getQuotationWeeklyActivity,
+} from '../../../quotations/selectors';
+import {
+  getSimulatedNow,
+  advanceSimulatedClock,
+  resetSimulatedClock,
+} from '../../../quotations/engine';
+import { canViewFullPhone } from '../../../lib/rbac';
+
+// Child Components
+import { QuotationsKpis } from '../components/QuotationsKpis';
+import { QuotationsFilterBar } from '../components/QuotationsFilterBar';
+import { QuotationsTable } from '../components/QuotationsTable';
+import { QuotationsBulkBar } from '../components/QuotationsBulkBar';
+import { QuotationsPagination } from '../components/QuotationsPagination';
+import { QuotationStatusOverview } from '../components/QuotationStatusOverview';
+import { QuotationWeeklyActivity } from '../components/QuotationWeeklyActivity';
+import { QuotationQuickActions } from '../components/QuotationQuickActions';
+import { QuotationDetailDrawer } from '../components/QuotationDetailDrawer';
+import { QuotationBuilderModal } from '../components/QuotationBuilderModal';
+import { ConvertBookingModal } from '../components/ConvertBookingModal';
+import { WhatsAppShareModal } from '../components/WhatsAppShareModal';
+import { QuotationReportsModal } from '../components/QuotationReportsModal';
+
 export function QuotationsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tableRef = useRef(null);
+
+  // Store bindings
   const state = useAppStore();
-  const quotations = state.quotations || [];
-  const bikeCatalog = state.catalogs.bikes || [];
-  const currentUser = state.currentUser;
-  const updateDiscountStatus = state.updateDiscountStatus;
+  const rawQuotations = state.quotations || [];
+  const bikeCatalog = state.catalogs?.bikes || [];
+  const branches = state.branches || [];
+  const currentUser = state.currentUser || {};
+  const activeBranchId = state.activeBranchId || 'br-blr-central';
+
+  // Store actions
   const addQuotation = state.addQuotation;
+  const updateQuotation = state.updateQuotation;
+  const renewQuotation = state.renewQuotation;
+  const cancelQuotation = state.cancelQuotation;
+  const convertQuotationToBooking = state.convertQuotationToBooking;
+  const expireQuotationsCatchup = state.expireQuotationsCatchup;
+  const updateDiscountStatus = state.updateDiscountStatus;
 
-  // Builder modal state
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [selectedBikeId, setSelectedBikeId] = useState(bikeCatalog[0]?.id || '');
-  const [selectedVariantId, setSelectedVariantId] = useState(bikeCatalog[0]?.variants[0]?.id || '');
-  const [selectedColor, setSelectedColor] = useState(bikeCatalog[0]?.colors[0]?.name || '');
-  const [customerName, setCustomerName] = useState('Anand Murthy');
-  const [customerPhone, setCustomerPhone] = useState('+91 98451 90214');
-  const [discountRupees, setDiscountRupees] = useState(0);
+  // Run initial expiry check
+  useEffect(() => {
+    if (typeof expireQuotationsCatchup === 'function') {
+      expireQuotationsCatchup();
+    }
+  }, []);
 
-  // Active detail & preview
-  const [activeQuotation, setActiveQuotation] = useState(null);
-  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  // Filter State from URL / Defaults
+  const [filters, setFilters] = useState(() => ({
+    search: searchParams.get('q') || '',
+    status: searchParams.get('status') || 'ALL',
+    branchId: searchParams.get('branch') || activeBranchId,
+    includeOpenQuotations: true,
+    salespersonId: '',
+    modelId: '',
+    minAmount: '',
+    maxAmount: '',
+    minDiscountPct: '',
+    maxDiscountPct: '',
+    expiringWithinDays: '',
+    hasApprovalRequest: false,
+    dateRangeLabel: 'Oct 01, 2026 – Oct 31, 2026',
+  }));
 
-  // EMI calculator drawer
-  const [emiDrawerOpen, setEmiDrawerOpen] = useState(false);
-  const [emiDownPaymentRupees, setEmiDownPaymentRupees] = useState(40000);
-  const [emiTenureMonths, setEmiTenureMonths] = useState(36);
-  const [emiRate, setEmiRate] = useState(10.5);
+  // Sync active branch when changed in topbar
+  useEffect(() => {
+    if (activeBranchId && filters.branchId !== activeBranchId) {
+      setFilters((prev) => ({ ...prev, branchId: activeBranchId }));
+    }
+  }, [activeBranchId]);
 
-  const selectedBike = bikeCatalog.find((b) => b.id === selectedBikeId) || bikeCatalog[0];
-  const selectedVariant = selectedBike.variants.find((v) => v.id === selectedVariantId) || selectedBike.variants[0];
+  // Keep URL in sync with search & status
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('q', filters.search);
+    if (filters.status && filters.status !== 'ALL') params.set('status', filters.status);
+    if (filters.branchId && filters.branchId !== 'all') params.set('branch', filters.branchId);
+    setSearchParams(params, { replace: true });
+  }, [filters.search, filters.status, filters.branchId, setSearchParams]);
 
-  // Dynamic price engine computation
-  const currentPricing = useMemo(() => {
-    const baseExShowroom = selectedBike.exShowroomPaise + (selectedVariant?.priceDiffPaise || 0);
-    const discountPaise = Number(discountRupees) * 100;
+  // Sorting & Pagination
+  const [sortKey, setSortKey] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedIds, setSelectedIds] = useState([]);
 
-    return calculateOnRoadPrice({
-      exShowroomPaise: baseExShowroom,
-      displacementCc: selectedBike.displacementCc,
-      fuelType: selectedBike.fuelType,
-      selectedAccessories: [
-        { id: 'acc-1', name: 'Engine Crash Guard', pricePaise: 385000 },
-      ],
-      applicableOffers: [
-        { id: 'off-1', code: 'DEALER_SCHEME', title: 'Dealership Festive Allowance', discountPaise: 200000 },
-      ],
-      approvedDiscountPaise: discountPaise,
-    });
-  }, [selectedBike, selectedVariant, discountRupees]);
+  // Dev Clock trigger to force re-render on simulated time advance
+  const [clockTick, setClockTick] = useState(0);
 
-  // EMI simulation
-  const loanPrincipalPaise = Math.max(
-    0,
-    currentPricing.netOnRoadPricePaise - Number(emiDownPaymentRupees) * 100
-  );
-  const emiDetails = calculateEmi({
-    principalPaise: loanPrincipalPaise,
-    annualInterestRatePercent: Number(emiRate),
-    tenureMonths: Number(emiTenureMonths),
-  });
-
-  const handleCreateQuotation = (e) => {
-    e.preventDefault();
-    const discountPaise = Number(discountRupees) * 100;
-
-    // Gate: If discount > ₹2,000 (executive limit), marked PENDING_APPROVAL
-    const requiresApproval = discountPaise > 200000;
-    const discountStatus = requiresApproval ? 'PENDING_APPROVAL' : 'APPROVED';
-
-    const newQ = {
-      id: `qt-${Date.now()}`,
-      quotationNumber: `QT/2627/${String(quotations.length + 1).padStart(5, '0')}`,
-      leadId: `lead-gen-${Date.now()}`,
-      customerName,
-      phone: customerPhone,
-      modelId: selectedBike.id,
-      modelName: `${selectedBike.brand} ${selectedBike.model}`,
-      variantName: selectedVariant.name,
-      colorName: selectedColor,
-      exShowroomPaise: currentPricing.exShowroomPaise,
-      roadTaxPaise: currentPricing.roadTaxPaise,
-      rtoFeePaise: currentPricing.rtoFeePaise,
-      insurancePaise: currentPricing.insurancePaise,
-      handlingPaise: currentPricing.handlingPaise,
-      accessoriesPaise: currentPricing.accessoriesTotalPaise,
-      discountPaise: currentPricing.approvedDiscountPaise,
-      discountStatus,
-      netOnRoadPricePaise: currentPricing.netOnRoadPricePaise,
-      validUntil: new Date(Date.now() + 7 * 86400000).toISOString(),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser?.name || 'Sales Staff',
+  // Active Date Range: Default Current Month (October 2026)
+  const dateRange = useMemo(() => {
+    const ref = getSimulatedNow();
+    return {
+      startDate: new Date(2026, 9, 1),
+      endDate: new Date(2026, 9, 31, 23, 59, 59),
     };
+  }, [clockTick]);
 
-    addQuotation(newQ);
-    setBuilderOpen(false);
+  // Filtered & Sorted Quotations
+  const filteredQuotations = useMemo(() => {
+    return filterQuotations(
+      rawQuotations,
+      filters,
+      currentUser,
+      dateRange,
+      getSimulatedNow()
+    );
+  }, [rawQuotations, filters, currentUser, dateRange, clockTick]);
 
-    if (requiresApproval) {
-      toast.warning(
-        `Quotation ${newQ.quotationNumber} logged with ₹${Number(discountRupees).toLocaleString('en-IN')} discount. Pending Sales Manager Gate!`
-      );
-    } else {
-      toast.success(`Quotation ${newQ.quotationNumber} generated successfully!`);
+  const sortedQuotations = useMemo(() => {
+    return sortQuotations(filteredQuotations, sortKey, sortOrder);
+  }, [filteredQuotations, sortKey, sortOrder]);
+
+  // Paginated Slice
+  const paginatedQuotations = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedQuotations.slice(start, start + pageSize);
+  }, [sortedQuotations, currentPage, pageSize]);
+
+  // Compute KPI values strictly from pure selector
+  const kpis = useMemo(() => {
+    return getQuotationsKpis(
+      rawQuotations,
+      filters.branchId,
+      dateRange,
+      getSimulatedNow()
+    );
+  }, [rawQuotations, filters.branchId, dateRange, clockTick]);
+
+  // Bottom Rows Pure Selectors
+  const statusBreakdown = useMemo(() => {
+    return getQuotationStatusBreakdown(filteredQuotations);
+  }, [filteredQuotations]);
+
+  const weeklyActivity = useMemo(() => {
+    return getQuotationWeeklyActivity(rawQuotations, filters.branchId, dateRange);
+  }, [rawQuotations, filters.branchId, dateRange]);
+
+  // Modals & Drawers State
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [activeQuotation, setActiveQuotation] = useState(null);
+
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState(null);
+
+  const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [targetConvertQuote, setTargetConvertQuote] = useState(null);
+
+  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
+  const [targetWhatsAppQuote, setTargetWhatsAppQuote] = useState(null);
+
+  const [reportsModalOpen, setReportsModalOpen] = useState(false);
+
+  // Auto-open builder if URL has ?lead=<id>
+  useEffect(() => {
+    const leadParam = searchParams.get('lead');
+    if (leadParam && !builderOpen) {
+      setEditingQuotation(null);
+      setBuilderOpen(true);
+    }
+  }, [searchParams]);
+
+  // Filter Handlers
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+    setSelectedIds([]);
+  };
+
+  const handleKpiStatusSelect = (statusTarget) => {
+    handleFilterChange('status', statusTarget);
+    if (tableRef.current) {
+      tableRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortOrder('desc');
+    }
+  };
+
+  // Selection Handlers
+  const handleToggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === paginatedQuotations.length && paginatedQuotations.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedQuotations.map((q) => q.id));
+    }
+  };
+
+  // Clock Simulation
+  const handleAdvanceClock = (days = 1) => {
+    advanceSimulatedClock(days);
+    if (typeof expireQuotationsCatchup === 'function') {
+      expireQuotationsCatchup();
+    }
+    setClockTick((v) => v + 1);
+    toast.info(`Simulated clock advanced by +${days} ${days === 1 ? 'day' : 'days'}`);
+  };
+
+  const handleResetClock = () => {
+    resetSimulatedClock();
+    if (typeof expireQuotationsCatchup === 'function') {
+      expireQuotationsCatchup();
+    }
+    setClockTick((v) => v + 1);
+    toast.success('Simulated clock reset to current time');
+  };
+
+  // Actions Handlers
+  const handleViewQuotation = (q) => {
+    setActiveQuotation(q);
+    setDetailDrawerOpen(true);
+  };
+
+  const handleEditQuotation = (q) => {
+    setEditingQuotation(q);
+    setBuilderOpen(true);
+  };
+
+  const handleConvertToBooking = (q) => {
+    setTargetConvertQuote(q);
+    setConvertModalOpen(true);
+  };
+
+  const handleConfirmBookingConversion = (quotationId, bookingData) => {
+    try {
+      const result = convertQuotationToBooking(quotationId, bookingData);
+      toast.success(
+        `Successfully generated Booking ${result.booking.bookingNumber} for ${result.booking.customerName}`
+      );
+      if (activeQuotation?.id === quotationId) {
+        setActiveQuotation(result.quotation);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to convert quotation to booking');
+    }
+  };
+
+  const handleSendWhatsApp = (q) => {
+    setTargetWhatsAppQuote(q);
+    setWhatsAppModalOpen(true);
+  };
+
+  const handleConfirmSendWhatsApp = (quotationId, message) => {
+    const q = rawQuotations.find((item) => item.id === quotationId);
+    if (q && (q.status === QUOTATION_STATUSES.DRAFT || q.status === QUOTATION_STATUSES.APPROVED)) {
+      updateQuotation(quotationId, {
+        status: QUOTATION_STATUSES.SENT,
+        history: [
+          ...(q.history || []),
+          {
+            timestamp: new Date().toISOString(),
+            action: 'DISPATCHED_WHATSAPP',
+            performedBy: currentUser?.name || 'Staff',
+            notes: 'Quotation details and link dispatched to customer mobile via WhatsApp API',
+          },
+        ],
+      });
+    }
+  };
+
+  const handleRenewQuotation = (q) => {
+    const renewed = renewQuotation(q.id);
+    if (renewed) {
+      toast.success(`Generated renewed quotation revision ${renewed.quotationNumber}`);
+      setActiveQuotation(renewed);
+    }
+  };
+
+  const handleCancelQuotation = (q) => {
+    const reason = window.prompt(
+      `Please provide a cancellation reason for ${q.quotationNumber}:`,
+      'Customer chose competing brand'
+    );
+    if (reason) {
+      cancelQuotation(q.id, reason);
+      toast.info(`Quotation ${q.quotationNumber} has been cancelled`);
+      if (activeQuotation?.id === q.id) {
+        setActiveQuotation((prev) => ({ ...prev, status: QUOTATION_STATUSES.CANCELLED, cancelReason: reason }));
+      }
+    }
+  };
+
+  const handleDownloadPdf = (q) => {
+    toast.success(`Downloaded Quotation PDF for ${q.quotationNumber}`);
+  };
+
+  const handleApproveDiscount = (quotationId) => {
+    updateDiscountStatus(quotationId, 'APPROVED', currentUser?.name || 'Manager');
+    updateQuotation(quotationId, {
+      status: QUOTATION_STATUSES.APPROVED,
+      history: [
+        {
+          timestamp: new Date().toISOString(),
+          action: 'DISCOUNT_AUTHORIZED',
+          performedBy: currentUser?.name || 'Manager',
+          notes: 'Dual-control discount authorized via Quotations Center',
+        },
+      ],
+    });
+    toast.success(`Discount approved for ${quotationId}`);
+    if (activeQuotation?.id === quotationId) {
+      setActiveQuotation((prev) => ({ ...prev, status: QUOTATION_STATUSES.APPROVED }));
+    }
+  };
+
+  const handleSaveQuotationBuilder = (payload) => {
+    if (editingQuotation) {
+      updateQuotation(payload.id, payload);
+      toast.success(`Updated quotation ${payload.quotationNumber}`);
+    } else {
+      addQuotation(payload);
+      toast.success(`Created quotation ${payload.quotationNumber}`);
+    }
+  };
+
+  // Bulk Actions
+  const handleBulkExport = () => {
+    setReportsModalOpen(true);
+  };
+
+  const handleBulkWhatsApp = () => {
+    toast.success(`Dispatched WhatsApp reminders to ${selectedIds.length} customer quotations`);
+    setSelectedIds([]);
+  };
+
+  const handleBulkCancel = () => {
+    if (window.confirm(`Are you sure you want to cancel ${selectedIds.length} quotations?`)) {
+      selectedIds.forEach((id) => {
+        cancelQuotation(id, 'Bulk cancelled by showroom manager');
+      });
+      toast.info(`Cancelled ${selectedIds.length} quotations`);
+      setSelectedIds([]);
+    }
+  };
+
+  const canViewPhone = canViewFullPhone(currentUser);
+
+  // Extract salespeople list from users store or staff
+  const salespeople = (state.users || [])
+    .filter((u) => u.role === 'Sales Executive' || u.role === 'Sales Manager')
+    .map((u) => ({ id: u.id, name: u.name }));
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-main">Vehicle Quotations & On-Road Engine</h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Statutory tax calculation with approval gates and instant WhatsApp generation
-          </p>
+    <div className="space-y-5 pb-12">
+      {/* 1. Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+        <Home className="w-3.5 h-3.5 text-slate-400" />
+        <span>Operations</span>
+        <span className="text-slate-300">/</span>
+        <span className="text-blue-600 font-semibold">Quotations</span>
+      </div>
+
+      {/* 2. Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-soft shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Quotations</h1>
+            <p className="text-xs text-slate-500">Create, manage and track customer quotations.</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Calculator}
-            onClick={() => setEmiDrawerOpen(true)}
+          <button
+            onClick={() => setReportsModalOpen(true)}
+            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
           >
-            EMI Calculator
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={PlusCircle}
-            onClick={() => setBuilderOpen(true)}
+            <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+            <span>Reports</span>
+          </button>
+
+          <button
+            onClick={() => setReportsModalOpen(true)}
+            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
           >
-            New Quotation Builder
-          </Button>
+            <FileDown className="w-4 h-4 text-slate-500" />
+            <span>Export</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingQuotation(null);
+              setBuilderOpen(true);
+            }}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Quotation</span>
+          </button>
         </div>
       </div>
 
-      {/* Quotation List Table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-surface-subtle border-b border-border text-text-muted font-semibold uppercase text-[11px]">
-                <th className="p-3.5">Quotation #</th>
-                <th className="p-3.5">Customer</th>
-                <th className="p-3.5">Bike Model & Variant</th>
-                <th className="p-3.5">Colour</th>
-                <th className="p-3.5">Ex-Showroom</th>
-                <th className="p-3.5">Net On-Road</th>
-                <th className="p-3.5">Discount Status</th>
-                <th className="p-3.5">Valid Until</th>
-                <th className="p-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {quotations.map((q) => (
-                <tr
-                  key={q.id}
-                  onClick={() => setActiveQuotation(q)}
-                  className="hover:bg-surface-subtle/70 transition-colors cursor-pointer"
-                >
-                  <td className="p-3.5 font-mono font-bold text-primary">{q.quotationNumber}</td>
-                  <td className="p-3.5">
-                    <div className="font-bold text-text-main">{q.customerName}</div>
-                    <div className="text-[10px] text-text-muted">{q.phone}</div>
-                  </td>
-                  <td className="p-3.5">
-                    <div className="font-medium text-text-main">{q.modelName}</div>
-                    <div className="text-[10px] text-text-muted">{q.variantName}</div>
-                  </td>
-                  <td className="p-3.5 text-text-main">{q.colorName}</td>
-                  <td className="p-3.5 tabular-nums text-text-muted">{formatMoney(q.exShowroomPaise)}</td>
-                  <td className="p-3.5 tabular-nums font-bold text-text-main">
-                    {formatMoney(q.netOnRoadPricePaise)}
-                  </td>
-                  <td className="p-3.5">
-                    <StatusBadge status={q.discountStatus} />
-                  </td>
-                  <td className="p-3.5 text-text-muted">{formatDate(q.validUntil)}</td>
-                  <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={FileDown}
-                        onClick={() => {
-                          setActiveQuotation(q);
-                          setPdfPreviewOpen(true);
-                        }}
-                      >
-                        PDF
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        icon={MessageSquare}
-                        onClick={() => {
-                          toast.success(`Quotation sent to ${q.customerName} on WhatsApp!`);
-                        }}
-                      >
-                        Share
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* 3. Four KPI Cards */}
+      <QuotationsKpis
+        kpis={kpis}
+        activeStatus={filters.status}
+        onSelectStatus={handleKpiStatusSelect}
+      />
 
-      {/* Comprehensive Quotation Builder Modal */}
-      <Modal
+      {/* 4. Filter Bar */}
+      <div ref={tableRef}>
+        <QuotationsFilterBar
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          branches={branches}
+          salespeople={salespeople}
+          models={bikeCatalog}
+          onAdvanceClock={handleAdvanceClock}
+          onResetClock={handleResetClock}
+        />
+      </div>
+
+      {/* 5. Bulk Selection Bar */}
+      <QuotationsBulkBar
+        selectedCount={selectedIds.length}
+        onClearSelection={() => setSelectedIds([])}
+        onBulkExport={handleBulkExport}
+        onBulkWhatsApp={handleBulkWhatsApp}
+        onBulkCancel={handleBulkCancel}
+      />
+
+      {/* 6. Quotations Table */}
+      <QuotationsTable
+        quotations={paginatedQuotations}
+        selectedIds={selectedIds}
+        onToggleSelect={handleToggleSelect}
+        onToggleSelectAll={handleToggleSelectAll}
+        onViewQuotation={handleViewQuotation}
+        onEditQuotation={handleEditQuotation}
+        onConvertToBooking={handleConvertToBooking}
+        onSendWhatsApp={handleSendWhatsApp}
+        onRenewQuotation={handleRenewQuotation}
+        onCancelQuotation={handleCancelQuotation}
+        onDownloadPdf={handleDownloadPdf}
+        canViewPhone={canViewPhone}
+        currentUser={currentUser}
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={handleSort}
+      />
+
+      {/* 7. Pagination */}
+      <QuotationsPagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={sortedQuotations.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
+      />
+
+      {/* 8. Bottom Row: Status Overview, Weekly Activity & Quick Actions (NO GRAPH DESIGN) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
+        <QuotationStatusOverview breakdown={statusBreakdown} />
+        <QuotationWeeklyActivity weeklyActivity={weeklyActivity} />
+        <QuotationQuickActions
+          onCreateQuotation={() => {
+            setEditingQuotation(null);
+            setBuilderOpen(true);
+          }}
+          onResetFilters={() => {
+            setFilters({
+              search: '',
+              status: 'ALL',
+              branchId: activeBranchId,
+              includeOpenQuotations: true,
+              salespersonId: '',
+              modelId: '',
+              minAmount: '',
+              maxAmount: '',
+              minDiscountPct: '',
+              maxDiscountPct: '',
+              expiringWithinDays: '',
+              hasApprovalRequest: false,
+              dateRangeLabel: 'Oct 01, 2026 – Oct 31, 2026',
+            });
+          }}
+          onOpenExportReport={() => setReportsModalOpen(true)}
+        />
+      </div>
+
+      {/* Modals & Drawers */}
+      <QuotationDetailDrawer
+        isOpen={detailDrawerOpen}
+        onClose={() => setDetailDrawerOpen(false)}
+        quotation={activeQuotation}
+        onConvertToBooking={handleConvertToBooking}
+        onSendWhatsApp={handleSendWhatsApp}
+        onRenewQuotation={handleRenewQuotation}
+        onDownloadPdf={handleDownloadPdf}
+        onApproveDiscount={handleApproveDiscount}
+        canViewPhone={canViewPhone}
+        currentUser={currentUser}
+      />
+
+      <QuotationBuilderModal
         isOpen={builderOpen}
-        onClose={() => setBuilderOpen(false)}
-        title="Interactive On-Road Price Quotation Builder"
-        size="xl"
-      >
-        <form onSubmit={handleCreateQuotation} className="space-y-6 text-xs">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Form: Vehicle & Customer Configuration */}
-            <div className="space-y-4">
-              <div className="p-3 bg-surface-subtle rounded-card border border-border">
-                <h4 className="font-semibold text-text-main mb-2">1. Customer Identification</h4>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-[11px] text-text-muted block">Customer Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] text-text-muted block">Mobile Phone (+91)</label>
-                    <input
-                      type="tel"
-                      required
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                    />
-                  </div>
-                </div>
-              </div>
+        onClose={() => {
+          setBuilderOpen(false);
+          setEditingQuotation(null);
+        }}
+        initialData={editingQuotation}
+        leadPrefill={
+          searchParams.get('lead')
+            ? (state.leads || []).find((l) => l.id === searchParams.get('lead'))
+            : null
+        }
+        bikes={bikeCatalog}
+        branches={branches}
+        currentUser={currentUser}
+        onSave={handleSaveQuotationBuilder}
+      />
 
-              <div className="p-3 bg-surface-subtle rounded-card border border-border">
-                <h4 className="font-semibold text-text-main mb-2">2. Vehicle & Variant</h4>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-[11px] text-text-muted block">Bike Model</label>
-                    <select
-                      value={selectedBikeId}
-                      onChange={(e) => {
-                        const newBikeId = e.target.value;
-                        setSelectedBikeId(newBikeId);
-                        const b = bikeCatalog.find((x) => x.id === newBikeId);
-                        setSelectedVariantId(b?.variants[0]?.id || '');
-                        setSelectedColor(b?.colors[0]?.name || '');
-                      }}
-                      className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                    >
-                      {bikeCatalog.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.brand} {b.model} ({b.displacementCc > 0 ? `${b.displacementCc}cc` : 'EV'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+      <ConvertBookingModal
+        isOpen={convertModalOpen}
+        onClose={() => setConvertModalOpen(false)}
+        quotation={targetConvertQuote}
+        onConfirm={handleConfirmBookingConversion}
+      />
 
-                  <div>
-                    <label className="text-[11px] text-text-muted block">Variant Specification</label>
-                    <select
-                      value={selectedVariantId}
-                      onChange={(e) => setSelectedVariantId(e.target.value)}
-                      className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                    >
-                      {selectedBike.variants.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} ({v.priceDiffPaise >= 0 ? '+' : ''}
-                          {formatMoney(v.priceDiffPaise)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+      <WhatsAppShareModal
+        isOpen={whatsAppModalOpen}
+        onClose={() => setWhatsAppModalOpen(false)}
+        quotation={targetWhatsAppQuote}
+        onSend={handleConfirmSendWhatsApp}
+      />
 
-                  <div>
-                    <label className="text-[11px] text-text-muted block">Colour Option</label>
-                    <select
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                    >
-                      {selectedBike.colors.map((c) => (
-                        <option key={c.name} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-surface-subtle rounded-card border border-border">
-                <h4 className="font-semibold text-text-main mb-2">3. Dealership Discount</h4>
-                <div>
-                  <label className="text-[11px] text-text-muted block">
-                    Special Cash Discount (₹ Rupees)
-                  </label>
-                  <input
-                    type="number"
-                    value={discountRupees}
-                    onChange={(e) => setDiscountRupees(Number(e.target.value))}
-                    className="w-full p-2 rounded-input border border-border bg-surface text-text-main"
-                  />
-                  <div className="mt-1 text-[10px] text-text-muted">
-                    {Number(discountRupees) > 2000 ? (
-                      <span className="text-status-amber font-semibold">
-                        Discount &gt; ₹2,000 exceeds Sales Executive limit. Creates pending Manager Approval Gate.
-                      </span>
-                    ) : (
-                      <span className="text-status-green">
-                        Auto-approved within standard Sales Executive discretion (≤ ₹2,000).
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Live Statutory On-Road Calculation Sheet */}
-            <div className="bg-surface-subtle p-4 rounded-card border border-border flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-3 border-b border-border">
-                  <div>
-                    <h3 className="font-bold text-sm text-text-main">
-                      {selectedBike.brand} {selectedBike.model}
-                    </h3>
-                    <div className="text-[11px] text-text-muted">
-                      {selectedVariant.name} • {selectedColor}
-                    </div>
-                  </div>
-                  <BikeThumb
-                    bodyType={selectedBike.bodyType}
-                    color={
-                      selectedBike.colors.find((c) => c.name === selectedColor)?.hex || '#2563EB'
-                    }
-                    imageUrl={selectedBike.imageUrl}
-                    className="w-16 h-10"
-                  />
-                </div>
-
-                {/* Line Item Breakdown with Rule Tags */}
-                <div className="divide-y divide-border/60 py-3 space-y-2">
-                  {currentPricing.lines.map((line, idx) => (
-                    <div key={idx} className="pt-2 flex items-start justify-between text-xs">
-                      <div>
-                        <div
-                          className={`font-semibold ${
-                            line.isDeduction ? 'text-status-green' : 'text-text-main'
-                          }`}
-                        >
-                          {line.label}
-                        </div>
-                        <div className="text-[10px] text-text-muted italic">{line.ruleUsed}</div>
-                      </div>
-                      <div
-                        className={`tabular-nums font-bold ${
-                          line.isDeduction ? 'text-status-green' : 'text-text-main'
-                        }`}
-                      >
-                        {line.isDeduction ? '- ' : ''}
-                        {formatMoney(line.amountPaise)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Total Payable */}
-              <div className="pt-4 border-t-2 border-border mt-4">
-                <div className="flex items-center justify-between text-base font-bold text-text-main">
-                  <span>Net On-Road Price:</span>
-                  <span className="text-primary tabular-nums">
-                    {formatMoney(currentPricing.netOnRoadPricePaise)}
-                  </span>
-                </div>
-                <div className="text-[10px] text-text-muted mt-1 text-right">
-                  Price valid for 7 days. Subject to RTO tariff updates.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2.5 pt-4 border-t border-border">
-            <Button variant="secondary" type="button" onClick={() => setBuilderOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit">
-              Save Official Quotation
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* PDF Printable Quotation Modal */}
-      <Modal
-        isOpen={pdfPreviewOpen}
-        onClose={() => setPdfPreviewOpen(false)}
-        title={activeQuotation ? `Quotation Sheet: ${activeQuotation.quotationNumber}` : ''}
-        size="lg"
-      >
-        {activeQuotation && (
-          <div className="p-6 bg-white text-slate-900 font-sans space-y-6 border border-border rounded-card">
-            {/* Letterhead */}
-            <div className="flex items-start justify-between border-b pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-navy-900">{state.dealership.name}</h2>
-                <p className="text-xs text-slate-500">{state.dealership.headOffice}</p>
-                <p className="text-xs text-slate-500 font-mono">
-                  GSTIN: {state.dealership.gstin} | State: Karnataka (29)
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-primary font-mono">
-                  {activeQuotation.quotationNumber}
-                </div>
-                <div className="text-xs text-slate-500">Date: {formatDate(activeQuotation.createdAt)}</div>
-                <div className="text-xs text-slate-500">Valid Till: {formatDate(activeQuotation.validUntil)}</div>
-              </div>
-            </div>
-
-            {/* Customer Details */}
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="font-semibold text-slate-500 block uppercase text-[10px]">Quote Prepared For:</span>
-                <span className="font-bold text-sm text-slate-800">{activeQuotation.customerName}</span>
-                <div className="text-slate-600">{activeQuotation.phone}</div>
-              </div>
-              <div>
-                <span className="font-semibold text-slate-500 block uppercase text-[10px]">Vehicle Configuration:</span>
-                <span className="font-bold text-sm text-slate-800">{activeQuotation.modelName}</span>
-                <div className="text-slate-600">Variant: {activeQuotation.variantName} | Color: {activeQuotation.colorName}</div>
-              </div>
-            </div>
-
-            {/* Price Table */}
-            <table className="w-full text-xs text-left border-collapse border border-slate-200">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="p-2 border border-slate-200">Component</th>
-                  <th className="p-2 border border-slate-200 text-right">Amount (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="p-2 border border-slate-200">Ex-Showroom Price (Incl. GST)</td>
-                  <td className="p-2 border border-slate-200 text-right tabular-nums">
-                    {formatMoney(activeQuotation.exShowroomPaise)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 border border-slate-200">Life Time Road Tax (Karnataka LTT)</td>
-                  <td className="p-2 border border-slate-200 text-right tabular-nums">
-                    {formatMoney(activeQuotation.roadTaxPaise)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 border border-slate-200">RTO Registration, Smart Card & HSRP</td>
-                  <td className="p-2 border border-slate-200 text-right tabular-nums">
-                    {formatMoney(activeQuotation.rtoFeePaise)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 border border-slate-200">Comprehensive Insurance (1-Yr OD + 5-Yr TP)</td>
-                  <td className="p-2 border border-slate-200 text-right tabular-nums">
-                    {formatMoney(activeQuotation.insurancePaise)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-2 border border-slate-200">Showroom Handling & Logistics</td>
-                  <td className="p-2 border border-slate-200 text-right tabular-nums">
-                    {formatMoney(activeQuotation.handlingPaise)}
-                  </td>
-                </tr>
-                {activeQuotation.accessoriesPaise > 0 && (
-                  <tr>
-                    <td className="p-2 border border-slate-200">Accessories Fitted</td>
-                    <td className="p-2 border border-slate-200 text-right tabular-nums">
-                      {formatMoney(activeQuotation.accessoriesPaise)}
-                    </td>
-                  </tr>
-                )}
-                {activeQuotation.discountPaise > 0 && (
-                  <tr className="text-emerald-700 font-semibold bg-emerald-50">
-                    <td className="p-2 border border-slate-200">Special Approved Dealership Discount</td>
-                    <td className="p-2 border border-slate-200 text-right tabular-nums">
-                      - {formatMoney(activeQuotation.discountPaise)}
-                    </td>
-                  </tr>
-                )}
-                <tr className="bg-slate-100 font-bold text-sm">
-                  <td className="p-2.5 border border-slate-200">Total Net On-Road Price</td>
-                  <td className="p-2.5 border border-slate-200 text-right text-primary tabular-nums">
-                    {formatMoney(activeQuotation.netOnRoadPricePaise)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Approval Gate status */}
-            {activeQuotation.discountStatus === 'PENDING_APPROVAL' && (
-              <div className="p-3 rounded bg-amber-50 border border-amber-200 text-status-amber text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Discount pending authorization by Sales Manager / Admin. Cannot convert to booking.</span>
-                </div>
-                {currentUser?.role === 'Sales Manager' || currentUser?.role === 'Super Admin' ? (
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => {
-                      updateDiscountStatus(activeQuotation.id, 'APPROVED', currentUser.name);
-                      setPdfPreviewOpen(false);
-                      toast.success(`Discount approved by ${currentUser.name}!`);
-                    }}
-                  >
-                    Authorize Discount
-                  </Button>
-                ) : null}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="secondary" onClick={() => window.print()}>
-                Print / Save PDF
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  toast.success(`Quotation PDF dispatched to ${activeQuotation.phone} via WhatsApp`);
-                  setPdfPreviewOpen(false);
-                }}
-              >
-                Send via WhatsApp
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* EMI Side Panel */}
-      <Drawer
-        isOpen={emiDrawerOpen}
-        onClose={() => setEmiDrawerOpen(false)}
-        title="Two-Wheeler Loan EMI Side Panel"
-        size="md"
-      >
-        <div className="space-y-6 text-xs">
-          <p className="text-text-muted">
-            Configure down payment and interest rate to calculate live monthly instalments.
-          </p>
-
-          <div className="space-y-3">
-            <div>
-              <label className="text-text-muted block font-semibold mb-1">
-                Vehicle On-Road Price Reference
-              </label>
-              <div className="text-lg font-bold text-text-main tabular-nums">
-                {formatMoney(currentPricing.netOnRoadPricePaise)}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-text-muted block font-semibold mb-1">
-                Down Payment (₹ Rupees)
-              </label>
-              <input
-                type="number"
-                value={emiDownPaymentRupees}
-                onChange={(e) => setEmiDownPaymentRupees(e.target.value)}
-                className="w-full p-2.5 rounded-input border border-border bg-surface-subtle text-text-main"
-              />
-            </div>
-
-            <div>
-              <label className="text-text-muted block font-semibold mb-1">
-                Financing Tenure (Months)
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {[12, 24, 36, 48].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setEmiTenureMonths(m)}
-                    className={`py-2 rounded-button border font-semibold ${
-                      emiTenureMonths === m
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-border bg-surface-subtle text-text-main'
-                    }`}
-                  >
-                    {m}M
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-text-muted block font-semibold mb-1">
-                Annual Interest Rate (% p.a.)
-              </label>
-              <input
-                type="number"
-                step="0.25"
-                value={emiRate}
-                onChange={(e) => setEmiRate(e.target.value)}
-                className="w-full p-2.5 rounded-input border border-border bg-surface-subtle text-text-main"
-              />
-            </div>
-          </div>
-
-          {/* Computed EMI Card */}
-          <Card className="p-5 bg-blue-50 border-blue-200">
-            <div className="text-xs text-text-muted uppercase font-semibold">
-              Monthly Equated Instalment
-            </div>
-            <div className="text-2xl font-bold text-primary mt-1 tabular-nums">
-              {formatMoney(emiDetails.monthlyEmiPaise)} / mo
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-blue-200 grid grid-cols-2 gap-3 text-[11px]">
-              <div>
-                <span className="text-text-muted block">Loan Principal:</span>
-                <span className="font-bold text-text-main tabular-nums">
-                  {formatMoney(emiDetails.principalPaise)}
-                </span>
-              </div>
-              <div>
-                <span className="text-text-muted block">Total Interest:</span>
-                <span className="font-bold text-text-main tabular-nums">
-                  {formatMoney(emiDetails.totalInterestPaise)}
-                </span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </Drawer>
+      <QuotationReportsModal
+        isOpen={reportsModalOpen}
+        onClose={() => setReportsModalOpen(false)}
+        filteredQuotations={filteredQuotations}
+        allQuotations={rawQuotations}
+        canViewPhone={canViewPhone}
+      />
     </div>
   );
 }

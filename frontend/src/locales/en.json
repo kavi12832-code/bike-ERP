@@ -14,7 +14,6 @@
     "stock_vehicles": "Vehicle Inventory",
     "stock_parts": "Spare Parts & Stock",
     "purchases": "Purchases & GRN",
-
     "workshop": "Workshop & Service",
     "service_center": "Service Appointments",
     "job_cards": "Job Cards Kanban",
@@ -24,7 +23,6 @@
     "pickup": "Pickup & Drop",
     "recalls": "Recalls & Bulletins",
     "my_jobs": "Technician My Jobs",
-
     "customer_care": "Customer Care",
     "customers": "Customer 360",
     "complaints": "Complaints & Grievances",
@@ -34,7 +32,6 @@
     "warranty_claims": "Warranty, AMC & OEM Claims",
     "warranty": "Warranty, AMC & OEM Claims",
     "documents": "Document Vault",
-
     "finance_accounts": "Finance & Accounts",
     "billing": "Invoices & Billing",
     "collections": "Collections & Receivables",
@@ -52,7 +49,6 @@
     "vehicle_finance": "Vehicle Finance (EMI)",
     "exchange": "Exchange & Pre-owned",
     "deal_profit": "Deal Profitability (P&L)",
-
     "growth_intelligence": "Growth & Intelligence",
     "lead_sources": "Lead Sources Hub",
     "telecall": "Telecalling Console",
@@ -62,7 +58,6 @@
     "oem_schemes": "OEM Schemes & Scorecard",
     "ai_suite": "AI Copilot & Tools",
     "reports": "Reports & Analytics",
-
     "administration": "Administration",
     "approvals": "Approvals Center",
     "users": "Users Management",
@@ -120,5 +115,21 @@
     "rejected": "Rejected",
     "draft": "Draft",
     "closed": "Closed"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview",
+    "gross_sales": "Gross Sales Today",
+    "invoices_target": "Invoices vs Target",
+    "bay_utilisation": "Service Bay Utilisation",
+    "gst_output": "GST Output Today",
+    "sales_performance": "Sales Performance",
+    "lead_sources": "Lead Source Distribution",
+    "top_performers": "Top Performers",
+    "ai_copilot": "AI Copilot",
+    "upcoming_tasks": "Upcoming Tasks",
+    "quick_actions": "Quick Actions",
+    "revenue_trajectory": "Showroom Revenue Trajectory",
+    "booking_trends": "Customer Booking Trends"
   }
 }

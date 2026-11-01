@@ -119,60 +119,57 @@ export function FleetSalesPage() {
     setShowNewDealModal(false);
   };
 
-  const totalB2bPipelinePaise = fleetAccounts.reduce((sum, acc) => 
-    sum + acc.activeDeals.reduce((dSum, d) => dSum + d.totalDealValuePaise, 0), 0
+  const totalB2bPipelinePaise = (fleetAccounts || []).reduce((sum, acc) => 
+    sum + ((acc?.activeDeals || []).reduce((dSum, d) => dSum + (d?.totalDealValuePaise || 0), 0)), 0
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Briefcase className="w-6 h-6 text-blue-600" />
-            Corporate &amp; Fleet Commercial Sales
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Bulk institutional sales for delivery fleets, corporate clients, automated volume discount slabs &amp; phased delivery schedules.
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Fleet & B2B Sales', path: '/sales/fleet' },
+        ]}
+        title="Corporate & Fleet Commercial Sales"
+        subtitle="Bulk institutional sales for delivery fleets, corporate clients, automated volume discount slabs & phased delivery schedules."
+        actions={
+          <button
+            onClick={() => setShowNewDealModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm transition"
+          >
+            <Plus className="w-4 h-4" />
+            Create Corporate Fleet Deal
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => setShowNewDealModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          Create Corporate Fleet Deal
-        </button>
-      </div>
-
-      {/* KPI Stats */}
+      {/* 2. Plain KPI Cards per Section 0.5 */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Institutional Deal Pipeline</div>
-          <div className="text-lg font-bold text-blue-600 font-mono mt-1">
-            {formatMoney(totalB2bPipelinePaise)}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">3 active corporate accounts</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Commercial Units in Order</div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white mt-1">65 Commercial Units</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">EV Cargo &amp; 125cc fleets</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Corporate Discount Slabs</div>
-          <div className="text-xs font-bold text-emerald-600 mt-1">5-10: 3% | 11-25: 5% | 26+: 7%</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Pre-authorized volume matrix</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Fleet Maintenance SLA</div>
-          <div className="text-lg font-bold text-indigo-600 mt-1">Dedicated Bay #12</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Bulk priority turnaround AMC</div>
-        </div>
+        <KpiCard
+          label="Institutional Pipeline"
+          value={formatMoney(totalB2bPipelinePaise)}
+          helperText={`${fleetAccounts.length} corporate accounts`}
+          icon={<Briefcase className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Units in Order"
+          value="65 Units"
+          helperText="EV Cargo & 125cc fleets"
+          icon={<Truck className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Volume Discount"
+          value="Up to 7%"
+          helperText="5-10: 3% | 11-25: 5% | 26+: 7%"
+          icon={<Percent className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Fleet SLA Priority"
+          value="Bay #12 Dedicated"
+          helperText="Turnaround commercial AMC"
+          icon={<ShieldCheck className="w-5 h-5 text-purple-500" />}
+        />
       </div>
 
       {/* Accounts & Deals Explorer */}
@@ -391,3 +388,4 @@ export function FleetSalesPage() {
 }
 
 export default FleetSalesPage;
+

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../../store';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -19,7 +20,18 @@ import {
 import { toast } from 'sonner';
 
 export function ReportsPage() {
-  const [activeReport, setActiveReport] = useState('SALES_LEADERBOARD');
+  const [searchParams] = useSearchParams();
+  const datasetParam = searchParams.get('dataset');
+  const [activeReport, setActiveReport] = useState(
+    datasetParam === 'approvals' ? 'APPROVALS_GOVERNANCE' : 'SALES_LEADERBOARD'
+  );
+  const approvals = useAppStore((state) => state.approvals || []);
+
+  useEffect(() => {
+    if (datasetParam === 'approvals') {
+      setActiveReport('APPROVALS_GOVERNANCE');
+    }
+  }, [datasetParam]);
   const invoices = useAppStore((state) => state.invoices || []);
   const customers = useAppStore((state) => state.customers || []);
 
@@ -79,6 +91,7 @@ export function ReportsPage() {
           { id: 'MODEL_MARGINS', label: 'Model-wise Gross Margins' },
           { id: 'BAY_REVENUE', label: 'Service Revenue per Bay' },
           { id: 'CUSTOMER_LTV', label: 'Customer Lifetime Value (LTV)' },
+          { id: 'APPROVALS_GOVERNANCE', label: 'Approvals & Governance Audit' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -151,6 +164,59 @@ export function ReportsPage() {
                     <td className="p-3.5 font-bold text-status-green">{m.avgMarginPercent}</td>
                     <td className="p-3.5 text-right font-bold tabular-nums text-primary">
                       {formatMoney(m.totalGrossMarginPaise)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      
+      {/* Tab 5: Approvals Governance Dataset */}
+      {activeReport === 'APPROVALS_GOVERNANCE' && (
+        <Card className="overflow-hidden">
+          <div className="p-4 border-b border-border bg-surface-subtle flex items-center justify-between text-xs">
+            <div>
+              <h3 className="font-bold text-text-main">Dual-Control Approvals Audit Trail ({approvals.length} records)</h3>
+              <p className="text-text-muted text-[11px]">Comprehensive governance log of all statutory decisions, SLA turnaround, and policy compliance.</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-surface-subtle border-b border-border text-text-muted font-semibold uppercase text-[11px]">
+                  <th className="p-3">Ref ID</th>
+                  <th className="p-3">Type</th>
+                  <th className="p-3">Title</th>
+                  <th className="p-3">Amount</th>
+                  <th className="p-3">Requester</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Decided By</th>
+                  <th className="p-3">SLA Compliance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {approvals.map((req) => (
+                  <tr key={req.id} className="hover:bg-surface-subtle/70 transition-colors">
+                    <td className="p-3 font-mono font-bold text-text-main">{req.id}</td>
+                    <td className="p-3 font-semibold">{req.type}</td>
+                    <td className="p-3 font-medium text-text-main max-w-xs truncate">{req.title}</td>
+                    <td className="p-3 font-bold text-primary">{req.amountPaise ? formatMoney(req.amountPaise) : 'N/A'}</td>
+                    <td className="p-3 text-text-muted">{req.requesterName} ({req.requesterRole})</td>
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
+                        {req.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-text-muted">{req.decidedBy || '—'}</td>
+                    <td className="p-3 font-medium">
+                      {req.slaBreached ? (
+                        <span className="text-status-red font-bold">Breached</span>
+                      ) : (
+                        <span className="text-status-green font-bold">Within SLA</span>
+                      )}
                     </td>
                   </tr>
                 ))}

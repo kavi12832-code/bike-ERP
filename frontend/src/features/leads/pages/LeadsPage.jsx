@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../store';
 import { hasPermission } from '../../../lib/rbac';
 import { PERMISSIONS } from '../../../config/permissions';
@@ -22,6 +23,9 @@ import {
   TrendingUp,
   UserCheck,
   CheckCircle,
+  FileSpreadsheet,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,12 +39,15 @@ const STAGES = [
 ];
 
 export function LeadsPage() {
+  const navigate = useNavigate();
   const state = useAppStore();
   const currentUser = state.currentUser;
   const leads = state.leads || [];
-  const bikeCatalog = state.catalogs.bikes || [];
+  const bikeCatalog = state.catalogs?.bikes || [];
   const updateLeadStage = state.updateLeadStage;
   const addLead = state.addLead;
+  const updateLead = state.updateLead;
+  const deleteLead = state.deleteLead;
 
   const [viewMode, setViewMode] = useState('KANBAN'); // 'KANBAN' or 'LIST'
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +55,15 @@ export function LeadsPage() {
   const [newLeadModalOpen, setNewLeadModalOpen] = useState(false);
   const [lostModalOpen, setLostModalOpen] = useState(false);
   const [lostReason, setLostReason] = useState('Competitor Price (Triumph/Bajaj)');
+  const [editLeadModalOpen, setEditLeadModalOpen] = useState(false);
+  const [editLeadForm, setEditLeadForm] = useState({
+    customerName: '',
+    phone: '',
+    modelName: '',
+    budgetRupees: 180000,
+    source: 'WALK_IN',
+    stage: 'ENQUIRY',
+  });
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -426,6 +442,18 @@ export function LeadsPage() {
               <Button
                 variant="primary"
                 size="sm"
+                icon={FileSpreadsheet}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                onClick={() => {
+                  navigate(`/quotations?customer=${encodeURIComponent(selectedLead.customerName)}&phone=${encodeURIComponent(selectedLead.phone)}&model=${encodeURIComponent(selectedLead.modelName)}`);
+                  toast.success(`Transitioning Lead ${selectedLead.customerName} to Quotation Builder...`);
+                }}
+              >
+                Create Quotation
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 icon={Phone}
                 onClick={() => toast.success(`Simulating call to ${selectedLead.customerName}...`)}
               >
@@ -439,14 +467,47 @@ export function LeadsPage() {
                   toast.success(`Opening WhatsApp Chat with ${selectedLead.customerName}`);
                 }}
               >
-                WhatsApp Reply
+                WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Edit3}
+                onClick={() => {
+                  setEditLeadForm({
+                    customerName: selectedLead.customerName,
+                    phone: selectedLead.phone,
+                    modelName: selectedLead.modelName,
+                    budgetRupees: Math.round((selectedLead.budgetPaise || 18000000) / 100),
+                    source: selectedLead.source,
+                    stage: selectedLead.stage,
+                  });
+                  setEditLeadModalOpen(true);
+                }}
+              >
+                Edit
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setLostModalOpen(true)}
               >
-                Mark as Lost
+                Mark Lost
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={Trash2}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  if (window.confirm(`Delete lead "${selectedLead.customerName}"?`)) {
+                    if (deleteLead) deleteLead(selectedLead.id);
+                    setSelectedLead(null);
+                    toast.success('Lead deleted from pipeline.');
+                  }
+                }}
+              >
+                Delete
               </Button>
             </div>
           </div>
@@ -584,6 +645,105 @@ export function LeadsPage() {
               }}
             >
               Confirm Lost
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Lead Modal */}
+      <Modal
+        isOpen={editLeadModalOpen}
+        onClose={() => setEditLeadModalOpen(false)}
+        title={selectedLead ? `Edit Lead — ${selectedLead.customerName}` : 'Edit Lead'}
+        size="md"
+      >
+        <div className="space-y-4 text-xs">
+          <div>
+            <label className="font-semibold text-text-main block mb-1">Customer Full Name</label>
+            <input
+              type="text"
+              value={editLeadForm.customerName}
+              onChange={(e) => setEditLeadForm({ ...editLeadForm, customerName: e.target.value })}
+              className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Mobile Number</label>
+              <input
+                type="text"
+                value={editLeadForm.phone}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, phone: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main font-mono"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Pipeline Stage</label>
+              <select
+                value={editLeadForm.stage}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, stage: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              >
+                {STAGES.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+                <option value="LOST">Lost</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Interested Model</label>
+              <input
+                type="text"
+                value={editLeadForm.modelName}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, modelName: e.target.value })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-text-main block mb-1">Estimated Budget (₹)</label>
+              <input
+                type="number"
+                value={editLeadForm.budgetRupees}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, budgetRupees: Number(e.target.value) })}
+                className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main tabular-nums font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="secondary" onClick={() => setEditLeadModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (selectedLead && updateLead) {
+                  updateLead(selectedLead.id, {
+                    customerName: editLeadForm.customerName,
+                    phone: editLeadForm.phone,
+                    modelName: editLeadForm.modelName,
+                    budgetPaise: editLeadForm.budgetRupees * 100,
+                    stage: editLeadForm.stage,
+                  });
+                  setSelectedLead({
+                    ...selectedLead,
+                    customerName: editLeadForm.customerName,
+                    phone: editLeadForm.phone,
+                    modelName: editLeadForm.modelName,
+                    budgetPaise: editLeadForm.budgetRupees * 100,
+                    stage: editLeadForm.stage,
+                  });
+                  setEditLeadModalOpen(false);
+                  toast.success(`Lead ${editLeadForm.customerName} updated successfully.`);
+                }
+              }}
+              className="bg-blue-600 text-white"
+            >
+              Save Changes
             </Button>
           </div>
         </div>

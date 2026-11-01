@@ -3,7 +3,7 @@ import { useAppStore } from '../../../store';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
-import { formatTimeOnly, formatDate, formatPhone } from '../../../lib/format';
+import { formatTimeOnly, formatDate, formatPhone, formatMoney } from '../../../lib/format';
 import {
   MessageSquareText,
   Send,
@@ -30,6 +30,7 @@ export function WhatsAppPage() {
   const [activeConvId, setActiveConvId] = useState(conversations[0]?.id || '');
   const [inputText, setInputText] = useState('');
   const [viewMode, setViewMode] = useState('INBOX'); // 'INBOX' or 'TEMPLATES'
+  const [, setTick] = useState(0);
 
   const activeConv = conversations.find((c) => c.id === activeConvId) || conversations[0];
   const relatedCustomer = customers.find((c) => c.id === activeConv?.customerId);
@@ -39,6 +40,7 @@ export function WhatsAppPage() {
     e.preventDefault();
     if (!inputText.trim() || !activeConv) return;
 
+    activeConv.messages = activeConv.messages || [];
     activeConv.messages.push({
       id: `msg-${Date.now()}`,
       sender: 'STAFF',
@@ -49,12 +51,14 @@ export function WhatsAppPage() {
     });
 
     setInputText('');
+    setTick((t) => t + 1);
     toast.success('WhatsApp reply dispatched to customer via Meta Cloud API webhook');
   };
 
   const handleToggleAi = () => {
     if (!activeConv) return;
     activeConv.isAiPaused = !activeConv.isAiPaused;
+    setTick((t) => t + 1);
     toast.info(
       activeConv.isAiPaused
         ? 'AI automated replies PAUSED. Staff takeover mode active.'

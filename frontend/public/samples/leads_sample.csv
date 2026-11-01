@@ -1,0 +1,7 @@
+Customer Name,Mobile Phone,Email Address,Interested Model,Lead Source,Lead Status,Branch ID
+Priya Singh,9845088214,priya.singh@example.com,Dominar 400,Walk-in Showroom,NEW,blr-main
+Sandeep Yadav,9845033221,sandeep.y@example.com,Pulsar NS200,Website Inquiry,CONTACTED,blr-main
+Rohit Chandran,9845011447,rohit.c@example.com,Chetak EV,Instagram Ads,TEST_RIDE_BOOKED,blr-main
+Bad Phone Lead,9845,bad.phone@test.com,Pulsar 150,Walk-in,NEW,blr-main
+No Model Lead,9845099331,no.model@test.com,,Google Search,NEW,blr-main
+

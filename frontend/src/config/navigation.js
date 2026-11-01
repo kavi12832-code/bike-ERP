@@ -468,10 +468,10 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'users',
         labelKey: 'nav.users',
-        label: 'Users and Roles',
+        label: 'Users Management',
         path: '/admin/users',
         icon: 'UserCog',
-        permission: PERMISSIONS.USERS_MANAGE,
+        permission: PERMISSIONS.USERS_VIEW,
       },
       {
         id: 'audit',
@@ -503,7 +503,7 @@ export const NAVIGATION_GROUPS = [
         label: 'HR and Incentives',
         path: '/hr',
         icon: 'UserCheck',
-        permission: PERMISSIONS.USERS_MANAGE,
+        permission: PERMISSIONS.USERS_VIEW,
       },
       {
         id: 'branches',
@@ -524,7 +524,7 @@ export const NAVIGATION_GROUPS = [
       {
         id: 'data_exchange',
         labelKey: 'nav.data_exchange',
-        label: 'Import/Export Center',
+        label: 'Import & Export Center',
         path: '/admin/data',
         icon: 'ArrowUpDown',
         permission: PERMISSIONS.DATA_EXCHANGE_MANAGE,

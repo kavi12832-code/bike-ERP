@@ -117,7 +117,7 @@ export function DviCustomerApprovalPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+      <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-xl text-center space-y-4">
           <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8" />
@@ -148,7 +148,7 @@ export function DviCustomerApprovalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-900 py-8 px-4">
       <div className="max-w-xl mx-auto space-y-6">
         {/* Dealership Branding Banner */}
         <div className="text-center space-y-1">

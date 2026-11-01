@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 export function GstCompliancePage() {
   const [activeTab, setActiveTab] = useState('GSTR1'); // 'GSTR1', 'GSTR3B', 'HSN_SUMMARY', 'ITC_RECON'
   const invoices = useAppStore((state) => state.invoices || []);
-  const taxRules = useAppStore((state) => state.catalogs.taxRules || []);
+  const taxRules = useAppStore((state) => state.catalogs?.taxRules || []);
 
   const totalOutputGstPaise = invoices.reduce((s, i) => s + (i.totalTaxPaise || 0), 0);
   const totalCgstPaise = invoices.reduce((s, i) => s + (i.cgstPaise || 0), 0);

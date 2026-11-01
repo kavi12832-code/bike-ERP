@@ -113,23 +113,42 @@ export function AccessoriesCounterPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Shift Floating Status */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <ScanBarcode className="w-6 h-6 text-blue-600" />
-            Accessories &amp; Merchandise Fast Counter (POS)
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Rapid walk-in billing with barcode scanning, promotional kit bundles, split payments &amp; 80mm thermal slips.
-          </p>
-        </div>
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Operations', path: '/dashboard' },
+          { label: 'Accessories Counter (POS)', path: '/counter' },
+        ]}
+        title="Accessories & Merchandise Fast Counter (POS)"
+        subtitle="Rapid walk-in billing with barcode scanning, promotional kit bundles, split payments & 80mm thermal slips."
+      />
 
-        <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs flex items-center gap-3">
-          <Clock className="w-4 h-4 text-slate-400" />
-          <span>Shift Opening Cash: <strong>{formatMoney(shiftFloatPaise)}</strong></span>
-          <span className="text-emerald-600 font-bold">• Active Till</span>
-        </div>
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Cart Total"
+          value={formatMoney(grossTotalPaise)}
+          helperText={`${cart.length} line items`}
+          icon={<ShoppingCart className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Units in Cart"
+          value={`${cart.reduce((sum, i) => sum + i.qty, 0)} Units`}
+          helperText="Scanned & in-basket"
+          icon={<Layers className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Shift Cash Float"
+          value={formatMoney(shiftFloatPaise)}
+          helperText="Opening till balance"
+          icon={<DollarSign className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="Payment Mode"
+          value={paymentMode}
+          helperText="UPI, Cash, or Split"
+          icon={<CreditCard className="w-5 h-5 text-purple-500" />}
+        />
       </div>
 
       {/* Main Grid: Products & Bundles vs POS Cart */}

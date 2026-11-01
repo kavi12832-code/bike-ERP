@@ -103,57 +103,59 @@ export function PickupDropPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Truck className="w-6 h-6 text-blue-600" />
-            Doorstep Pickup &amp; Drop Logistics
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Driver transit dispatch, route windows, OTP-verified custody handover &amp; AMC billing waiver.
-          </p>
-        </div>
-
-        {/* Filter buttons */}
-        <div className="flex items-center gap-2">
-          {['ALL', 'PICKUP', 'DROP'].map(type => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition ${
-                filterType === type
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-              }`}
-            >
-              {type === 'ALL' ? 'All Schedules' : `${type}s Only`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Driver Fleet Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Active Transit Drivers</div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white mt-1">2 Drivers On Duty</div>
-          <div className="text-[11px] text-slate-400">Suresh Gowda (KA-01-T-881) • Ramesh (KA-03-T-992)</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Today's Transit Queue</div>
-          <div className="text-lg font-bold text-blue-600 mt-1">{trips.length} Bookings Scheduled</div>
-          <div className="text-[11px] text-slate-400">2 Pickups Morning • 2 Drops Afternoon</div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-500">Doorstep Logistics Revenue</div>
-          <div className="text-lg font-bold text-emerald-600 mt-1">
-            {formatMoney(trips.reduce((sum, t) => sum + t.chargesPaise, 0))}
+      {/* 1. Page Header */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Workshop & Service', path: '/service/bays' },
+          { label: 'Pickup & Drop', path: '/service/pickup' },
+        ]}
+        title="Doorstep Pickup & Drop Logistics"
+        subtitle="Driver transit dispatch, route windows, OTP-verified custody handover and AMC billing waiver."
+        actions={
+          <div className="flex items-center gap-1.5 bg-surface-subtle p-1 rounded-lg border border-border">
+            {['ALL', 'PICKUP', 'DROP'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
+                  filterType === type
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-main'
+                }`}
+              >
+                {type === 'ALL' ? 'All Trips' : `${type}s`}
+              </button>
+            ))}
           </div>
-          <div className="text-[11px] text-slate-400">2 Waived under AKASH Bajaj Gold AMC</div>
-        </div>
+        }
+      />
+
+      {/* 2. Plain KPI Cards per Section 0.5 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <KpiCard
+          label="Active Transit Drivers"
+          value="2 On Duty"
+          helperText="Suresh & Ramesh"
+          icon={<User className="w-5 h-5 text-primary" />}
+        />
+        <KpiCard
+          label="Today's Transit Queue"
+          value={`${trips.length} Bookings`}
+          helperText="Pickups & Drops scheduled"
+          icon={<Truck className="w-5 h-5 text-blue-500" />}
+        />
+        <KpiCard
+          label="Doorstep Logistics Rev."
+          value={formatMoney(trips.reduce((sum, t) => sum + t.chargesPaise, 0))}
+          helperText="Paid logistics charges"
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+        />
+        <KpiCard
+          label="AMC Logistics Waivers"
+          value="2 Trips FOC"
+          helperText="Under Gold/Platinum AMC"
+          icon={<KeyRound className="w-5 h-5 text-purple-500" />}
+        />
       </div>
 
       {/* Trips Cards Grid */}
