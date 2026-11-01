@@ -737,12 +737,52 @@ export const useAppStore = create(
           set({ bookings: updatedBookings, vehicleStock: updatedStock });
         }
       },
+      addCustomer: (customerData) => {
+        const id = 'cust-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        const newCustomer = {
+          id,
+          name: '',
+          phone: '',
+          email: '',
+          address: '',
+          city: 'Bangalore',
+          state: 'Karnataka',
+          stateCode: '29',
+          pincode: '560001',
+          gstin: null,
+          loyaltyTier: 'Silver',
+          loyaltyPoints: 0,
+          ltvPaise: 0,
+          csatScore: 5,
+          churnRisk: 'LOW',
+          consent: {
+            marketingWhatsapp: true,
+            serviceReminders: true,
+            promotionalSms: false,
+            updatedAt: new Date().toISOString(),
+          },
+          documents: [],
+          vehicles: [],
+          createdAt: new Date().toISOString(),
+          ...customerData,
+        };
+        set((state) => ({ customers: [newCustomer, ...(state.customers || [])] }));
+        get().logAudit('CUSTOMER_CREATED', 'CUSTOMER', id, null, newCustomer);
+        return newCustomer;
+      },
       updateCustomer: (customerId, patch) => {
-        const old = get().customers.find((c) => c.id === customerId);
+        const old = (get().customers || []).find((c) => c.id === customerId);
         set((state) => ({
-          customers: state.customers.map((c) => (c.id === customerId ? { ...c, ...patch } : c)),
+          customers: (state.customers || []).map((c) => (c.id === customerId ? { ...c, ...patch } : c)),
         }));
         get().logAudit('CUSTOMER_UPDATED', 'CUSTOMER', customerId, old, patch);
+      },
+      deleteCustomer: (customerId) => {
+        const old = (get().customers || []).find((c) => c.id === customerId);
+        set((state) => ({
+          customers: (state.customers || []).filter((c) => c.id !== customerId),
+        }));
+        get().logAudit('CUSTOMER_DELETED', 'CUSTOMER', customerId, old, null);
       },
       updateAppointment: (appointmentId, patch) => {
         const old = (get().appointments || []).find((a) => a.id === appointmentId);
