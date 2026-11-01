@@ -23,6 +23,8 @@ import {
   Edit3,
   Trash2,
   Sparkles,
+  Bike,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,7 +45,8 @@ export function VehicleStockPage() {
   // Dynamic counting of vehicles separated by bike models
   const modelCounts = useMemo(() => {
     const counts = {};
-    vehicleStock.forEach((unit) => {
+    (vehicleStock || []).forEach((unit) => {
+      if (!unit) return;
       const model = unit.modelName || 'Other';
       if (!counts[model]) {
         counts[model] = {
@@ -108,7 +111,8 @@ export function VehicleStockPage() {
   const allowCostView = canViewCost(currentUser);
 
   const filteredStock = useMemo(() => {
-    return vehicleStock.filter((unit) => {
+    return (vehicleStock || []).filter((unit) => {
+      if (!unit) return false;
       if (selectedModelFilter !== 'ALL' && unit.modelName !== selectedModelFilter) {
         return false;
       }
@@ -315,7 +319,7 @@ export function VehicleStockPage() {
               Vehicle Stock Counting Separated by Bike Model
             </h3>
             <span className="text-[11px] font-semibold text-text-muted bg-surface-subtle px-2 py-0.5 rounded-full border border-border">
-              {modelCounts.length} Models • {vehicleStock.length} Total Units
+              {modelCounts.length} Models • {(vehicleStock || []).filter(Boolean).length} Total Units
             </span>
           </div>
 
@@ -335,8 +339,8 @@ export function VehicleStockPage() {
           {/* Card: All Models Overview */}
           <KpiCard
             label="All Bike Models"
-            value={`${vehicleStock.length} Units`}
-            helperText={`${vehicleStock.filter((v) => v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Free • ${vehicleStock.filter((v) => v.allocatedBookingId).length} Booked`}
+            value={`${(vehicleStock || []).filter(Boolean).length} Units`}
+            helperText={`${(vehicleStock || []).filter((v) => v && v.status === 'IN_STOCK' && !v.allocatedBookingId).length} Free • ${(vehicleStock || []).filter((v) => v && v.allocatedBookingId).length} Booked`}
             icon={<Warehouse className="w-5 h-5 text-primary" />}
             active={selectedModelFilter === 'ALL'}
             onClick={() => setSelectedModelFilter('ALL')}

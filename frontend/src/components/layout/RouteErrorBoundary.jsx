@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 
-export function RouteErrorBoundary() {
-  const error = useRouteError();
+export function RouteErrorBoundary({ error: propsError }) {
+  const routeError = useRouteError();
+  const error = propsError || routeError;
   const navigate = useNavigate();
   const location = useLocation();
   const resetToDefaultSeed = useAppStore((s) => s.resetToDefaultSeed);
@@ -183,7 +184,12 @@ export class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      if (this.props.fallback) {
+        if (React.isValidElement(this.props.fallback)) {
+          return React.cloneElement(this.props.fallback, { error: this.state.error });
+        }
+        return this.props.fallback;
+      }
       return (
         <div className="p-6 my-4 bg-rose-50 border border-rose-200 rounded-xl text-center">
           <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
