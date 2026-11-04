@@ -14,51 +14,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SAMPLE_CONSENT_LEDGER = [
-  {
-    id: 'cns-01',
-    customerId: 'cust-001',
-    customerName: 'Rohit Chandran',
-    consentType: 'WHATSAPP_MARKETING', // WHATSAPP_MARKETING, SERVICE_REMINDERS, KYC_STORAGE, THIRD_PARTY
-    channel: 'WhatsApp OTP Double Opt-in',
-    timestamp: '2026-10-15 14:20:10 IST',
-    ipAddress: '192.168.1.102',
-    status: 'GRANTED',
-  },
-  {
-    id: 'cns-02',
-    customerId: 'cust-001',
-    customerName: 'Rohit Chandran',
-    consentType: 'SERVICE_REMINDERS',
-    channel: 'Digital Gatepass Acceptance',
-    timestamp: '2026-10-15 14:20:10 IST',
-    ipAddress: '192.168.1.102',
-    status: 'GRANTED',
-  },
-  {
-    id: 'cns-03',
-    customerId: 'cust-002',
-    customerName: 'Deepak Kumar',
-    consentType: 'WHATSAPP_MARKETING',
-    channel: 'Web Opt-Out Form',
-    timestamp: '2026-10-18 09:12:00 IST',
-    ipAddress: '49.207.181.12',
-    status: 'REVOKED',
-  },
-  {
-    id: 'cns-04',
-    customerId: 'cust-003',
-    customerName: 'Vinod Nair',
-    consentType: 'THIRD_PARTY_SHARING',
-    channel: 'Financier Application',
-    timestamp: '2026-09-12 11:45:00 IST',
-    ipAddress: '192.168.1.105',
-    status: 'REVOKED',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_CONSENT_LEDGER: loaded from the database (collection "admin.privacyConsent.consentLedger")
 
 export function PrivacyConsentPage() {
-  const [ledger, setLedger] = useState(SAMPLE_CONSENT_LEDGER);
+  const [ledger, setLedger] = useCollection('admin.privacyConsent.consentLedger');
   const [search, setSearch] = useState('');
   const [showErasureModal, setShowErasureModal] = useState(false);
   const [erasureTargetCustomer, setErasureTargetCustomer] = useState('Vinod Nair');

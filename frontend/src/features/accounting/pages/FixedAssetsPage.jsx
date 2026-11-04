@@ -15,63 +15,11 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_ASSETS = [
-  {
-    id: 'ast-01',
-    tagNo: 'FA/BLR/MCH-001',
-    category: 'Workshop Machinery',
-    name: 'ATS ELGI Hydraulic Two-Post Bike Lift (Bay 1)',
-    costPaise: 24500000, // ₹2,45,000
-    purchaseDate: '2024-04-10',
-    depreciationMethod: 'SLM', // SLM or WDV
-    ratePercent: 15,
-    accumulatedDepreciationPaise: 7350000,
-    netBookValuePaise: 17150000,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'ast-02',
-    tagNo: 'FA/BLR/MCH-002',
-    category: 'Workshop Machinery',
-    name: 'Bosch OBD Master Two-Wheeler Diagnostic Scanner',
-    costPaise: 18500000, // ₹1,85,000
-    purchaseDate: '2025-01-15',
-    depreciationMethod: 'WDV',
-    ratePercent: 40,
-    accumulatedDepreciationPaise: 7400000,
-    netBookValuePaise: 11100000,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'ast-03',
-    tagNo: 'FA/BLR/FIX-001',
-    category: 'Showroom Fixtures',
-    name: 'Backlit Royal Enfield Brand Wall & Display Pods',
-    costPaise: 48000000, // ₹4,80,000
-    purchaseDate: '2023-11-20',
-    depreciationMethod: 'SLM',
-    ratePercent: 10,
-    accumulatedDepreciationPaise: 14400000,
-    netBookValuePaise: 33600000,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'ast-04',
-    tagNo: 'FA/BLR/DEMO-001',
-    category: 'Company & Demo Vehicles',
-    name: 'Himalayan 450 Demo Bike (KA-01-TEST-01)',
-    costPaise: 28500000,
-    purchaseDate: '2025-06-01',
-    depreciationMethod: 'WDV',
-    ratePercent: 30,
-    accumulatedDepreciationPaise: 4275000,
-    netBookValuePaise: 24225000,
-    status: 'ACTIVE',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_ASSETS: loaded from the database (collection "accounting.fixedAssets.assets")
 
 export function FixedAssetsPage() {
-  const [assets, setAssets] = useState(SAMPLE_ASSETS);
+  const [assets, setAssets] = useCollection('accounting.fixedAssets.assets');
   const [selectedMethod, setSelectedMethod] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
 

@@ -18,71 +18,11 @@ import {
 import { useAppStore } from '../../../store';
 import { toast } from 'sonner';
 
-const SAMPLE_TASKS = [
-  {
-    id: 'tsk-01',
-    module: 'DELIVERY',
-    title: 'Pre-Delivery Inspection (PDI) for Arjun Das (Hunter 350)',
-    dueDate: '2026-10-24',
-    time: '11:30 AM',
-    priority: 'HIGH',
-    assignee: 'Vikram Sethi',
-    isMyTask: true,
-    completed: false,
-    entityLink: '/delivery',
-  },
-  {
-    id: 'tsk-02',
-    module: 'CRM_FOLLOWUP',
-    title: 'Follow-up telecall with Kishore Gowda on exchange valuation',
-    dueDate: '2026-10-24',
-    time: '02:00 PM',
-    priority: 'MEDIUM',
-    assignee: 'Deepak Rao',
-    isMyTask: false,
-    completed: false,
-    entityLink: '/leads/telecall',
-  },
-  {
-    id: 'tsk-03',
-    module: 'TEST_RIDE',
-    title: 'Off-road Test Ride slot: Priya Singh (Himalayan 450)',
-    dueDate: '2026-10-24',
-    time: '04:30 PM',
-    priority: 'HIGH',
-    assignee: 'Deepak Rao',
-    isMyTask: false,
-    completed: false,
-    entityLink: '/test-rides',
-  },
-  {
-    id: 'tsk-04',
-    module: 'RECEIVABLES',
-    title: 'Collect overdue balance ₹39,000 from Rohit Chandran',
-    dueDate: '2026-10-25',
-    time: '10:00 AM',
-    priority: 'HIGH',
-    assignee: 'Suresh Iyer',
-    isMyTask: false,
-    completed: false,
-    entityLink: '/finance/collections',
-  },
-  {
-    id: 'tsk-05',
-    module: 'COMPLAINT',
-    title: 'Resolve engine oil leakage complaint for Vinay Bhaskar',
-    dueDate: '2026-10-25',
-    time: '12:00 PM',
-    priority: 'URGENT',
-    assignee: 'Karthik Raja',
-    isMyTask: false,
-    completed: false,
-    entityLink: '/care/complaints',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_TASKS: loaded from the database (collection "tasks.tasksCalendar.tasks")
 
 export function TasksCalendarPage() {
-  const [tasks, setTasks] = useState(SAMPLE_TASKS);
+  const [tasks, setTasks] = useCollection('tasks.tasksCalendar.tasks');
   const [viewMode, setViewMode] = useState('LIST'); // 'LIST' or 'CALENDAR'
   const [filterScope, setFilterScope] = useState('ALL'); // 'ALL' or 'MY_TASKS'
   const [priorityFilter, setPriorityFilter] = useState('ALL');

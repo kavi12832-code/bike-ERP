@@ -29,63 +29,12 @@ import { Modal } from '../../../components/ui/Modal';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_MEMBERS = [
-  {
-    id: 'mem-001',
-    customerName: 'Rohit Chandran',
-    phone: '+91 98860 99441',
-    tier: 'PLATINUM', // SILVER, GOLD, PLATINUM
-    pointsBalance: 3450,
-    lifetimeSpendPaise: 42500000, // ₹4,25,000
-    referralCode: 'ROHIT-ROYAL',
-    referralCount: 3,
-    referralEarningsPaise: 300000,
-    pointsExpiringSoon: 450,
-    cardNo: 'VEN-PLT-8841',
-    history: [
-      { date: '2026-10-15', desc: 'Points earned on 1st Free Service Consumables', points: '+180' },
-      { date: '2026-09-20', desc: 'Referral bonus from Deepak Kumar booking', points: '+1000' },
-      { date: '2026-08-10', desc: 'Points earned on Himalayan 450 Purchase', points: '+778' },
-    ]
-  },
-  {
-    id: 'mem-002',
-    customerName: 'Ananya Sharma',
-    phone: '+91 98450 12345',
-    tier: 'GOLD',
-    pointsBalance: 1200,
-    lifetimeSpendPaise: 18500000,
-    referralCode: 'ANANYA-BIKE',
-    referralCount: 1,
-    referralEarningsPaise: 100000,
-    pointsExpiringSoon: 0,
-    cardNo: 'VEN-GLD-1902',
-    history: [
-      { date: '2026-10-02', desc: 'Redeemed on Riding Helmet purchase', points: '-500' },
-      { date: '2026-09-12', desc: 'Earned on Accessories purchase', points: '+240' }
-    ]
-  },
-  {
-    id: 'mem-003',
-    customerName: 'Arjun Das',
-    phone: '+91 98440 77123',
-    tier: 'SILVER',
-    pointsBalance: 680,
-    lifetimeSpendPaise: 9500000,
-    referralCode: 'ARJUN-350',
-    referralCount: 0,
-    referralEarningsPaise: 0,
-    pointsExpiringSoon: 120,
-    cardNo: 'VEN-SLV-0491',
-    history: [
-      { date: '2026-10-18', desc: 'Welcome points on Hunter 350 Booking', points: '+500' },
-      { date: '2026-10-18', desc: 'Points earned on Crash Guard addition', points: '+180' }
-    ]
-  }
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+// SAMPLE_MEMBERS: loaded from the database (collection "care.loyaltyReferrals.members")
 
 export function LoyaltyReferralsPage() {
-  const [members, setMembers] = useState(SAMPLE_MEMBERS);
+  const SAMPLE_MEMBERS = useCollectionItems('care.loyaltyReferrals.members');
+  const [members, setMembers] = useCollection('care.loyaltyReferrals.members');
   const [selectedMember, setSelectedMember] = useState(SAMPLE_MEMBERS[0]);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('ALL');

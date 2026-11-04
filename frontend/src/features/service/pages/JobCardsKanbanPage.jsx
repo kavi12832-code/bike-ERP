@@ -24,6 +24,8 @@ import {
   Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Pencil, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
 const STAGES = [
   { id: 'BOOKED', label: 'Booked' },
@@ -43,6 +45,8 @@ export function JobCardsKanbanPage() {
   const updateJobCardStage = state.updateJobCardStage;
 
   const [selectedCard, setSelectedCard] = useState(null);
+  const [deletingCard, setDeletingCard] = useState(null);
+  const deleteJobCard = useAppStore((s) => s.deleteJobCard);
   const [qcModalOpen, setQcModalOpen] = useState(false);
   const [gatePassOpen, setGatePassOpen] = useState(false);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
@@ -360,6 +364,12 @@ export function JobCardsKanbanPage() {
 
             {/* Action Bar */}
             <div className="pt-4 border-t border-border flex flex-wrap gap-2">
+              <Button variant="secondary" icon={Pencil} onClick={() => navigate(`/service/jobs/new?edit=${selectedCard.id}`)}>
+                Edit Job Card
+              </Button>
+              <Button variant="danger" icon={Trash2} onClick={() => setDeletingCard(selectedCard)}>
+                Delete
+              </Button>
               {selectedCard.stage === 'READY' && (
                 <Button
                   variant="primary"
@@ -381,6 +391,27 @@ export function JobCardsKanbanPage() {
           </div>
         )}
       </Drawer>
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingCard)}
+        onClose={() => setDeletingCard(null)}
+        onConfirm={() => {
+          const card = deletingCard;
+          setDeletingCard(null);
+          try {
+            deleteJobCard(card.id);
+            setSelectedCard(null);
+            toast.success(`Job card ${card.jobCardNumber} deleted.`);
+          } catch (err) {
+            toast.error(err.message);
+          }
+        }}
+        title="Delete job card?"
+        message={deletingCard
+          ? `Delete ${deletingCard.jobCardNumber} (${deletingCard.registrationNumber})? Its bay is freed and the appointment it came from is reopened.`
+          : ''}
+        confirmLabel="Delete job card"
+      />
 
       {/* QC Sign-off Dual-Control Modal */}
       <Modal

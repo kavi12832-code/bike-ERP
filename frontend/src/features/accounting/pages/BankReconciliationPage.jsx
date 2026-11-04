@@ -13,21 +13,14 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_BANK_FEED = [
-  { id: 'bnk-01', date: '2026-10-24', utrRef: 'CMS948210492', description: 'NEFT CR-HDFC LOAN DISB-ROHIT', amountPaise: 35000000, type: 'CREDIT', matchedErpId: 'inv-2627-001', status: 'MATCHED' },
-  { id: 'bnk-02', date: '2026-10-24', utrRef: 'UPI/6298104821', description: 'UPI/PRIYA SINGH/BOOKING', amountPaise: 500000, type: 'CREDIT', matchedErpId: 'bk-2627-001', status: 'MATCHED' },
-  { id: 'bnk-03', date: '2026-10-23', utrRef: 'CHQ884920', description: 'CLG CHQ-ARJUN DAS DOWNPAYMENT', amountPaise: 3890000, type: 'CREDIT', matchedErpId: null, status: 'UNRECONCILED_BANK' },
-  { id: 'bnk-04', date: '2026-10-22', utrRef: 'RTGS991042', description: 'RTGS DR-MOTUL INDIA LUBRICANTS', amountPaise: 4200000, type: 'DEBIT', matchedErpId: 'po-2627-004', status: 'MATCHED' },
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_BANK_FEED: loaded from the database (collection "accounting.bankReconciliation.bankFeed")
 
-const SAMPLE_UNRECONCILED_ERP = [
-  { id: 'erp-un-01', date: '2026-10-24', ref: 'REC/2627/049', entity: 'Sunil Hegde (Service Cash/UPI)', amountPaise: 380000, type: 'DEPOSIT_UNCREDITED', reason: 'Transit clearance in clearing house' },
-  { id: 'erp-un-02', date: '2026-10-23', ref: 'CHQ/2627/012', entity: 'Sri Balaji Spares (Cheque #492104)', amountPaise: 185000, type: 'UNPRESENTED_CHEQUE', reason: 'Vendor has not presented to drawer branch yet' },
-];
+// SAMPLE_UNRECONCILED_ERP: loaded from the database (collection "accounting.bankReconciliation.unreconciledErp")
 
 export function BankReconciliationPage() {
-  const [bankFeed, setBankFeed] = useState(SAMPLE_BANK_FEED);
-  const [unreconciledErp, setUnreconciledErp] = useState(SAMPLE_UNRECONCILED_ERP);
+  const [bankFeed, setBankFeed] = useCollection('accounting.bankReconciliation.bankFeed');
+  const [unreconciledErp, setUnreconciledErp] = useCollection('accounting.bankReconciliation.unreconciledErp');
 
   // Balances
   const erpBookBalancePaise = 184500000; // ₹18,45,000

@@ -12,25 +12,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SAMPLE_TEMPLATES = [
-  { id: 'tmpl-inv', name: 'Vehicle & Service Tax Invoice', type: 'INVOICE', showGstin: true, showLogo: true, showBankDetails: true, footerTerms: 'Goods once sold cannot be taken back. Interest @ 18% p.a. charged after 15 days.' },
-  { id: 'tmpl-quote', name: 'Customer Price Quotation', type: 'QUOTATION', showGstin: true, showLogo: true, showBankDetails: false, footerTerms: 'Quotation valid for 7 days. Prices subject to OEM revision without prior notice.' },
-  { id: 'tmpl-jc', name: 'Service Estimate & Job Card', type: 'JOBCARD', showGstin: true, showLogo: true, showBankDetails: false, footerTerms: 'Customer belongings must be removed before workshop handover.' },
-  { id: 'tmpl-gp', name: 'Delivery Security Gate Pass', type: 'GATEPASS', showGstin: true, showLogo: true, showBankDetails: false, footerTerms: 'Security verification mandatory at exit gate.' },
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+// SAMPLE_TEMPLATES: loaded from the database (collection "admin.templatesCustomFields.templates")
 
-const SAMPLE_CUSTOM_FIELDS = [
-  { id: 'cf-01', entity: 'CUSTOMER', fieldName: 'Rider Blood Group', fieldType: 'DROPDOWN', options: 'O+, A+, B+, AB+, O-, A-, B-, AB-', required: false },
-  { id: 'cf-02', entity: 'CUSTOMER', fieldName: 'Riders Club Member ID', fieldType: 'TEXT', options: '', required: false },
-  { id: 'cf-03', entity: 'LEAD', fieldName: 'Preferred Weekend Slot', fieldType: 'DROPDOWN', options: 'Saturday Morning, Saturday Evening, Sunday Morning', required: false },
-  { id: 'cf-04', entity: 'VEHICLE', fieldName: 'GPS Tracker IMEI Number', fieldType: 'TEXT', options: '', required: false },
-];
+// SAMPLE_CUSTOM_FIELDS: loaded from the database (collection "admin.templatesCustomFields.customFields")
 
 export function TemplatesCustomFieldsPage() {
+  const SAMPLE_TEMPLATES = useCollectionItems('admin.templatesCustomFields.templates');
   const [activeTab, setActiveTab] = useState('TEMPLATES'); // 'TEMPLATES' or 'CUSTOM_FIELDS'
-  const [templates, setTemplates] = useState(SAMPLE_TEMPLATES);
+  const [templates, setTemplates] = useCollection('admin.templatesCustomFields.templates');
   const [selectedTemplate, setSelectedTemplate] = useState(SAMPLE_TEMPLATES[0]);
-  const [customFields, setCustomFields] = useState(SAMPLE_CUSTOM_FIELDS);
+  const [customFields, setCustomFields] = useCollection('admin.templatesCustomFields.customFields');
   const [showNewFieldModal, setShowNewFieldModal] = useState(false);
 
   // New field state

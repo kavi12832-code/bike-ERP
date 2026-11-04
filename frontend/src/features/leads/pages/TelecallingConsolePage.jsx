@@ -15,41 +15,8 @@ import {
 import { useAppStore } from '../../../store';
 import { toast } from 'sonner';
 
-const SAMPLE_CALL_QUEUE = [
-  {
-    id: 'tcall-001',
-    customerName: 'Kishore Gowda',
-    phone: '+91 98450 88219',
-    modelInterest: 'Royal Enfield Classic 350',
-    source: 'Meta Ads',
-    lastCall: 'Never called',
-    status: 'PENDING', // PENDING, CONNECTED, BUSY, SWITCH_OFF, CALLBACK, TEST_RIDE_BOOKED
-    language: 'Kannada / English',
-    city: 'Bangalore South',
-  },
-  {
-    id: 'tcall-002',
-    customerName: 'Praveen Venkatesh',
-    phone: '+91 97401 55662',
-    modelInterest: 'Royal Enfield Himalayan 450',
-    source: 'Bikewale',
-    lastCall: 'Yesterday (Busy)',
-    status: 'PENDING',
-    language: 'Tamil / English',
-    city: 'Indiranagar',
-  },
-  {
-    id: 'tcall-003',
-    customerName: 'Deepak Rao',
-    phone: '+91 98860 11234',
-    modelInterest: 'Hunter 350 Dapper',
-    source: 'Website Enquiry',
-    lastCall: '2 days ago',
-    status: 'CALLBACK',
-    language: 'English',
-    city: 'Whitefield',
-  }
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+// SAMPLE_CALL_QUEUE: loaded from the database (collection "leads.telecallingConsole.callQueue")
 
 const OBJECTION_SCRIPTS = [
   {
@@ -67,7 +34,8 @@ const OBJECTION_SCRIPTS = [
 ];
 
 export function TelecallingConsolePage() {
-  const [queue, setQueue] = useState(SAMPLE_CALL_QUEUE);
+  const SAMPLE_CALL_QUEUE = useCollectionItems('leads.telecallingConsole.callQueue');
+  const [queue, setQueue] = useCollection('leads.telecallingConsole.callQueue');
   const [selectedCall, setSelectedCall] = useState(SAMPLE_CALL_QUEUE[0]);
   const [disposition, setDisposition] = useState('CONNECTED');
   const [notes, setNotes] = useState('');

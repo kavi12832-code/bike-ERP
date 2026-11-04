@@ -1,116 +1,106 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../../../store';
-import { ROLE_PRESETS } from '../../../config/roles';
-import { ShieldCheck, ArrowRight, KeyRound, Mail, Lock, UserCheck, Sparkles, Zap, CheckCircle2 } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { QRCodeSVG } from 'qrcode.react';
+import { ArrowLeft, ArrowRight, KeyRound, Lock, Mail, ShieldCheck, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
-import { backend } from '../../../services/api/backend';
+import { useAppStore } from '../../../store';
+import { Button } from '../../../components/ui/Button';
 import { BrandLogo } from '../../../components/domain/BrandLogo';
+import { backend } from '../../../services/api/backend';
 
-const DEMO_OTP = '123456';
+const inputClass =
+  'w-full pl-9 pr-3 py-2.5 text-sm rounded-input border border-border bg-surface-subtle text-text-main ' +
+  'focus:outline-none focus:ring-2 focus:ring-primary';
 
+function CodeInput({ value, onChange, autoFocus }) {
+  return (
+    <input
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      maxLength={6}
+      value={value}
+      autoFocus={autoFocus}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+      placeholder="6-digit code"
+      className="w-full text-center tracking-[0.5em] font-mono text-lg py-3 rounded-input border border-border bg-surface-subtle text-text-main focus:outline-none focus:ring-2 focus:ring-primary"
+    />
+  );
+}
+
+/**
+ * Sign-in against the Django API (JWT). Steps:
+ *  CREDENTIALS -> (2FA enrolled) CODE -> app
+ *  CREDENTIALS -> (2FA required but not enrolled) ENROL (QR + code) -> app
+ */
 export function LoginPage() {
   const navigate = useNavigate();
-  const loginAsRole = useAppStore((state) => state.loginAsRole);
   const refreshFromBackend = useAppStore((state) => state.refreshFromBackend);
 
-  const [step, setStep] = useState('CREDENTIALS'); // 'CREDENTIALS' or 'OTP'
-  const [selectedPreset, setSelectedPreset] = useState(ROLE_PRESETS[0]);
-  const [email, setEmail] = useState(ROLE_PRESETS[0].email);
-  const [password, setPassword] = useState('password123');
-  // Pre-fill OTP automatically for seamless demo
-  const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
+  const [step, setStep] = useState('CREDENTIALS');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [enrolment, setEnrolment] = useState(null); // { secret, otpauthUri }
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const emailRef = useRef(null);
 
-  const handleSelectPreset = (preset) => {
-    setSelectedPreset(preset);
-    setEmail(preset.email);
-    setPassword('password123');
+  useEffect(() => emailRef.current?.focus(), []);
+
+  const enterApp = async (user) => {
+    if (!(await refreshFromBackend())) throw new Error('Signed in, but loading your data failed. Please retry.');
+    toast.success(`Welcome back, ${user?.name || email}!`);
+    navigate('/', { replace: true });
   };
 
-  // Instant 1-click Demo Entry (Bypasses manual OTP for rapid client demo)
-  const handleInstantDemoLogin = (preset = selectedPreset) => {
+  const submitLogin = async (otp) => {
     setLoading(true);
-    loginAsRole(preset.id);
-    toast.success(`Demo Access Granted: Logged in as ${preset.name} (${preset.role})`);
-    setTimeout(() => {
-      navigate('/');
-    }, 200);
-  };
-
-  // Django backend: real JWT login; the server decides whether an OTP step is needed.
-  const backendLogin = async (otpCode) => {
-    setLoading(true);
+    setError('');
     try {
-      const res = await backend.login(email.trim(), password, otpCode || DEMO_OTP);
+      const res = await backend.login(email.trim(), password, otp);
       if (res.otpRequired) {
-        setOtp(['1', '2', '3', '4', '5', '6']);
-        setStep('OTP');
-        toast.info('Demo OTP pre-filled: 123456');
+        setCode('');
+        setStep('CODE');
         return;
       }
-      if (!(await refreshFromBackend())) throw new Error('Signed in, but loading data from the server failed.');
-      toast.success(`Welcome back, ${res.user?.name || email}!`);
-      navigate('/');
+      if (res.mustSetupTwoFactor) {
+        setEnrolment(await backend.startTwoFactorSetup());
+        setCode('');
+        setStep('ENROL');
+        return;
+      }
+      setPassword('');
+      await enterApp(res.user);
     } catch (err) {
-      toast.error(err.message || 'Login failed');
+      setError(err.message || 'Sign-in failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCredentialsSubmit = (e) => {
-    e.preventDefault();
-    if (backend.enabled()) {
-      backendLogin();
-      return;
-    }
+  const confirmEnrolment = async () => {
     setLoading(true);
-
-    setTimeout(() => {
+    setError('');
+    try {
+      await backend.confirmTwoFactor(code);
+      toast.success('Two-factor authentication is on.');
+      setPassword('');
+      await enterApp(null);
+    } catch (err) {
+      setError(err.message || 'That code did not work');
+    } finally {
       setLoading(false);
-      if (selectedPreset.twoFactorRequired) {
-        setOtp(['1', '2', '3', '4', '5', '6']);
-        setStep('OTP');
-        toast.info(`Demo 2FA OTP auto-filled: ${DEMO_OTP}`);
-      } else {
-        loginAsRole(selectedPreset.id);
-        toast.success(`Welcome back, ${selectedPreset.name}!`);
-        navigate('/');
-      }
-    }, 300);
+    }
   };
 
-  const handleOtpSubmit = (e) => {
-    e.preventDefault();
-    const code = otp.join('');
-    if (backend.enabled()) {
-      backendLogin(code);
-      return;
-    }
-    if (code !== DEMO_OTP) {
-      toast.error(`Invalid OTP. Use the demo code ${DEMO_OTP}.`);
-      return;
-    }
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      loginAsRole(selectedPreset.id);
-      toast.success(`2FA Verified! Logged in as ${selectedPreset.role}`);
-      navigate('/');
-    }, 300);
-  };
-
-  const autofillOtp = () => {
-    setOtp(['1', '2', '3', '4', '5', '6']);
-    toast.success('Demo OTP 123456 auto-filled!');
+  const back = () => {
+    setStep('CREDENTIALS');
+    setCode('');
+    setError('');
   };
 
   return (
     <div className="h-full overflow-y-auto bg-navy-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Decorative Accents */}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
 
@@ -118,9 +108,7 @@ export function LoginPage() {
         <div className="flex justify-center">
           <BrandLogo className="w-16 h-16 rounded-2xl shadow-lg shadow-blue-500/20" />
         </div>
-        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-white">
-          AKASH Bajaj
-        </h2>
+        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-white">AKASH Bajaj</h2>
         <p className="mt-1 text-center text-xs text-slate-400">
           Enterprise Dealership Management &amp; Workshop Service Portal
         </p>
@@ -128,161 +116,123 @@ export function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="bg-surface py-8 px-6 shadow-dialog rounded-card border border-border sm:px-10">
-          {step === 'CREDENTIALS' ? (
-            <form onSubmit={handleCredentialsSubmit} className="space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-text-main">
-                    Select Demo Persona
-                  </label>
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                    Credentials Auto-Loaded
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {ROLE_PRESETS.slice(0, 4).map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleSelectPreset(preset)}
-                      className={`p-2 rounded-button border text-left transition-all ${
-                        selectedPreset.id === preset.id
-                          ? 'border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary'
-                          : 'border-border bg-surface-subtle text-text-main hover:bg-surface-muted'
-                      }`}
-                    >
-                      <div className="text-xs truncate font-bold">{preset.name}</div>
-                      <div className="text-[10px] text-text-muted truncate">{preset.role}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {error && (
+            <div role="alert" className="mb-4 p-2.5 rounded bg-red-50 border border-red-200 text-xs text-status-red">
+              {error}
+            </div>
+          )}
 
+          {step === 'CREDENTIALS' && (
+            <form
+              className="space-y-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitLogin();
+              }}
+            >
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Email Address
+                <label htmlFor="login-email" className="block text-xs font-medium text-text-main mb-1">
+                  Work email
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-text-muted absolute left-3 top-2.5" />
+                  <Mail className="w-4 h-4 text-text-muted absolute left-3 top-3" />
                   <input
+                    id="login-email"
+                    ref={emailRef}
                     type="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-input border border-border bg-surface-subtle text-text-main focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={inputClass}
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
+                <label htmlFor="login-password" className="block text-xs font-medium text-text-main mb-1">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-text-muted absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-text-muted absolute left-3 top-3" />
                   <input
+                    id="login-password"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-input border border-border bg-surface-subtle text-text-main focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    className={inputClass}
                   />
                 </div>
               </div>
+              <Button type="submit" variant="primary" className="w-full" loading={loading} iconRight={ArrowRight}>
+                Sign in
+              </Button>
+              <p className="text-[11px] text-text-muted text-center">
+                Accounts are created by your administrator. Repeated wrong passwords lock the account for 15 minutes.
+              </p>
+            </form>
+          )}
 
-              {selectedPreset.twoFactorRequired && (
-                <div className="flex items-center gap-2 p-2.5 rounded bg-blue-50 border border-blue-200 text-primary text-[11px]">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>2FA Security: Demo OTP <strong>123456</strong> is pre-configured.</span>
+          {step === 'CODE' && (
+            <form
+              className="space-y-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitLogin(code);
+              }}
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center mx-auto mb-2">
+                  <KeyRound className="w-6 h-6" />
                 </div>
-              )}
-
-              <div className="space-y-2 pt-1">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  loading={loading}
-                  iconRight={ArrowRight}
-                >
-                  {selectedPreset.twoFactorRequired ? 'Proceed to 2FA Verification' : 'Access Showroom Terminal'}
+                <h3 className="text-sm font-semibold text-text-main">Two-factor authentication</h3>
+                <p className="text-xs text-text-muted mt-1">Enter the 6-digit code from your authenticator app.</p>
+              </div>
+              <CodeInput value={code} onChange={setCode} autoFocus />
+              <div className="space-y-2">
+                <Button type="submit" variant="primary" className="w-full" loading={loading} disabled={code.length !== 6}>
+                  Verify &amp; sign in
                 </Button>
-
-                {/* 1-Click Fast Bypass for Client Presentation */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full text-xs font-semibold text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                  onClick={() => handleInstantDemoLogin(selectedPreset)}
-                >
-                  <Zap className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                  1-Click Direct Demo Login (Skip OTP)
+                <Button type="button" variant="ghost" className="w-full" icon={ArrowLeft} onClick={back}>
+                  Back
                 </Button>
               </div>
             </form>
-          ) : (
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
+          )}
+
+          {step === 'ENROL' && enrolment && (
+            <form
+              className="space-y-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                confirmEnrolment();
+              }}
+            >
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary flex items-center justify-center mx-auto mb-2 shadow-xs">
-                  <KeyRound className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-full bg-amber-50 text-status-amber flex items-center justify-center mx-auto mb-2">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-text-main">Enter 6-Digit Security OTP</h3>
+                <h3 className="text-sm font-semibold text-text-main">Set up two-factor authentication</h3>
                 <p className="text-xs text-text-muted mt-1">
-                  Sent to registered mobile for <strong>{selectedPreset.name}</strong>
+                  Your role requires 2FA. Scan this code with Google Authenticator, Microsoft Authenticator or a
+                  similar app, then enter the 6-digit code it shows.
                 </p>
-                <div className="inline-flex items-center gap-1.5 mt-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] px-2.5 py-1 rounded-full font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Demo Mode: OTP auto-filled (123456)
-                </div>
               </div>
-
-              <div className="flex justify-center gap-2">
-                {otp.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => {
-                      const newOtp = [...otp];
-                      newOtp[idx] = e.target.value;
-                      setOtp(newOtp);
-                    }}
-                    className="w-10 h-12 text-center font-mono text-base font-bold rounded-input border border-border bg-surface-subtle text-text-main focus:ring-2 focus:ring-primary shadow-xs"
-                  />
-                ))}
+              <div className="flex justify-center p-3 bg-white rounded border border-border">
+                <QRCodeSVG value={enrolment.otpauthUri} size={168} />
               </div>
-
-              <div className="space-y-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  loading={loading}
-                >
-                  Verify &amp; Enter ERP
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={autofillOtp}
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1 text-primary" />
-                  Auto-fill OTP (123456)
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full text-xs text-text-muted"
-                  onClick={() => setStep('CREDENTIALS')}
-                >
-                  Back to Persona Selection
-                </Button>
+              <div className="flex items-start gap-2 text-[11px] text-text-muted">
+                <Smartphone className="w-4 h-4 shrink-0" />
+                <span>
+                  Can&apos;t scan? Enter this key manually:{' '}
+                  <code className="font-mono text-text-main break-all">{enrolment.secret}</code>
+                </span>
               </div>
+              <CodeInput value={code} onChange={setCode} autoFocus />
+              <Button type="submit" variant="primary" className="w-full" loading={loading} disabled={code.length !== 6}>
+                Turn on 2FA &amp; continue
+              </Button>
             </form>
           )}
         </div>
@@ -290,3 +240,5 @@ export function LoginPage() {
     </div>
   );
 }
+
+export default LoginPage;

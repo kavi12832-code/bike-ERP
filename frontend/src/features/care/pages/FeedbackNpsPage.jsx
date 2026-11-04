@@ -26,73 +26,11 @@ import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_FEEDBACK = [
-  {
-    id: 'fb-01',
-    customerName: 'Priya Singh',
-    phone: '+91 98450 12345',
-    type: 'DELIVERY', // DELIVERY or SERVICE
-    vehicle: 'Royal Enfield Himalayan 450',
-    rating: 5,
-    npsScore: 10, // 0 to 10
-    comment: 'Flawless delivery experience by Deepak! Vehicle was polished, all documents ready on time.',
-    date: '2026-10-24',
-    escalatedToComplaint: false,
-  },
-  {
-    id: 'fb-02',
-    customerName: 'Girish Patil',
-    phone: '+91 97402 33445',
-    type: 'SERVICE',
-    vehicle: 'Honda SP125',
-    rating: 2,
-    npsScore: 3,
-    comment: 'Service took 4 hours more than promised and water wash was poorly done. Chain was not greased.',
-    date: '2026-10-23',
-    escalatedToComplaint: true,
-    complaintOwner: 'Karthik Raja (Service Manager)',
-  },
-  {
-    id: 'fb-03',
-    customerName: 'Arjun Das',
-    phone: '+91 98860 99441',
-    type: 'DELIVERY',
-    vehicle: 'Royal Enfield Hunter 350',
-    rating: 5,
-    npsScore: 10,
-    comment: 'PDI was detailed and explained clearly. Excellent tea and showroom ambiance.',
-    date: '2026-10-22',
-    escalatedToComplaint: false,
-  },
-  {
-    id: 'fb-04',
-    customerName: 'Ramesh Shenoy',
-    phone: '+91 99001 55667',
-    type: 'SERVICE',
-    vehicle: 'TVS iQube EV',
-    rating: 3,
-    npsScore: 5,
-    comment: 'Good staff but software update took too long due to OEM server slowness.',
-    date: '2026-10-21',
-    escalatedToComplaint: true,
-    complaintOwner: 'Ananya Sharma',
-  },
-  {
-    id: 'fb-05',
-    customerName: 'Anil Deshmukh',
-    phone: '+91 98440 88991',
-    type: 'SERVICE',
-    vehicle: 'Royal Enfield Classic 350',
-    rating: 5,
-    npsScore: 9,
-    comment: 'Manoj Kumar did fantastic tuning on the tappets. Bike feels brand new.',
-    date: '2026-10-20',
-    escalatedToComplaint: false,
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_FEEDBACK: loaded from the database (collection "care.feedbackNps.feedback")
 
 export function FeedbackNpsPage() {
-  const [feedbackList, setFeedbackList] = useState(SAMPLE_FEEDBACK);
+  const [feedbackList, setFeedbackList] = useCollection('care.feedbackNps.feedback');
   const [filterType, setFilterType] = useState('ALL');
   const [ratingFilter, setRatingFilter] = useState('ALL');
   const [search, setSearch] = useState('');

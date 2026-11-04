@@ -46,6 +46,7 @@ import { CancelBookingModal } from '../components/CancelBookingModal';
 import { BookingsReportModal } from '../components/BookingsReportModal';
 
 import { toast } from 'sonner';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
 export function BookingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,6 +76,7 @@ export function BookingsPage() {
   const confirmBooking = state.confirmBooking;
   const deliverBooking = state.deliverBooking;
   const cancelBooking = state.cancelBooking;
+  const deleteBooking = state.deleteBooking;
   const expireHoldsCatchup = state.expireHoldsCatchup;
 
   // Periodic hold expiry check (every 60s)
@@ -100,6 +102,19 @@ export function BookingsPage() {
     hasPermission(currentUser, PERMISSIONS.BOOKINGS_CANCEL) ||
     currentUser?.role === 'SUPER_ADMIN' ||
     currentUser?.role === 'BRANCH_MANAGER';
+  // Deleting removes the record entirely (cancelling keeps it): managers only.
+  const canDelete = ['Super Admin', 'Sales Manager', 'Branch Manager'].includes(currentUser?.role);
+
+  // Runs a store action and reports a failure instead of failing silently.
+  const run = (label, fn) => {
+    try {
+      fn();
+      return true;
+    } catch (err) {
+      toast.error(`${label}: ${err.message}`);
+      return false;
+    }
+  };
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -129,6 +144,8 @@ export function BookingsPage() {
   const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [deletingBooking, setDeletingBooking] = useState(null);
   const [allocateModalOpen, setAllocateModalOpen] = useState(false);
   const [recordTokenModalOpen, setRecordTokenModalOpen] = useState(false);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -269,16 +286,23 @@ export function BookingsPage() {
   };
 
   const handleConfirmBooking = (booking) => {
-    if (confirmBooking) {
-      confirmBooking(booking.id);
+    if (run('Could not confirm', () => confirmBooking(booking.id))) {
       toast.success(`Booking ${booking.bookingNumber} confirmed successfully!`);
     }
   };
 
   const handleDeliverBooking = (booking) => {
-    if (deliverBooking) {
-      deliverBooking(booking.id);
+    if (run('Could not mark delivered', () => deliverBooking(booking.id))) {
       toast.success(`Booking ${booking.bookingNumber} marked as Delivered!`);
+    }
+  };
+
+  const handleDeleteBooking = () => {
+    const booking = deletingBooking;
+    setDeletingBooking(null);
+    if (run('Could not delete', () => deleteBooking(booking.id))) {
+      setSelectedIds((ids) => ids.filter((id) => id !== booking.id));
+      toast.success(`Booking ${booking.bookingNumber} deleted${booking.allocatedChassisNumber ? ' and chassis released' : ''}.`);
     }
   };
 
@@ -400,6 +424,9 @@ export function BookingsPage() {
         onConfirmBooking={handleConfirmBooking}
         onDeliverBooking={handleDeliverBooking}
         onCancelBooking={handleOpenCancel}
+        onEditBooking={(b) => setEditingBooking(b)}
+        onDeleteBooking={(b) => setDeletingBooking(b)}
+        canDelete={canDelete}
         canViewFullPhone={canViewFullPhone}
         canAllocateChassis={canAllocateChassis}
         canCancel={canCancel}
@@ -455,6 +482,9 @@ export function BookingsPage() {
         onConfirmBooking={handleConfirmBooking}
         onDeliverBooking={handleDeliverBooking}
         onCancelBooking={handleOpenCancel}
+        onEditBooking={(b) => setEditingBooking(b)}
+        onDeleteBooking={(b) => setDeletingBooking(b)}
+        canDelete={canDelete}
         canViewFullPhone={canViewFullPhone}
         canAllocateChassis={canAllocateChassis}
         canCancel={canCancel}
@@ -485,10 +515,37 @@ export function BookingsPage() {
         vehicleStock={vehicleStock}
         prefill={createPrefill}
         onCreateBooking={(bookingData) => {
-          if (addBooking) {
-            addBooking(bookingData);
+          let created = null;
+          if (run('Could not create booking', () => { created = addBooking(bookingData); })) {
+            toast.success(`Reservation ${created?.bookingNumber || ''} created.`);
           }
         }}
+      />
+
+      {/* Edit booking: same form, prefilled */}
+      <CreateBookingModal
+        isOpen={Boolean(editingBooking)}
+        onClose={() => setEditingBooking(null)}
+        branches={branches}
+        models={models}
+        vehicleStock={vehicleStock}
+        editBooking={editingBooking}
+        onUpdateBooking={(bookingId, patch) => {
+          if (run('Could not save booking', () => updateBooking(bookingId, patch))) {
+            toast.success('Booking updated.');
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingBooking)}
+        onClose={() => setDeletingBooking(null)}
+        onConfirm={handleDeleteBooking}
+        title="Delete booking?"
+        message={deletingBooking
+          ? `Delete ${deletingBooking.bookingNumber} for ${deletingBooking.customerName}? Any allocated chassis returns to stock. To keep a record of the reservation, cancel it instead.`
+          : ''}
+        confirmLabel="Delete booking"
       />
 
       <AllocateChassisDialog
@@ -497,8 +554,13 @@ export function BookingsPage() {
         onClose={() => setAllocateModalOpen(false)}
         vehicleStock={vehicleStock}
         onAllocate={(allocData) => {
-          if (allocateChassisToBooking) {
-            allocateChassisToBooking(allocData);
+          if (run('Could not allocate chassis', () =>
+            allocateChassisToBooking(allocData.bookingId, allocData.vin, {
+              isHold: Boolean(allocData.isHold),
+              reason: allocData.reallocationReason || '',
+            })
+          )) {
+            toast.success(`Chassis ${allocData.vin} allocated.`);
           }
         }}
       />
@@ -508,9 +570,8 @@ export function BookingsPage() {
         isOpen={recordTokenModalOpen}
         onClose={() => setRecordTokenModalOpen(false)}
         onRecordPayment={(payData) => {
-          if (recordTokenPayment) {
-            recordTokenPayment(payData);
-          }
+          const { bookingId, ...payment } = payData;
+          run('Could not record payment', () => recordTokenPayment(bookingId, payment));
         }}
       />
 
@@ -519,11 +580,12 @@ export function BookingsPage() {
         isOpen={rescheduleModalOpen}
         onClose={() => setRescheduleModalOpen(false)}
         onReschedule={(reschedData) => {
-          if (updateBooking) {
+          run('Could not reschedule', () =>
             updateBooking(reschedData.bookingId, {
               tentativeDeliveryDate: reschedData.newDate,
-            });
-          }
+              estDelivery: reschedData.newDate,
+            })
+          );
         }}
       />
 
@@ -532,9 +594,8 @@ export function BookingsPage() {
         isOpen={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         onCancelReservation={(cancelData) => {
-          if (cancelBooking) {
-            cancelBooking(cancelData.bookingId, cancelData);
-          }
+          const reason = cancelData.remarks ? `${cancelData.reason} — ${cancelData.remarks}` : cancelData.reason;
+          run('Could not cancel', () => cancelBooking(cancelData.bookingId, reason));
         }}
       />
 

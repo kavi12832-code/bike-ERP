@@ -26,62 +26,12 @@ import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatPhone } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_SOS_REQUESTS = [
-  {
-    id: 'rsa-001',
-    ticketNo: 'SOS/2627/0014',
-    customerName: 'Kavitha Murthy',
-    phone: '+91 98451 90811',
-    landmark: 'Near Silk Board Flyover, Outer Ring Road, Bangalore',
-    gps: '12.9172° N, 77.6228° E',
-    breakdownType: 'BATTERY_DEAD', // FLAT_TYRE, BATTERY_DEAD, MECHANICAL, ACCIDENT
-    vehicle: 'Royal Enfield Meteor 350 (KA-01-EQ-5590)',
-    technicianName: 'Manoj Kumar (Tech Team A)',
-    towTruckAssigned: 'Tow Van #KA-01-T-882',
-    etaMinutes: 18,
-    status: 'DISPATCHED', // LOGGED, DISPATCHED, REACHED, RESOLVED_ON_SPOT, TOWED
-    isAmcCovered: true,
-    chargesPaise: 0,
-    loggedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-  },
-  {
-    id: 'rsa-002',
-    ticketNo: 'SOS/2627/0015',
-    customerName: 'Sanjay Reddy',
-    phone: '+91 99002 44331',
-    landmark: 'Bangalore-Mysore Expressway Toll Plaza (NICE Junction)',
-    gps: '12.8711° N, 77.4820° E',
-    breakdownType: 'MECHANICAL',
-    vehicle: 'Royal Enfield Himalayan 450 (KA-01-NJ-8810)',
-    technicianName: 'Suresh Gowda',
-    towTruckAssigned: 'Hydraulic Flatbed Tow #KA-05-T-114',
-    etaMinutes: 35,
-    status: 'LOGGED',
-    isAmcCovered: false,
-    chargesPaise: 150000, // ₹1,500 towing charge
-    loggedAt: new Date(Date.now() - 10 * 60000).toISOString(),
-  },
-  {
-    id: 'rsa-003',
-    ticketNo: 'SOS/2627/0012',
-    customerName: 'Arun V.',
-    phone: '+91 97401 55662',
-    landmark: 'Indiranagar 100ft Road, near Domlur Bridge',
-    gps: '12.9644° N, 77.6382° E',
-    breakdownType: 'FLAT_TYRE',
-    vehicle: 'Honda SP125 (KA-03-NQ-2211)',
-    technicianName: 'Ramesh Kumar',
-    towTruckAssigned: 'Mobile Service Scooter',
-    etaMinutes: 0,
-    status: 'RESOLVED_ON_SPOT',
-    isAmcCovered: true,
-    chargesPaise: 0,
-    loggedAt: new Date(Date.now() - 120 * 60000).toISOString(),
-  }
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+// SAMPLE_SOS_REQUESTS: loaded from the database (collection "care.roadsideAssistance.sosRequests")
 
 export function RoadsideAssistancePage() {
-  const [requests, setRequests] = useState(SAMPLE_SOS_REQUESTS);
+  const SAMPLE_SOS_REQUESTS = useCollectionItems('care.roadsideAssistance.sosRequests');
+  const [requests, setRequests] = useCollection('care.roadsideAssistance.sosRequests');
   const [selectedTicket, setSelectedTicket] = useState(SAMPLE_SOS_REQUESTS[0]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');

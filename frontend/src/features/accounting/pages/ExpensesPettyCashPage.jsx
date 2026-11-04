@@ -19,72 +19,11 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_VOUCHERS = [
-  {
-    id: 'vch-001',
-    voucherNo: 'PV/2627/0081',
-    category: 'Shop Floor Consumables',
-    payee: 'Sri Balaji Hardware & Tools',
-    amountPaise: 185000, // ₹1,850 (<₹2,000 -> Auto approved)
-    approvalTier: 'AUTO_APPROVED',
-    status: 'PAID',
-    hasGstInvoice: true,
-    vendorGstin: '29ABCDE1234F1Z5',
-    sacCode: '9987',
-    cgstPaise: 14100,
-    sgstPaise: 14100,
-    paidFromFloat: true,
-    date: '2026-10-24',
-    receiptAttached: true,
-  },
-  {
-    id: 'vch-002',
-    voucherNo: 'PV/2627/0082',
-    category: 'Refreshments & Pantry',
-    payee: 'Udupi Upahar Tea Stall',
-    amountPaise: 120000, // ₹1,200 (Auto approved)
-    approvalTier: 'AUTO_APPROVED',
-    status: 'PAID',
-    hasGstInvoice: false,
-    paidFromFloat: true,
-    date: '2026-10-23',
-    receiptAttached: true,
-  },
-  {
-    id: 'vch-003',
-    voucherNo: 'EV/2627/0045',
-    category: 'Fuel & Demo Bikes Petrol',
-    payee: 'Indian Oil Retail Outlet #491',
-    amountPaise: 650000, // ₹6,500 (Branch Manager tier)
-    approvalTier: 'BRANCH_MANAGER',
-    status: 'APPROVED',
-    hasGstInvoice: true,
-    vendorGstin: '29AAACI1681G1Z1',
-    paidFromFloat: false,
-    date: '2026-10-22',
-    receiptAttached: true,
-  },
-  {
-    id: 'vch-004',
-    voucherNo: 'EV/2627/0046',
-    category: 'Legal & CA Retainer',
-    payee: 'R. K. Swamy & Associates Chartered Accountants',
-    amountPaise: 1500000, // ₹15,000 (>₹10,000 -> Dealer Principal tier)
-    approvalTier: 'DEALER_PRINCIPAL',
-    status: 'PENDING_APPROVAL',
-    hasGstInvoice: true,
-    vendorGstin: '29AABCS8891H1Z9',
-    sacCode: '9982',
-    cgstPaise: 114400,
-    sgstPaise: 114400,
-    paidFromFloat: false,
-    date: '2026-10-24',
-    receiptAttached: true,
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_VOUCHERS: loaded from the database (collection "accounting.expensesPettyCash.vouchers")
 
 export function ExpensesPettyCashPage() {
-  const [vouchers, setVouchers] = useState(SAMPLE_VOUCHERS);
+  const [vouchers, setVouchers] = useCollection('accounting.expensesPettyCash.vouchers');
   const [openingFloatPaise, setOpeningFloatPaise] = useState(1500000); // ₹15,000
   const [showAddModal, setShowAddModal] = useState(false);
 

@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import viewsets
 
 from apps.audit.services import record_audit
@@ -20,6 +21,15 @@ class TenantScopedViewSet(viewsets.ModelViewSet):
             return self.queryset.model.objects.none()
         return self.queryset.model.objects.filter(tenant=self.request.tenant)
 
+    def filter_queryset(self, queryset):
+        # Pagination needs a total order: add the primary key as the final tie-breaker so rows
+        # with equal sort values (e.g. bulk-created at the same instant) never repeat or vanish.
+        queryset = super().filter_queryset(queryset)
+        ordering = list(queryset.query.order_by or queryset.model._meta.ordering or [])
+        if 'pk' not in ordering and '-pk' not in ordering and 'id' not in ordering:
+            queryset = queryset.order_by(*ordering, 'pk')
+        return queryset
+
     def entity_name(self):
         return self.audit_entity or self.queryset.model.__name__.upper()
 
@@ -37,8 +47,13 @@ class TenantScopedViewSet(viewsets.ModelViewSet):
         record_audit(self.request, f'{self.entity_name()}_UPDATED', self.entity_name(), instance.ref,
                      changed_old, changed_new)
 
+    def before_destroy(self, instance):
+        """Hook for cleaning up related records (runs in the same transaction as the delete)."""
+
     def perform_destroy(self, instance):
         snapshot = self.get_serializer(instance).data
         ref = instance.ref
-        instance.delete()
+        with transaction.atomic():
+            self.before_destroy(instance)
+            instance.delete()
         record_audit(self.request, f'{self.entity_name()}_DELETED', self.entity_name(), ref, snapshot, None)

@@ -17,61 +17,11 @@ import {
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../hooks/useCollection';
 export default function NotificationsPage() {
   const [filter, setFilter] = useState('ALL'); // 'ALL', 'APPROVAL', 'STOCK', 'SLA'
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'N-101',
-      type: 'APPROVAL',
-      title: 'Discount Approval Requested',
-      desc: 'Sales Executive requested ₹ 3,500 discount on Royal Enfield Hunter 350 for Arjun Das (Exceeds ₹ 2,000 limit).',
-      time: '12 mins ago',
-      read: false,
-      link: '/quotations',
-      actionLabel: 'Review Quotation',
-    },
-    {
-      id: 'N-102',
-      type: 'STOCK',
-      title: 'Safety Reorder Alert: Spark Plug (Champion RG4HC)',
-      desc: 'Stock level reached 14 pcs (below reorder threshold of 25 pcs). Bin Location: A-12-04.',
-      time: '45 mins ago',
-      read: false,
-      link: '/stock/parts',
-      actionLabel: 'Create PO / Restock',
-    },
-    {
-      id: 'N-103',
-      type: 'SLA',
-      title: 'Service SLA Risk: Bay 4 Hunter 350',
-      desc: 'Job Card #JC-2627-0042 in Quality Check has 25 minutes remaining before promised customer handover.',
-      time: '1 hour ago',
-      read: false,
-      link: '/service/jobs',
-      actionLabel: 'View Job Card',
-    },
-    {
-      id: 'N-104',
-      type: 'APPROVAL',
-      title: 'High-Value Journal Voucher Counter-Sign Required',
-      desc: 'Accountant created ₹ 54,000 adjustment voucher #JV-2026-081 requiring Super Admin dual sign-off.',
-      time: '2 hours ago',
-      read: true,
-      link: '/accounting',
-      actionLabel: 'Inspect Voucher',
-    },
-    {
-      id: 'N-105',
-      type: 'LEAD',
-      title: 'Hot Walk-in Lead Added: Himalayan 450',
-      desc: 'Customer Priya Singh visited Bangalore Flagship showroom with pre-approved HDFC loan.',
-      time: '3 hours ago',
-      read: true,
-      link: '/leads',
-      actionLabel: 'View Lead Profile',
-    },
-  ]);
+  const [notifications, setNotifications] = useCollection('notifications.notifications.notifications');
 
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

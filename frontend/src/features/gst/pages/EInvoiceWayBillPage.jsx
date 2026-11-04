@@ -15,32 +15,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_EINVOICES = [
-  {
-    id: 'einv-01',
-    invoiceNo: 'VI/2627/00004',
-    buyerName: 'Bundl Technologies Pvt Ltd (Swiggy)',
-    buyerGstin: '29AAGCB1820M1ZO',
-    invoiceValuePaise: 115000000,
-    irn: 'c1a2f489b09123847a98d02341b590e8234190cba72348123049b1092348a102',
-    signedQrString: 'NIC-IRN|29AABCB1829M1ZK|29AAGCB1820M1ZO|VI/2627/00004|1150000.00|SIGNED_OK',
-    ackNo: '112690412890',
-    generatedAt: '2026-10-24 11:20:15',
-    status: 'ACTIVE',
-  },
-  {
-    id: 'einv-02',
-    invoiceNo: 'VI/2627/00005',
-    buyerName: 'SmartShift Logistics (Porter)',
-    buyerGstin: '29AACCP8940P1Z8',
-    invoiceValuePaise: 256680000,
-    irn: '984120ba498210384a91029341ba0293481023948b0192384019238410293841',
-    signedQrString: 'NIC-IRN|29AABCB1829M1ZK|29AACCP8940P1Z8|VI/2627/00005|2566800.00|SIGNED_OK',
-    ackNo: '112690412891',
-    generatedAt: '2026-10-24 14:45:00',
-    status: 'ACTIVE',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_EINVOICES: loaded from the database (collection "gst.eInvoiceWayBill.einvoices")
 
 const SAMPLE_EWAY_BILLS = [
   {
@@ -60,7 +36,7 @@ const SAMPLE_EWAY_BILLS = [
 
 export function EInvoiceWayBillPage() {
   const [activeTab, setActiveTab] = useState('EINVOICE');
-  const [einvoices, setEinvoices] = useState(SAMPLE_EINVOICES);
+  const [einvoices, setEinvoices] = useCollection('gst.eInvoiceWayBill.einvoices');
   const [ewayBills, setEwayBills] = useState(SAMPLE_EWAY_BILLS);
   const [selectedIrnDoc, setSelectedIrnDoc] = useState(null);
 

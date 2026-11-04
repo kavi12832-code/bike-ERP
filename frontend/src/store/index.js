@@ -1,14 +1,23 @@
 import { BOOKING_STATUSES } from '../bookings/config';
-import { runHoldExpiryCheck, calculateCancellationRefund, canConfirmBooking, getTokenSummary, isValidVin } from '../bookings/engine';
+import { runHoldExpiryCheck, calculateCancellationRefund, canConfirmBooking, getTokenSummary, isValidVin, getMinimumTokenPaise } from '../bookings/engine';
 import { QUOTATION_STATUSES } from '../quotations/config';
 import { runExpiryCheck, getSimulatedNow } from '../quotations/engine';
 import { approvalsApi } from '../approvals/api';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getInitialSeedData } from '../data/seed';
 import { createAuditEntry } from './auditMiddleware';
 import { ROLE_PRESETS } from '../config/roles';
 import { backend, syncToBackend } from '../services/api/backend';
+import { createSyncEngine } from './sync';
+import { setTaxRulesProvider } from '../lib/tax';
+import {
+  CATALOG_KEYS,
+  COLLECTION_SLICES,
+  OBJECT_RECORD_ID,
+  OBJECT_SLICES,
+  REST_SLICES,
+  catalogCollection,
+} from './syncConfig';
 
 
 function nextBookingSequence(bookings) {
@@ -19,8 +28,6 @@ function nextBookingSequence(bookings) {
     }, 0) + 1
   );
 }
-
-const todayKey = () => new Date().toDateString();
 
 // Highest numeric suffix of VI/2627/NNNNN so new numbers never collide with existing ones.
 function nextInvoiceSequence(invoices) {
@@ -45,11 +52,36 @@ function nextJobCardNumber(jobCards, now = new Date()) {
   return `${prefix}${String(Math.max(0, ...used) + 1).padStart(3, '0')}`;
 }
 
+/**
+ * The app starts empty; everything is loaded from the API after login (hydrateFromBackend).
+ * Demo data lives in the backend database (seed_demo), not in the browser bundle.
+ */
+export function emptyDataState() {
+  const state = {
+    dealership: {},
+    activeBranchId: null,
+    currentUser: null,
+    catalogs: Object.fromEntries(CATALOG_KEYS.map((k) => [k, []])),
+    bays: [],
+    auditLogs: [],
+    collections: {},
+  };
+  for (const slice of Object.keys(REST_SLICES)) state[slice] = [];
+  for (const slice of Object.keys(COLLECTION_SLICES)) state[slice] = [];
+  for (const slice of Object.keys(OBJECT_SLICES)) state[slice] = slice === 'dealership' ? {} : {};
+  return state;
+}
+
+// Loads the demo seed only where there is no backend (unit tests / offline tooling).
+async function loadSeed() {
+  const { getInitialSeedData } = await import('../data/seed');
+  return getInitialSeedData();
+}
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
-      ...getInitialSeedData(),
-      seededOn: todayKey(),
+      ...emptyDataState(),
       backendStatus: backend.enabled() ? 'disconnected' : 'offline', // offline | disconnected | syncing | live | error
       lastSyncedAt: null,
 
@@ -62,18 +94,22 @@ export const useAppStore = create(
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       updateSettings: (patch) => set((state) => ({ settings: { ...(state.settings || {}), ...patch } })),
-      resetDemoData: () => {
+      // Re-reads everything from the server (data lives in the database, not the browser).
+      resetDemoData: async () => {
         try {
-          localStorage.removeItem('bikeerp-store-v2');
           localStorage.removeItem('bikeerp_collapsed_nav_groups');
           localStorage.removeItem('bikeerp_pinned_nav_items');
-        } catch {}
-        window.location.reload();
+        } catch {
+          // storage unavailable
+        }
+        await get().refreshFromBackend();
       },
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
 
       // Auth & Branch Switcher
+      // Offline/test only: with the backend, the role always comes from the signed-in account.
       loginAsRole: (rolePresetId) => {
+        if (backend.enabled()) return;
         const found = ROLE_PRESETS.find((r) => r.id === rolePresetId) || ROLE_PRESETS[0];
         set({ currentUser: found });
       },
@@ -83,31 +119,44 @@ export const useAppStore = create(
 
       // Backend (Django) session
       hydrateFromBackend: (data) => {
-        const keys = [
-          'customers', 'leads', 'quotations', 'bookings', 'salesOrders', 'vehicleStock', 'partsStock', 'jobCards',
-          'appointments', 'bays', 'invoices', 'approvals', 'notifications', 'branches', 'auditLogs',
-        ];
+        const collections = { ...(data.collections || {}) };
+        const take = (name) => {
+          const items = collections[name] || [];
+          delete collections[name];
+          return items;
+        };
         const patch = {};
-        keys.forEach((k) => {
-          if (Array.isArray(data[k])) patch[k] = data[k];
-        });
-        const persona = data.currentUser && ROLE_PRESETS.find((r) => r.id === data.currentUser.id);
+        for (const slice of [...Object.keys(REST_SLICES), 'bays', 'auditLogs']) {
+          if (Array.isArray(data[slice])) patch[slice] = data[slice];
+        }
+        for (const [slice, name] of Object.entries(COLLECTION_SLICES)) patch[slice] = take(name);
+        for (const [slice, name] of Object.entries(OBJECT_SLICES)) {
+          const record = take(name).find((r) => r.id === OBJECT_RECORD_ID);
+          patch[slice] = record ? record.value : emptyDataState()[slice];
+        }
+        patch.catalogs = Object.fromEntries(CATALOG_KEYS.map((k) => [k, take(catalogCollection(k))]));
+        patch.collections = collections; // page-level collections (useCollection)
+        if (data.tenant) patch.dealership = { ...patch.dealership, name: patch.dealership?.name || data.tenant.name };
+
         const branches = patch.branches || get().branches;
         set({
           ...patch,
-          ...(data.currentUser ? { currentUser: { ...persona, ...data.currentUser } } : {}),
+          ...(data.currentUser ? { currentUser: data.currentUser } : {}),
           activeBranchId: branches.some((b) => b.id === get().activeBranchId)
             ? get().activeBranchId
-            : data.activeBranchId || get().activeBranchId,
-          ...(data.tenant ? { dealership: { ...get().dealership, ...data.tenant.profile, name: data.tenant.name } } : {}),
+            : data.activeBranchId || branches[0]?.id || null,
           backendStatus: 'live',
           lastSyncedAt: new Date().toISOString(),
         });
+        // What we just received is what the server has: start syncing local changes from here.
+        syncEngine.start(get());
       },
       refreshFromBackend: async () => {
         if (!backend.enabled() || !backend.isLoggedIn()) return false;
         set({ backendStatus: 'syncing' });
         try {
+          // Save pending local edits first so a refresh never overwrites them.
+          if (syncEngine.isActive()) await syncEngine.flush();
           get().hydrateFromBackend(await backend.bootstrap());
           return true;
         } catch {
@@ -116,14 +165,18 @@ export const useAppStore = create(
         }
       },
       logout: async () => {
+        await syncEngine.flush();
+        syncEngine.stop();
         await backend.logout();
         set({
-          ...getInitialSeedData(),
-          seededOn: todayKey(),
+          ...emptyDataState(),
           backendStatus: backend.enabled() ? 'disconnected' : 'offline',
           lastSyncedAt: null,
         });
       },
+      // Page-level module data (see hooks/useCollection.js).
+      setCollection: (name, items) =>
+        set((state) => ({ collections: { ...state.collections, [name]: items } })),
 
       // Audit Logging Action
       logAudit: (action, entityType, entityId, oldValue, newValue) => {
@@ -151,9 +204,6 @@ export const useAppStore = create(
         };
         set((state) => ({ leads: [newLead, ...state.leads] }));
         get().logAudit('LEAD_CREATED', 'LEAD', newLead.id, null, newLead);
-        syncToBackend('Lead', () => backend.createLead(newLead), (saved) =>
-          set((state) => ({ leads: replaceById(state.leads, saved) }))
-        );
         return newLead;
       },
       updateLeadStage: (leadId, newStage) => {
@@ -165,14 +215,12 @@ export const useAppStore = create(
           leads: state.leads.map((l) => (l.id === leadId ? { ...l, stage: newStage } : l)),
         });
         get().logAudit('LEAD_STAGE_UPDATED', 'LEAD', leadId, { stage: oldLead.stage }, { stage: newStage });
-        syncToBackend('Lead stage', () => backend.updateLead(leadId, { stage: newStage }));
       },
 
       // Quotations Actions
       addQuotation: (quotation) => {
         set((state) => ({ quotations: [quotation, ...state.quotations] }));
         get().logAudit('QUOTATION_CREATED', 'QUOTATION', quotation.id, null, quotation);
-        syncToBackend('Quotation', () => backend.createQuotation(quotation));
       },
       updateQuotation: (quotationId, patch) => {
         const state = get();
@@ -183,7 +231,6 @@ export const useAppStore = create(
           quotations: state.quotations.map((q) => (q.id === quotationId ? updated : q)),
         });
         get().logAudit('QUOTATION_UPDATED', 'QUOTATION', quotationId, old, updated);
-        syncToBackend('Quotation update', () => backend.updateQuotation(quotationId, patch));
       },
       renewQuotation: (quotationId) => {
         const state = get();
@@ -313,9 +360,6 @@ export const useAppStore = create(
           ),
         });
         get().logAudit('DISCOUNT_APPROVAL_STATUS', 'QUOTATION', quotationId, { status: old?.discountStatus }, { status });
-        syncToBackend('Discount status', () =>
-          backend.updateQuotation(quotationId, { discountStatus: status, approvedBy: approverName })
-        );
       },
 
       // Bookings & Allocation Actions (Single-unit rule, atomic allocation)
@@ -325,30 +369,53 @@ export const useAppStore = create(
         const bookingNumber = `BK/2627/${String(nextSeq).padStart(5, '0')}`;
         const bookingId = `bk-2627-${String(nextSeq).padStart(3, '0')}`;
 
+        // The booking form sends customerPhone / colour / variant / tokenPaidPaise; older callers send
+        // phone / colorName / variantName / tokenAmountPaise. Accept both.
+        const branch =
+          state.branches.find((b) => b.id === bookingData.branchId) ||
+          state.branches.find((b) => b.name === bookingData.branchName) ||
+          state.branches.find((b) => b.id === state.activeBranchId);
+        const tokenPaidPaise = Number(bookingData.tokenAmountPaise ?? bookingData.tokenPaidPaise ?? 0);
+        const catalogBike = (state.catalogs?.bikes || []).find(
+          (bike) => bike.id === bookingData.modelId || `${bike.brand} ${bike.model}` === bookingData.modelName || bike.model === bookingData.modelName
+        );
+        const now = new Date().toISOString();
         const newBooking = {
           id: bookingId,
           bookingNumber,
           customerId: bookingData.customerId || `cust-${Date.now()}`,
           customerName: bookingData.customerName,
-          phone: bookingData.phone,
-          email: bookingData.email || '',
-          branchId: bookingData.branchId || state.activeBranchId,
-          branchName: bookingData.branchName || 'Bangalore Central Flagship',
-          salespersonId: bookingData.salespersonId || state.currentUser?.id || 'usr-007',
-          salespersonName: bookingData.salespersonName || state.currentUser?.name || 'Deepak Rao',
-          salesExecutive: bookingData.salesExecutive || state.currentUser?.name || 'Deepak Rao',
+          phone: bookingData.phone || bookingData.customerPhone || '',
+          email: bookingData.email || bookingData.customerEmail || '',
+          deliveryAddress: bookingData.deliveryAddress || '',
+          branchId: branch?.id || state.activeBranchId,
+          branchName: branch?.name || bookingData.branchName || '',
+          salespersonId: bookingData.salespersonId || state.currentUser?.id || null,
+          salespersonName: bookingData.salespersonName || state.currentUser?.name || '',
+          salesExecutive: bookingData.salesExecutive || state.currentUser?.name || '',
           quotationId: bookingData.quotationId || null,
           leadId: bookingData.leadId || null,
           modelId: bookingData.modelId,
           modelName: bookingData.modelName,
-          variantName: bookingData.variantName || 'Standard Variant',
-          colorName: bookingData.colorName || 'Default',
-          tokenRequiredPaise: bookingData.tokenRequiredPaise || 1000000,
-          tokenAmountPaise: bookingData.tokenAmountPaise || 0,
-          tokenPayments: bookingData.tokenPayments || [],
+          variantName: bookingData.variantName || bookingData.variant || '',
+          colorName: bookingData.colorName || bookingData.colour || '',
+          tokenRequiredPaise: bookingData.tokenRequiredPaise || getMinimumTokenPaise(bookingData.modelName),
+          tokenAmountPaise: tokenPaidPaise,
+          tokenPayments:
+            bookingData.tokenPayments ||
+            (tokenPaidPaise > 0
+              ? [{
+                  receiptNo: `RCP-${String(nextSeq).padStart(5, '0')}-1`,
+                  amountPaise: tokenPaidPaise,
+                  mode: bookingData.paymentMode || 'UPI',
+                  reference: bookingData.paymentRef || '',
+                  date: now,
+                  status: 'CLEARED',
+                }]
+              : []),
           allocatedChassisNumber: null,
           allocation: null,
-          totalOnRoadPaise: bookingData.totalOnRoadPaise || 20000000,
+          totalOnRoadPaise: bookingData.totalOnRoadPaise || catalogBike?.exShowroomPaise || 0,
           status: bookingData.status || BOOKING_STATUSES.PENDING,
           bookingDate: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -384,7 +451,10 @@ export const useAppStore = create(
         }));
 
         get().logAudit('BOOKING_CREATED', 'BOOKING', bookingId, null, newBooking);
-        return newBooking;
+        if (bookingData.allocatedVin) {
+          get().allocateChassisToBooking(bookingId, bookingData.allocatedVin);
+        }
+        return get().bookings.find((b) => b.id === bookingId) || newBooking;
       },
 
       updateBooking: (bookingId, patch) => {
@@ -676,6 +746,22 @@ export const useAppStore = create(
         return updatedBooking;
       },
 
+      /** Deletes a booking (not delivered ones) and releases any chassis it held. */
+      deleteBooking: (bookingId) => {
+        const state = get();
+        const booking = state.bookings.find((b) => b.id === bookingId);
+        if (!booking) throw new Error('Booking not found');
+        if (String(booking.status).toUpperCase() === 'DELIVERED') {
+          throw new Error('A delivered booking cannot be deleted; it is part of the sales record.');
+        }
+        set({
+          bookings: state.bookings.filter((b) => b.id !== bookingId),
+          vehicleStock: state.vehicleStock.map((u) =>
+            u.allocatedBookingId === bookingId ? { ...u, status: 'IN_STOCK', allocatedBookingId: null } : u
+          ),
+        });
+        get().logAudit('BOOKING_DELETED', 'BOOKING', bookingId, booking, null);
+      },
       cancelBooking: (bookingId, reason = 'Customer request') => {
         const state = get();
         const b = state.bookings.find((item) => item.id === bookingId);
@@ -827,8 +913,41 @@ export const useAppStore = create(
           newApt = await backend.createAppointment(newApt);
         }
         set((state) => ({ appointments: [...(state.appointments || []), newApt] }));
+        syncEngine.markRecordClean('appointments', newApt); // already saved by the call above
         get().logAudit('APPOINTMENT_BOOKED', 'APPOINTMENT', newApt.id, null, newApt);
         return newApt;
+      },
+      /** Deletes an appointment that has not become a job card yet. */
+      deleteAppointment: (appointmentId) => {
+        const apt = (get().appointments || []).find((a) => a.id === appointmentId);
+        if (!apt) return;
+        if (apt.jobCardId && get().jobCards.some((jc) => jc.id === apt.jobCardId)) {
+          throw new Error(`Checked in on job card ${apt.jobCardId}. Delete or edit the job card instead.`);
+        }
+        set((state) => ({ appointments: state.appointments.filter((a) => a.id !== appointmentId) }));
+        get().logAudit('APPOINTMENT_DELETED', 'APPOINTMENT', appointmentId, apt, null);
+      },
+      /** Deletes a job card, frees its bay and reopens the appointment it came from. */
+      deleteJobCard: (jobCardId) => {
+        const state = get();
+        const card = state.jobCards.find((jc) => jc.id === jobCardId);
+        if (!card) return;
+        if (['READY', 'DELIVERED'].includes(card.stage) && card.grandTotalPaise) {
+          throw new Error('A completed, billed job card cannot be deleted.');
+        }
+        set({
+          jobCards: state.jobCards.filter((jc) => jc.id !== jobCardId),
+          bays: state.bays.map((bay) =>
+            bay.activeJobCardId === jobCardId
+              ? { ...bay, status: 'FREE', activeJobCardId: null, vehicleRegistration: null, modelName: null,
+                  technicianId: null, technicianName: null, startedAt: null, slaStatus: 'NORMAL' }
+              : bay
+          ),
+          appointments: (state.appointments || []).map((a) =>
+            a.jobCardId === jobCardId ? { ...a, status: 'CONFIRMED', jobCardId: null } : a
+          ),
+        });
+        get().logAudit('JOBCARD_DELETED', 'JOB_CARD', jobCardId, card, null);
       },
       cancelAppointment: (appointmentId) => {
         const apt = (get().appointments || []).find((a) => a.id === appointmentId);
@@ -838,7 +957,6 @@ export const useAppStore = create(
           appointments: state.appointments.map((a) => (a.id === appointmentId ? { ...a, status: 'CANCELLED' } : a)),
         }));
         get().logAudit('APPOINTMENT_CANCELLED', 'APPOINTMENT', appointmentId, { status: apt.status }, { status: 'CANCELLED' });
-        syncToBackend('Appointment cancellation', () => backend.cancelAppointment(appointmentId));
       },
       /**
        * Saves the Create Job Card form. `stage: 'DRAFT'` keeps it as a draft; any other stage creates the card and
@@ -876,6 +994,12 @@ export const useAppStore = create(
               }
             : {}),
         }));
+        // The server already has this card (and linked the appointment) via the calls above.
+        syncEngine.markRecordClean('jobCards', card);
+        if (linkAppointment) {
+          const apt = get().appointments.find((a) => a.id === card.appointmentId);
+          if (apt) syncEngine.markRecordClean('appointments', apt);
+        }
         get().logAudit(isDraft ? 'JOBCARD_DRAFT_SAVED' : 'JOBCARD_CREATED', 'JOB_CARD', card.id,
           existing ? { stage: existing.stage } : null, { jobCardNumber: card.jobCardNumber, stage: card.stage });
         return card;
@@ -892,7 +1016,6 @@ export const useAppStore = create(
           jobCards: state.jobCards.map((jc) => (jc.id === jobCardId ? updatedCard : jc)),
         });
         get().logAudit('JOBCARD_STAGE_UPDATED', 'JOB_CARD', jobCardId, { stage: oldCard.stage }, { stage });
-        syncToBackend('Job card stage', () => backend.setJobCardStage(jobCardId, stage, additional));
       },
 
       assignBayToJobCard: (bayNumber, jobCardId) => {
@@ -996,9 +1119,10 @@ export const useAppStore = create(
 
         get().logAudit('INVOICE_POSTED', 'INVOICE', postedInvoice.id, null, postedInvoice);
         // The server assigns the authoritative gap-free number; adopt it when it differs.
-        syncToBackend('Invoice', () => backend.postInvoice(postedInvoice), (saved) =>
-          set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === postedInvoice.id ? saved : inv)) }))
-        );
+        syncToBackend('Invoice', () => backend.postInvoice(postedInvoice), (saved) => {
+          set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === postedInvoice.id ? saved : inv)) }));
+          syncEngine.markRecordClean('invoices', saved);
+        });
         return postedInvoice;
       },
 
@@ -2136,110 +2260,36 @@ export const useAppStore = create(
         set({ userDrafts: drafts });
       },
 
-      resetToDefaultSeed: () => {
-        if (backend.enabled() && backend.isLoggedIn()) {
-          get().refreshFromBackend();
+      resetToDefaultSeed: async () => {
+        if (backend.enabled()) {
+          await get().refreshFromBackend();
           return;
         }
-        set({ ...getInitialSeedData(), seededOn: todayKey() });
+        set(await loadSeed());
       },
     }),
     {
-      name: 'bikeerp-storage-v1',
-      // Demo seed dates are relative to the day they were generated. In offline mode a cache from
-      // an earlier day would leave every "today" KPI at zero, so re-seed and keep only preferences.
-      merge: (persisted, current) => {
-        if (!persisted) return current;
-        if (persisted.dealership?.name && /AKASH\s+Bajaj/i.test(persisted.dealership.name)) {
-          persisted.dealership.name = 'AKASH BAJAJ';
-        }
-        if (!backend.enabled() && persisted.seededOn !== todayKey()) {
-          return {
-            ...current,
-            theme: persisted.theme ?? current.theme,
-            currentUser: persisted.currentUser ?? current.currentUser,
-          };
-        }
-        // Ensure users list is populated if missing in legacy persisted state
-        if (!persisted.users || !Array.isArray(persisted.users) || persisted.users.length === 0) {
-          persisted.users = current.users;
-        }
-        // Ensure approvals & policies are populated/migrated
-        if (!persisted.approvals || !Array.isArray(persisted.approvals) || persisted.approvals.length <= 1) {
-          persisted.approvals = current.approvals;
-        }
-        // Ensure quotations are populated/migrated with full 32-quotation seed dataset
-        if (!persisted.quotations || !Array.isArray(persisted.quotations) || persisted.quotations.length < 15) {
-          persisted.quotations = current.quotations;
-        }
-        // Ensure bookings are populated/migrated with full 40-booking seed dataset
-        if (!persisted.bookings || !Array.isArray(persisted.bookings) || persisted.bookings.length < 20) {
-          persisted.bookings = current.bookings;
-        }
-        // Ensure vehicleStock has the full 84-unit dataset
-        if (!persisted.vehicleStock || !Array.isArray(persisted.vehicleStock) || persisted.vehicleStock.length < 30) {
-          persisted.vehicleStock = current.vehicleStock;
-        }
-        if (!persisted.approvalPolicies || !Array.isArray(persisted.approvalPolicies) || persisted.approvalPolicies.length === 0) {
-          persisted.approvalPolicies = current.approvalPolicies;
-        }
-        if (!persisted.tasks || !Array.isArray(persisted.tasks) || persisted.tasks.length === 0) {
-          persisted.tasks = current.tasks;
-        }
-        if (!persisted.cancellations || !Array.isArray(persisted.cancellations)) {
-          persisted.cancellations = current.cancellations;
-        }
-        if (!persisted.settings || !persisted.settings.promoSlides) {
-          persisted.settings = { ...(current.settings || {}), ...(persisted.settings || {}) };
-        }
-        if (!persisted.catalogs || typeof persisted.catalogs !== 'object') {
-          persisted.catalogs = current.catalogs;
-        }
-        return { ...current, ...persisted };
-      },
+      name: 'bikeerp-preferences-v1',
       partialize: (state) => ({
-        seededOn: state.seededOn,
-        dealership: state.dealership,
-        externalIntegrations: state.externalIntegrations,
-        customApprovalRules: state.customApprovalRules,
-        customRoles: state.customRoles,
-        branches: state.branches,
-        notifications: state.notifications,
         theme: state.theme,
-        currentUser: state.currentUser,
+        sidebarCollapsed: state.sidebarCollapsed,
         activeBranchId: state.activeBranchId,
-        customers: state.customers,
-        leads: state.leads,
-        quotations: state.quotations,
-        bookings: state.bookings,
-        salesOrders: state.salesOrders,
-        vehicleStock: state.vehicleStock,
-        partsStock: state.partsStock,
-        bays: state.bays,
-        jobCards: state.jobCards,
-        appointments: state.appointments,
-        invoices: state.invoices,
-        chartOfAccounts: state.chartOfAccounts,
-        journalEntries: state.journalEntries,
-        whatsappConversations: state.whatsappConversations,
-        approvals: state.approvals,
-        approvalPolicies: state.approvalPolicies,
-        auditLogs: state.auditLogs,
-        importHistory: state.importHistory,
-        exportHistory: state.exportHistory,
-        scheduledJobs: state.scheduledJobs,
-        syncIntegrations: state.syncIntegrations,
-        lastImportMappings: state.lastImportMappings,
-        users: state.users,
-        userDrafts: state.userDrafts,
-        hrStaff: state.hrStaff,
-        hrPerformanceTrend: state.hrPerformanceTrend,
-        hrPayrollRuns: state.hrPayrollRuns,
-        hrIncentiveRules: state.hrIncentiveRules,
-        hrAttendance: state.hrAttendance,
       }),
     }
   )
 );
+
+// Old builds cached every slice (customer data included) in localStorage; remove it.
+try {
+  localStorage.removeItem('bikeerp-storage-v1');
+  localStorage.removeItem('bikeerp-store-v2');
+} catch {
+  // storage unavailable
+}
+
+setTaxRulesProvider(() => useAppStore.getState().catalogs?.taxRules);
+
+/** Pushes local changes to the API; started by hydrateFromBackend after login. */
+export const syncEngine = createSyncEngine(useAppStore);
 
 export const useStore = useAppStore;

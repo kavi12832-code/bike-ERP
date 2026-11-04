@@ -14,6 +14,8 @@ import {
   Receipt,
   Clock,
   Bike,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { STATUS_CONFIG, BOOKING_STATUSES } from '../../../bookings/config';
 import { getDeliveryFlag, isHoldExpired } from '../../../bookings/engine';
@@ -32,6 +34,9 @@ export function BookingsTable({
   onConfirmBooking,
   onDeliverBooking,
   onCancelBooking,
+  onEditBooking,
+  onDeleteBooking,
+  canDelete = false,
   canViewFullPhone = false,
   canAllocateChassis = true,
   canCancel = true,
@@ -340,6 +345,20 @@ export function BookingsTable({
                                 </button>
                               )}
 
+                            {onEditBooking && b.status !== BOOKING_STATUSES.DELIVERED && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onEditBooking(b);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-slate-50 text-slate-700"
+                              >
+                                <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Edit Booking</span>
+                              </button>
+                            )}
+
                             {canAllocateChassis &&
                               b.status !== BOOKING_STATUSES.DELIVERED &&
                               b.status !== BOOKING_STATUSES.CANCELLED && (
@@ -418,6 +437,20 @@ export function BookingsTable({
                                   </button>
                                 </div>
                               )}
+
+                            {canDelete && onDeleteBooking && b.status !== BOOKING_STATUSES.DELIVERED && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onDeleteBooking(b);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-rose-50 text-rose-700 font-medium"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete Booking</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>

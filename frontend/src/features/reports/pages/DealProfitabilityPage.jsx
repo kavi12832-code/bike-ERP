@@ -16,91 +16,11 @@ import { formatMoney } from '../../../lib/format';
 import { PERMISSIONS } from '../../../config/permissions';
 import { toast } from 'sonner';
 
-const SAMPLE_DEAL_MARGINS = [
-  {
-    id: 'dp-001',
-    orderNo: 'SO-2627-001',
-    customerName: 'Arjun Das',
-    model: 'Royal Enfield Hunter 350',
-    executive: 'Deepak Rao',
-    exShowroomPaise: 16990000,
-    factoryCostPaise: 15120000,
-    vehicleMarginPaise: 1870000, // ₹18,700
-    accessoryRevenuePaise: 1190000,
-    accessoryCostPaise: 750000,
-    accessoryMarginPaise: 440000, // ₹4,400
-    insuranceCommissionPaise: 220000, // ₹2,200
-    financePayoutPaise: 180000, // ₹1,800
-    exchangeMarginPaise: 0,
-    discountGivenPaise: 200000, // -₹2,000
-    executiveIncentivePaise: 150000, // -₹1,500
-    netContributionPaise: 2360000, // ₹23,600
-    totalRevenuePaise: 20200000,
-  },
-  {
-    id: 'dp-002',
-    orderNo: 'SO-2627-002',
-    customerName: 'Priya Singh',
-    model: 'Royal Enfield Himalayan 450',
-    executive: 'Vikram Sethi',
-    exShowroomPaise: 28500000,
-    factoryCostPaise: 25900000,
-    vehicleMarginPaise: 2600000,
-    accessoryRevenuePaise: 2450000,
-    accessoryCostPaise: 1500000,
-    accessoryMarginPaise: 950000,
-    insuranceCommissionPaise: 380000,
-    financePayoutPaise: 250000,
-    exchangeMarginPaise: 450000,
-    discountGivenPaise: 500000,
-    executiveIncentivePaise: 250000,
-    netContributionPaise: 3880000, // ₹38,800
-    totalRevenuePaise: 34800000,
-  },
-  {
-    id: 'dp-003',
-    orderNo: 'SO-2627-003',
-    customerName: 'Rohit Chandran',
-    model: 'Royal Enfield Classic 350',
-    executive: 'Deepak Rao',
-    exShowroomPaise: 19300000,
-    factoryCostPaise: 17400000,
-    vehicleMarginPaise: 1900000,
-    accessoryRevenuePaise: 0,
-    accessoryCostPaise: 0,
-    accessoryMarginPaise: 0,
-    insuranceCommissionPaise: 180000,
-    financePayoutPaise: 0, // Cash purchase
-    exchangeMarginPaise: -150000, // Refurbishment overrun
-    discountGivenPaise: 650000, // Over-discounted
-    executiveIncentivePaise: 100000,
-    netContributionPaise: 1180000, // ₹11,800
-    totalRevenuePaise: 21200000,
-  },
-  {
-    id: 'dp-004',
-    orderNo: 'SO-2627-004',
-    customerName: 'Special Bulk Client (Fleet)',
-    model: 'TVS iQube EV',
-    executive: 'Vikram Sethi',
-    exShowroomPaise: 11500000,
-    factoryCostPaise: 10800000,
-    vehicleMarginPaise: 700000,
-    accessoryRevenuePaise: 0,
-    accessoryCostPaise: 0,
-    accessoryMarginPaise: 0,
-    insuranceCommissionPaise: 80000,
-    financePayoutPaise: 0,
-    exchangeMarginPaise: 0,
-    discountGivenPaise: 850000, // Deep discount
-    executiveIncentivePaise: 50000,
-    netContributionPaise: -120000, // Negative Deal! -₹1,200 loss!
-    totalRevenuePaise: 12200000,
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_DEAL_MARGINS: loaded from the database (collection "reports.dealProfitability.dealMargins")
 
 export function DealProfitabilityPage() {
-  const [deals, setDeals] = useState(SAMPLE_DEAL_MARGINS);
+  const [deals, setDeals] = useCollection('reports.dealProfitability.dealMargins');
   const [search, setSearch] = useState('');
   const [negativeOnly, setNegativeOnly] = useState(false);
 

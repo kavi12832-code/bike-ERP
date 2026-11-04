@@ -19,67 +19,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_RECEIVABLES = [
-  {
-    id: 'rec-01',
-    customerName: 'Rohit Chandran',
-    phone: '+91 98860 99441',
-    invoiceNo: 'VI/2627/00001',
-    totalInvoicePaise: 38900000,
-    paidPaise: 35000000,
-    outstandingPaise: 3900000, // ₹39,000
-    daysOverdue: 14,
-    ageingBucket: '0_30', // '0_30', '31_60', '61_90', '90_PLUS'
-    ptpDate: '2026-10-28',
-    ptpStatus: 'CONFIRMED',
-    notes: 'Awaiting loan disbursement final tranche from HDFC Bank.',
-  },
-  {
-    id: 'rec-02',
-    customerName: 'SmartShift Logistics (Porter)',
-    phone: '+91 98450 77112',
-    invoiceNo: 'VI/2627/00005',
-    totalInvoicePaise: 256680000,
-    paidPaise: 200000000,
-    outstandingPaise: 56680000, // ₹5,66,800
-    daysOverdue: 42,
-    ageingBucket: '31_60',
-    ptpDate: '2026-11-02',
-    ptpStatus: 'PENDING',
-    notes: 'Corporate net-30 terms. CFO approved release on 2nd Nov.',
-  },
-  {
-    id: 'rec-03',
-    customerName: 'Vinod Nair',
-    phone: '+91 97401 55667',
-    invoiceNo: 'JC/2627/0088',
-    totalInvoicePaise: 845000,
-    paidPaise: 0,
-    outstandingPaise: 845000, // ₹8,450
-    daysOverdue: 75,
-    ageingBucket: '61_90',
-    ptpDate: '2026-10-20',
-    ptpStatus: 'BROKEN',
-    notes: 'Post-service bill. Customer promised to transfer via GPay, repeatedly delayed.',
-  },
-  {
-    id: 'rec-04',
-    customerName: 'Kishore Kumar',
-    phone: '+91 98860 11234',
-    invoiceNo: 'VI/2526/0491',
-    totalInvoicePaise: 1850000,
-    paidPaise: 0,
-    outstandingPaise: 1850000, // ₹18,500
-    daysOverdue: 110,
-    ageingBucket: '90_PLUS',
-    ptpDate: null,
-    ptpStatus: 'NO_RESPONSE',
-    notes: 'Old accessories credit. Disputed item quality, legal notice draft ready.',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_RECEIVABLES: loaded from the database (collection "finance.collectionsReceivables.receivables")
 
 export function CollectionsReceivablesPage() {
-  const [receivables, setReceivables] = useState(SAMPLE_RECEIVABLES);
+  const [receivables, setReceivables] = useCollection('finance.collectionsReceivables.receivables');
   const [selectedBucket, setSelectedBucket] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);

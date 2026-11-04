@@ -25,6 +25,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 const COMPLAINT_STAGES = [
   { id: 'OPEN', label: 'Open', color: 'border-rose-500 text-rose-700 bg-rose-50' },
   { id: 'ASSIGNED', label: 'Assigned', color: 'border-amber-500 text-amber-700 bg-amber-50' },
@@ -33,71 +34,10 @@ const COMPLAINT_STAGES = [
   { id: 'CLOSED', label: 'Closed & Verified', color: 'border-emerald-500 text-emerald-700 bg-emerald-50' },
 ];
 
-const INITIAL_COMPLAINTS = [
-  {
-    id: 'cmp-001',
-    ticketNo: 'CMP/2627/0042',
-    customerName: 'Vinay Bhaskar',
-    phone: '+91 98451 88440',
-    vehicle: 'Royal Enfield Hunter 350 (KA-01-MJ-9912)',
-    category: 'Service Quality',
-    issue: 'Engine oil leakage observed immediately after 2nd general service.',
-    stage: 'OPEN',
-    createdAt: new Date(Date.now() - 32 * 3600000).toISOString(),
-    slaHoursRemaining: 16,
-    escalationLevel: 'SERVICE_MANAGER',
-    assignedTo: 'Karthik Raja (Service Manager)',
-    resolutionNote: '',
-  },
-  {
-    id: 'cmp-002',
-    ticketNo: 'CMP/2627/0043',
-    customerName: 'Aishwarya Raman',
-    phone: '+91 97401 22990',
-    vehicle: 'TVS iQube EV (KA-03-EV-1144)',
-    category: 'Billing Discrepancy',
-    issue: 'Discrepancy in extended warranty charging amount compared to sales quote.',
-    stage: 'ASSIGNED',
-    createdAt: new Date(Date.now() - 10 * 3600000).toISOString(),
-    slaHoursRemaining: 38,
-    escalationLevel: 'ADVISOR',
-    assignedTo: 'Deepak Rao (Sales Executive)',
-    resolutionNote: '',
-  },
-  {
-    id: 'cmp-003',
-    ticketNo: 'CMP/2627/0040',
-    customerName: 'Kishore Kumar',
-    phone: '+91 98860 11234',
-    vehicle: 'Honda SP125 (KA-05-AB-5511)',
-    category: 'Part Delay',
-    issue: 'Rear shock absorber replacement part delayed over 14 days.',
-    stage: 'UNDER_INVESTIGATION',
-    createdAt: new Date(Date.now() - 52 * 3600000).toISOString(),
-    slaHoursRemaining: -4,
-    escalationLevel: 'DEALER_PRINCIPAL',
-    assignedTo: 'Rajesh Varma (Dealer Principal)',
-    resolutionNote: '',
-  },
-  {
-    id: 'cmp-004',
-    ticketNo: 'CMP/2627/0039',
-    customerName: 'Sanjay Reddy',
-    phone: '+91 99002 44331',
-    vehicle: 'Royal Enfield Himalayan 450 (KA-01-NJ-8810)',
-    category: 'Delivery PDI',
-    issue: 'Small scratch on exhaust heat shield noted during handover.',
-    stage: 'CLOSED',
-    createdAt: new Date(Date.now() - 90 * 3600000).toISOString(),
-    slaHoursRemaining: 0,
-    escalationLevel: 'RESOLVED',
-    assignedTo: 'Ananya Sharma',
-    resolutionNote: 'Free heat shield replacement completed under dealer goodwill. Customer signed satisfaction note.',
-  }
-];
+// INITIAL_COMPLAINTS: loaded from the database (collection "care.complaints.complaints")
 
 export function ComplaintsPage() {
-  const [complaints, setComplaints] = useState(INITIAL_COMPLAINTS);
+  const [complaints, setComplaints] = useCollection('care.complaints.complaints');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [stageFilter, setStageFilter] = useState('ALL');

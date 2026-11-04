@@ -14,50 +14,8 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_TDS_RECORDS = [
-  {
-    id: 'tds-01',
-    section: '194C',
-    sectionTitle: 'Contractor / Workshop Deep Cleaning',
-    deducteeName: 'CleanPro Facilities Services',
-    deducteePan: 'AAACC1234K',
-    grossAmountPaise: 4500000, // ₹45,000
-    tdsRatePercent: 1.0, // 1% for individual/HUF, 2% company (CONFIRM WITH CA)
-    tdsDeductedPaise: 45000,
-    challanNo: 'CHL/IT/2627/0942',
-    bsrCode: '0002050',
-    depositDate: '2026-10-07',
-    status: 'DEPOSITED',
-  },
-  {
-    id: 'tds-02',
-    section: '194J',
-    sectionTitle: 'Professional Fees (Chartered Accountant)',
-    deducteeName: 'R. K. Swamy & Associates CA',
-    deducteePan: 'AABFR8819P',
-    grossAmountPaise: 15000000, // ₹1,50,000
-    tdsRatePercent: 10.0, // 10% under 194J (CONFIRM WITH CA)
-    tdsDeductedPaise: 1500000, // ₹15,000
-    challanNo: 'CHL/IT/2627/0942',
-    bsrCode: '0002050',
-    depositDate: '2026-10-07',
-    status: 'DEPOSITED',
-  },
-  {
-    id: 'tds-03',
-    section: '194I',
-    sectionTitle: 'Rent for Flagship Showroom Building',
-    deducteeName: 'M. S. Ramaiah Realty Holdings',
-    deducteePan: 'AABCM9102L',
-    grossAmountPaise: 35000000, // ₹3,50,000
-    tdsRatePercent: 10.0, // 10% rent on immovable property (CONFIRM WITH CA)
-    tdsDeductedPaise: 3500000, // ₹35,000
-    challanNo: null,
-    bsrCode: null,
-    depositDate: null,
-    status: 'PAYMENT_DUE', // Due 7th of next month
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_TDS_RECORDS: loaded from the database (collection "gst.tdsTcsCompliance.tdsRecords")
 
 const SAMPLE_TCS_RECORDS = [
   {
@@ -76,7 +34,7 @@ const SAMPLE_TCS_RECORDS = [
 
 export function TdsTcsCompliancePage() {
   const [activeTab, setActiveTab] = useState('TDS'); // 'TDS' or 'TCS'
-  const [tdsRecords, setTdsRecords] = useState(SAMPLE_TDS_RECORDS);
+  const [tdsRecords, setTdsRecords] = useCollection('gst.tdsTcsCompliance.tdsRecords');
   const [tcsRecords, setTcsRecords] = useState(SAMPLE_TCS_RECORDS);
 
   const totalTdsDuePaise = tdsRecords

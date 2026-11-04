@@ -2,7 +2,6 @@
  * Options, defaults and validation for the Create Vehicle Service Job Card form.
  * Validation mirrors backend/apps/erp/serializers.py (JobCardSerializer).
  */
-import { ROLE_PRESETS } from '../../config/roles';
 
 export const MANUFACTURERS = {
   Bajaj: ['Pulsar 125', 'Pulsar 150', 'Pulsar N160', 'Pulsar NS200', 'Platina 110', 'CT 110X', 'Avenger 160', 'Dominar 400', 'Chetak EV'],
@@ -108,9 +107,16 @@ export const REPORTED_PROBLEMS = [
   'Chain / Sprocket', 'Body / Paint', 'Other',
 ];
 
-const NAMES_BY_ROLE = (roles) => ROLE_PRESETS.filter((p) => roles.includes(p.role)).map((p) => p.name);
-export const SERVICE_ADVISERS = [...NAMES_BY_ROLE(['Service Advisor', 'Service Manager']), 'Ravi Kumar'];
-export const TECHNICIANS = [...NAMES_BY_ROLE(['Technician']), 'Ravi Shankar', 'Suresh', 'Imran Khan', 'Vinod Reddy'];
+// Adviser / technician choices come from the staff directory (Admin > Users), not a fixed list.
+const ADVISER_ROLES = ['Service Advisor', 'Service Manager', 'Workshop Manager'];
+const TECHNICIAN_ROLES = ['Technician', 'Senior Technician', 'Master Technician', 'EV Technician'];
+const activeNamesByRole = (users, roles) =>
+  [...new Set((users || [])
+    .filter((u) => roles.includes(u.role) && (u.status || 'Active') !== 'Inactive' && u.isActive !== false)
+    .map((u) => u.name || u.fullName)
+    .filter(Boolean))].sort();
+export const serviceAdvisersFrom = (users) => activeNamesByRole(users, ADVISER_ROLES);
+export const techniciansFrom = (users) => activeNamesByRole(users, TECHNICIAN_ROLES);
 
 export const emptyComplaint = () => ({
   category: '',

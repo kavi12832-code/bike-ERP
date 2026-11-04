@@ -1,26 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../store';
-import { ROLE_PRESETS } from '../../config/roles';
 import { Avatar } from '../ui/Avatar';
-import { User, ChevronDown, LogOut, ShieldCheck, ChevronRight, Check } from 'lucide-react';
+import { User, ChevronDown, LogOut, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { backend } from '../../services/api/backend';
 
 export function RoleSwitcher() {
   const currentUser = useAppStore((state) => state.currentUser);
-  const loginAsRole = useAppStore((state) => state.loginAsRole);
   const logout = useAppStore((state) => state.logout);
   const navigate = useNavigate();
-  const serverAuth = backend.enabled();
   const [open, setOpen] = useState(false);
-  const [demoExpanded, setDemoExpanded] = useState(false);
   const dropdownRef = useRef(null);
-
-  // Check if current user is Super Admin
-  const isSuperAdmin =
-    currentUser?.role?.toLowerCase() === 'super admin' ||
-    currentUser?.role?.toLowerCase() === 'super_admin' ||
-    currentUser?.id === 'admin';
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -62,10 +51,10 @@ export function RoleSwitcher() {
               <Avatar name={currentUser?.name || 'User'} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text-main truncate">
-                  {currentUser?.name || 'Rajesh Varma'}
+                  {currentUser?.name || 'Signed-in user'}
                 </div>
                 <div className="text-xs text-text-muted truncate">
-                  {currentUser?.email || 'admin@akashbajaj.com'}
+                  {currentUser?.email || ''}
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
@@ -95,47 +84,6 @@ export function RoleSwitcher() {
               <span>User & Team Management</span>
             </button>
           </div>
-
-          {/* Super Admin Demo Persona Switcher (Collapsible) */}
-          {!serverAuth && isSuperAdmin && (
-            <div className="py-1">
-              <button
-                onClick={() => setDemoExpanded(!demoExpanded)}
-                className="w-full px-3 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider flex items-center justify-between hover:bg-surface-subtle"
-              >
-                <span>Demo Personas</span>
-                <ChevronRight className={`w-3 h-3 transition-transform ${demoExpanded ? 'rotate-90' : ''}`} />
-              </button>
-
-              {demoExpanded && (
-                <div className="max-h-60 overflow-y-auto py-1">
-                  {ROLE_PRESETS.map((preset) => {
-                    const isSelected = currentUser?.id === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        onClick={() => {
-                          loginAsRole(preset.id);
-                          setOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-surface-subtle transition-colors ${
-                          isSelected ? 'bg-primary/10 text-primary font-semibold' : 'text-text-main'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-medium text-xs">{preset.name}</div>
-                          <div className="text-[10px] text-text-muted">
-                            {preset.role} • {preset.department}
-                          </div>
-                        </div>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Sign Out */}
           <div className="py-1">

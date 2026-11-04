@@ -23,35 +23,14 @@ import { formatMoney } from '../../../lib/format';
 import { BikeThumb } from '../../../components/domain/BikeThumb';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function AiToolkitPage() {
   const [activeTool, setActiveTool] = useState('UPSELL'); // UPSELL, BAY_OPT, DAMAGE, CALL_SUMMARY, VOICE, POSTER, OWNER_DIGEST
   const bays = useAppStore(state => state.bays || []);
   const jobCards = useAppStore(state => state.jobCards || []);
 
   // E1: Upsell suggestions state
-  const [upsells, setUpsells] = useState([
-    {
-      id: 'up-1',
-      title: 'Ultrasonic Fuel Injector Clean & Decarbonise',
-      pitch: '"Sir, at 10,000 km fuel injector deposits reduce mileage by 3-5 km/l. Ultrasonic cleaning restores factory throttle response for ₹850."',
-      costPaise: 85000,
-      added: false,
-    },
-    {
-      id: 'up-2',
-      title: 'Ceramic Nano Heat Shield Exhaust Coating',
-      pitch: '"Pillion heat guard coating prevents silencer bluing and chrome pitting during monsoon rides for ₹1,250."',
-      costPaise: 125000,
-      added: false,
-    },
-    {
-      id: 'up-3',
-      title: 'Brake Caliper Piston De-glaze & Synthetic Lube',
-      pitch: '"Eliminates high-speed brake squeal and extends pad life by 30% for ₹450."',
-      costPaise: 45000,
-      added: false,
-    }
-  ]);
+  const [upsells, setUpsells] = useCollection('ai.aiToolkit.upsells');
 
   // E2: Bay scheduling optimizer state
   const [optimizedSchedule, setOptimizedSchedule] = useState(null);

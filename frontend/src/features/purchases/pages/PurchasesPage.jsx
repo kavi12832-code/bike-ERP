@@ -19,51 +19,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function PurchasesPage() {
-  const [purchaseOrders, setPurchaseOrders] = useState([
-    {
-      id: 'po-2627-001',
-      poNumber: 'PO/2627/00001',
-      supplierName: 'Royal Enfield India Ltd (Oragadam Plant)',
-      category: 'VEHICLES',
-      orderDate: new Date(Date.now() - 5 * 86400000).toISOString(),
-      expectedDate: new Date(Date.now() + 2 * 86400000).toISOString(),
-      itemCount: 12,
-      totalAmountPaise: 1845000000, // ₹18,45,000 (18.45 Lakhs)
-      status: 'IN_TRANSIT', // DRAFT, APPROVED, IN_TRANSIT, RECEIVED
-      approvalRequired: false,
-      grnNumber: 'GRN/2627/00041',
-      varianceDetected: false,
-    },
-    {
-      id: 'po-2627-002',
-      poNumber: 'PO/2627/00002',
-      supplierName: 'Brembo Brake Systems India Ltd',
-      category: 'SPARE_PARTS',
-      orderDate: new Date(Date.now() - 2 * 86400000).toISOString(),
-      expectedDate: new Date(Date.now() + 4 * 86400000).toISOString(),
-      itemCount: 80,
-      totalAmountPaise: 44000000, // ₹4,40,000
-      status: 'APPROVED',
-      approvalRequired: false,
-      grnNumber: null,
-      varianceDetected: false,
-    },
-    {
-      id: 'po-2627-003',
-      poNumber: 'PO/2627/00003',
-      supplierName: 'Motul India Lubricants Ltd',
-      category: 'LUBRICANTS',
-      orderDate: new Date(Date.now() - 10 * 86400000).toISOString(),
-      expectedDate: new Date(Date.now() - 3 * 86400000).toISOString(),
-      itemCount: 150,
-      totalAmountPaise: 100500000, // ₹10,05,000
-      status: 'RECEIVED',
-      approvalRequired: true,
-      grnNumber: 'GRN/2627/00039',
-      varianceDetected: false,
-    },
-  ]);
+  const [purchaseOrders, setPurchaseOrders] = useCollection('purchases.purchases.purchaseOrders');
 
   const [activePo, setActivePo] = useState(null);
   const [grnModalOpen, setGrnModalOpen] = useState(false);

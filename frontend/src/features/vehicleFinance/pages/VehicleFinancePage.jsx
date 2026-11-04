@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function VehicleFinancePage() {
   const financiers = useAppStore((state) => state.catalogs?.financiers || [
     { id: 'fin-hdfc', code: 'HDFC', name: 'HDFC Bank Auto Loans', interestRatePercent: 9.75, tatHours: 4, maxTenureMonths: 48, processingFeePaise: 99900 },
@@ -32,34 +33,7 @@ export function VehicleFinancePage() {
     { id: 'fin-idfc', code: 'IDFC', name: 'IDFC First Bank Two-Wheeler', interestRatePercent: 9.99, tatHours: 3, maxTenureMonths: 36, processingFeePaise: 99900 },
   ]);
 
-  const [loanApplications, setLoanApplications] = useState([
-    {
-      id: 'loan-001',
-      appNumber: 'LN/2627/00042',
-      customerName: 'Karthik Narayanan',
-      vehicleModel: 'Hunter 350 Dapper',
-      financierName: 'HDFC Bank Auto Loans',
-      loanAmountPaise: 16000000, // ₹1,60,000
-      tenureMonths: 36,
-      interestRatePercent: 9.75,
-      stage: 'SANCTIONED', // APPLIED, DOCUMENTS_VERIFIED, SANCTIONED, DISBURSED, REJECTED
-      disbursementRef: 'HDFC-DISB-99120',
-      appliedDate: new Date(Date.now() - 3 * 86400000).toISOString(),
-    },
-    {
-      id: 'loan-002',
-      appNumber: 'LN/2627/00043',
-      customerName: 'Vikas Swaminathan',
-      vehicleModel: 'Ather 450X EV',
-      financierName: 'Bajaj Finserv Auto',
-      loanAmountPaise: 11000000, // ₹1,10,000
-      tenureMonths: 24,
-      interestRatePercent: 11.5,
-      stage: 'DOCUMENTS_VERIFIED',
-      disbursementRef: null,
-      appliedDate: new Date(Date.now() - 1 * 86400000).toISOString(),
-    },
-  ]);
+  const [loanApplications, setLoanApplications] = useCollection('finance.vehicleFinance.loanApplications');
 
   // Create Application Modal State
   const [newLoanModalOpen, setNewLoanModalOpen] = useState(false);

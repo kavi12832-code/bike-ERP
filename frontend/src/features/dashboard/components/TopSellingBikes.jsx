@@ -1,16 +1,17 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { BikeThumb } from '../../../components/domain/BikeThumb';
-import { BIKE_CATALOG } from '../../../data/catalogs/bikes';
+import { useAppStore } from '../../../store';
 import { formatMoney } from '../../../lib/format';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 
 export function TopSellingBikes() {
   const navigate = useNavigate();
+  const catalog = useAppStore((state) => state.catalogs?.bikes || []);
 
-  // Top fast movers from our catalog
-  const topBikes = BIKE_CATALOG.filter((b) => b.fastMover).slice(0, 5);
+  // Top fast movers from the catalogue (Admin-maintained, loaded from the database)
+  const topBikes = catalog.filter((b) => b.fastMover).slice(0, 5);
 
   return (
     <Card className="h-full flex flex-col">

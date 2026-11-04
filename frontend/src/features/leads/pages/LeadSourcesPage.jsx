@@ -14,81 +14,11 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_SOURCES = [
-  {
-    id: 'src-walkin',
-    name: 'Showroom Walk-in',
-    leadsCount: 142,
-    bookingsCount: 38,
-    conversionRate: 26.8,
-    monthlySpendPaise: 0,
-    cplPaise: 0,
-    qualityRating: 'EXCELLENT',
-  },
-  {
-    id: 'src-meta',
-    name: 'Meta Ads (Facebook & Instagram)',
-    leadsCount: 220,
-    bookingsCount: 24,
-    conversionRate: 10.9,
-    monthlySpendPaise: 4500000, // ₹45,000
-    cplPaise: 20400, // ₹204
-    qualityRating: 'GOOD',
-  },
-  {
-    id: 'src-google',
-    name: 'Google Search & Maps (Near Me)',
-    leadsCount: 95,
-    bookingsCount: 18,
-    conversionRate: 18.9,
-    monthlySpendPaise: 3500000, // ₹35,000
-    cplPaise: 36800, // ₹368
-    qualityRating: 'EXCELLENT',
-  },
-  {
-    id: 'src-bikewale',
-    name: 'BikeWale Lead Network',
-    leadsCount: 88,
-    bookingsCount: 11,
-    conversionRate: 12.5,
-    monthlySpendPaise: 2200000,
-    cplPaise: 25000,
-    qualityRating: 'AVERAGE',
-  },
-  {
-    id: 'src-zigwheels',
-    name: 'ZigWheels Marketplace',
-    leadsCount: 64,
-    bookingsCount: 7,
-    conversionRate: 10.9,
-    monthlySpendPaise: 1800000,
-    cplPaise: 28100,
-    qualityRating: 'AVERAGE',
-  },
-  {
-    id: 'src-oem',
-    name: 'OEM Brand Official Website Portal',
-    leadsCount: 110,
-    bookingsCount: 28,
-    conversionRate: 25.5,
-    monthlySpendPaise: 0,
-    cplPaise: 0,
-    qualityRating: 'EXCELLENT',
-  },
-  {
-    id: 'src-wa',
-    name: 'WhatsApp QR & Direct Inbound',
-    leadsCount: 135,
-    bookingsCount: 32,
-    conversionRate: 23.7,
-    monthlySpendPaise: 500000,
-    cplPaise: 3700,
-    qualityRating: 'EXCELLENT',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_SOURCES: loaded from the database (collection "leads.leadSources.sources")
 
 export function LeadSourcesPage() {
-  const [sources, setSources] = useState(SAMPLE_SOURCES);
+  const [sources, setSources] = useCollection('leads.leadSources.sources');
   const [routingRule, setRoutingRule] = useState('ROUND_ROBIN'); // 'ROUND_ROBIN', 'BRANCH', 'LANGUAGE'
 
   const handleSaveRouting = () => {

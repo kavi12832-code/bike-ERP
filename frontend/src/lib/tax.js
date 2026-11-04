@@ -1,4 +1,9 @@
-import { TAX_RULES } from '../data/catalogs/taxRules';
+// Tax rules are effective-dated reference data maintained in the database (catalog.taxRules).
+// The store registers a provider at start-up so this module stays free of store imports.
+let taxRulesProvider = () => [];
+export function setTaxRulesProvider(provider) {
+  taxRulesProvider = provider;
+}
 import { TAX_CONSTANTS } from '../config/constants';
 
 /**
@@ -14,7 +19,7 @@ export function findTaxRule({
   effectiveDate = new Date(),
   customRules = null,
 }) {
-  const rules = customRules || TAX_RULES;
+  const rules = customRules || taxRulesProvider() || [];
   const dateStr = effectiveDate instanceof Date ? effectiveDate.toISOString().slice(0, 10) : String(effectiveDate).slice(0, 10);
 
   const matched = rules.find((rule) => {

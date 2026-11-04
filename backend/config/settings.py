@@ -96,8 +96,21 @@ else:
 
 AUTH_USER_MODEL = 'accounts.User'
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 10}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+# scrypt (memory-hard) first: as strong against cracking as PBKDF2-1.2M but ~5x faster to verify here,
+# so logins stay responsive. Older PBKDF2 hashes still verify and are upgraded on the next login.
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+# Brute-force protection for /auth/login/ (per account, on top of the per-IP rate limit).
+LOGIN_MAX_FAILURES = int(os.getenv('LOGIN_MAX_FAILURES', '5'))
+LOGIN_LOCK_MINUTES = int(os.getenv('LOGIN_LOCK_MINUTES', '15'))
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
@@ -112,6 +125,9 @@ CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,h
 CORS_ALLOW_HEADERS = (
     'accept', 'authorization', 'content-type', 'origin', 'user-agent', 'x-requested-with', 'x-tenant',
 )
+# The refresh token travels in an httpOnly cookie, so the allowed origins may send credentials.
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('apps.tenants.authentication.TenantJWTAuthentication',),
@@ -125,24 +141,56 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 50,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'apps.audit.exceptions.logging_exception_handler',
-    'DEFAULT_THROTTLE_RATES': {'login': '10/min'},
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('THROTTLE_ANON', '60/min'),
+        'user': os.getenv('THROTTLE_USER', '1200/min'),
+        'login': os.getenv('THROTTLE_LOGIN', '10/min'),
+        'refresh': os.getenv('THROTTLE_REFRESH', '60/min'),
+    },
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.getenv('JWT_ACCESS_MINUTES', '30'))),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.getenv('JWT_ACCESS_MINUTES', '15'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('JWT_REFRESH_DAYS', '7'))),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ALGORITHM': 'HS256',
+    # Separate key so rotating the JWT key does not invalidate sessions/password resets (and vice versa).
+    'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY') or SECRET_KEY,
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
 }
+JWT_REFRESH_COOKIE = 'bikeerp_refresh'
+JWT_COOKIE_PATH = '/api/v1/auth/'
+JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+JWT_COOKIE_SECURE = env_bool('JWT_COOKIE_SECURE', not DEBUG)
+
+# Production hardening (DEBUG off): HTTPS-only cookies, HSTS, and safe default headers.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
+SESSION_COOKIE_HTTPONLY = True
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'AKASH Bajaj API',
     'DESCRIPTION': (
         'Multi-tenant two-wheeler showroom & workshop ERP.\n\n'
         '1. `POST /api/v1/auth/login/` with email + password (+ `otp` for 2FA users).\n'
-        '2. Click **Authorize** and paste the `access` token.\n'
+        '2. Click **Authorize** and paste the `access` token (valid for JWT_ACCESS_MINUTES).\n'
+        'Browsers get the refresh token as an httpOnly cookie; API clients may send `refresh` in the body.\n'
         'All data is scoped to the tenant of the authenticated user. Money is integer paise.'
     ),
     'VERSION': '1.0.0',
@@ -151,12 +199,16 @@ SPECTACULAR_SETTINGS = {
     'SWAGGER_UI_SETTINGS': {'persistAuthorization': True},
 }
 
-if 'test' in sys.argv[1:2]:
+TESTING = 'test' in sys.argv[1:2]
+if TESTING:
     # Fast hashing and no login throttling for the test suite only.
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
-    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {'login': '10000/min'}
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {k: '100000/min' for k in ('anon', 'user', 'login', 'refresh')}
 
+# Demo-only values: DEMO_OTP is accepted only while DEBUG is on (see LoginView); seed_demo refuses
+# to create users with the default password when DEBUG is off.
 DEMO_OTP = os.getenv('DEMO_OTP', '123456')
+DEMO_OTP_ENABLED = env_bool('DEMO_OTP_ENABLED', DEBUG) or TESTING
 DEMO_USER_PASSWORD = os.getenv('DEMO_USER_PASSWORD', 'password123')
 REQUEST_LOG_RETENTION_DAYS = int(os.getenv('REQUEST_LOG_RETENTION_DAYS', '30'))
 

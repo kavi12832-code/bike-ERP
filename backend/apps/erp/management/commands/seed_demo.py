@@ -29,7 +29,7 @@ SKIP_FIELDS = {'id', 'tenant', 'ref', 'data', 'created_at', 'updated_at'}
 COLLECTIONS = [
     ('customers', erp.Customer), ('leads', erp.Lead), ('quotations', erp.Quotation), ('bookings', erp.Booking),
     ('salesOrders', erp.SalesOrder), ('vehicleStock', erp.VehicleUnit), ('partsStock', erp.Part),
-    ('jobCards', erp.JobCard), ('appointments', erp.ServiceAppointment), ('bays', erp.Bay), ('invoices', erp.Invoice), ('approvals', erp.Approval),
+    ('jobCards', erp.JobCard), ('appointments', erp.ServiceAppointment), ('bays', erp.Bay), ('invoices', erp.Invoice),
     ('notifications', erp.Notification),
 ]
 
@@ -79,13 +79,38 @@ def build_instance(model, tenant, record):
     return model(data=extra, **kwargs)
 
 
+INACTIVE = ('Inactive', 'Deactivated', 'Disabled', 'Exited')
+USER_CORE = {'id', 'name', 'fullName', 'email', 'role', 'avatar', 'department', 'twoFactor', 'twoFactorRequired',
+             'status', 'failedAttempts', 'lockedAt', 'primaryBranchId'}
+
+
+def apply_person(user, person, hq_ref):
+    """Copies a staff-directory entry onto an account (never touches the password)."""
+    two_factor = person.get('twoFactor') or {}
+    status = person.get('status') or 'Active'
+    user.ref = person['id']
+    user.name = person.get('name') or person.get('fullName') or user.email
+    user.role = person.get('role') or user.role or 'Sales Executive'
+    user.avatar = person.get('avatar') or user.avatar or ''
+    user.department = person.get('department') or ''
+    user.two_factor_required = bool(two_factor.get('required', person.get('twoFactorRequired', False)))
+    user.branch_ref = person.get('primaryBranchId') or hq_ref
+    user.is_active = status not in INACTIVE
+    user.profile = {**{k: v for k, v in person.items() if k not in USER_CORE}, 'status': status}
+    user.locked_until = timezone.now() + timedelta(days=3650) if status == 'Locked' else None
+
+
 class Command(BaseCommand):
-    help = 'Create (or reset) a demo tenant populated with the frontend seed data.'
+    help = 'Create (or reset, or top up) a demo tenant populated with the demo data in fixtures/demo_seed.json.'
 
     def add_arguments(self, parser):
         parser.add_argument('--tenant', default='bike-erp', help='Tenant slug (default: bike-erp)')
         parser.add_argument('--name', default=None, help='Tenant display name')
-        parser.add_argument('--reset', action='store_true', help='Delete the tenant first if it exists')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--reset', action='store_true', help='Delete the tenant first if it exists')
+        group.add_argument('--add-missing', action='store_true',
+                           help='Keep everything already in the tenant; only add records, collections and users '
+                                'that do not exist yet (existing accounts keep their passwords)')
 
     @transaction.atomic
     def handle(self, *args, **opts):
@@ -96,43 +121,87 @@ class Command(BaseCommand):
         day_shift = (timezone.localdate() - timezone.localtime(exported).date()).days
         data = shift_dates(raw, timedelta(days=day_shift))
 
+        password = settings.DEMO_USER_PASSWORD
+        if not (settings.DEBUG or settings.TESTING) and password == 'password123':
+            raise CommandError('Set DEMO_USER_PASSWORD to a strong password before seeding with DEBUG off.')
+
         slug = opts['tenant']
-        existing = Tenant.objects.filter(slug=slug).first()
-        if existing and not opts['reset']:
-            raise CommandError(f'Tenant "{slug}" already exists. Use --reset to recreate it.')
-        if existing:
-            User.objects.filter(tenant=existing).delete()
-            existing.delete()
+        tenant = Tenant.objects.filter(slug=slug).first()
+        add_missing = opts['add_missing']
+        if tenant and not (opts['reset'] or add_missing):
+            raise CommandError(f'Tenant "{slug}" already exists. Use --add-missing to top it up or --reset.')
+        if add_missing and not tenant:
+            add_missing = False  # nothing to keep: plain seed
+        if tenant and opts['reset']:
+            User.objects.filter(tenant=tenant).delete()
+            tenant.delete()
+            tenant = None
 
         dealer = data.get('dealership', {})
-        tenant = Tenant.objects.create(
-            slug=slug, name=opts['name'] or dealer.get('name', slug), gstin=dealer.get('gstin', ''),
-            state=dealer.get('state', ''), state_code=dealer.get('stateCode', ''), profile=dealer,
-        )
+        if tenant is None:
+            tenant = Tenant.objects.create(
+                slug=slug, name=opts['name'] or dealer.get('name', slug), gstin=dealer.get('gstin', ''),
+                state=dealer.get('state', ''), state_code=dealer.get('stateCode', ''), profile=dealer,
+            )
 
-        Branch.objects.bulk_create(build_instance(Branch, tenant, b) for b in data['branches'])
+        def add_rows(model, items):
+            existing = set(model.objects.filter(tenant=tenant).values_list('ref', flat=True)) if add_missing else set()
+            fresh = [build_instance(model, tenant, r) for r in items]
+            fresh = [row for row in fresh if row.ref not in existing]
+            model.objects.bulk_create(fresh)
+            return len(fresh)
+
+        added = {'branches': add_rows(Branch, data['branches'])}
         for key, model in COLLECTIONS:
-            model.objects.bulk_create(build_instance(model, tenant, r) for r in data.get(key, []))
+            added[key] = add_rows(model, data.get(key, []))
         sync_invoice_sequence(tenant)
 
+        # Module collections (catalogs, complaints, expenses, ...) previously hardcoded in the frontend.
+        have = set(erp.Record.objects.filter(tenant=tenant).values_list('collection', 'ref')) if add_missing else set()
+        rows = []
+        for name, items in (data.get('collections') or {}).items():
+            for position, item in enumerate(items, 1):
+                item = dict(item) if isinstance(item, dict) else {'value': item}
+                ref = str(item.pop('id', '') or f'{name.split(".")[-1][:12]}-{position}')[:64]
+                if (name, ref) not in have:
+                    rows.append(erp.Record(tenant=tenant, collection=name, ref=ref, data=item, position=position))
+        erp.Record.objects.bulk_create(rows)
+        added['moduleRecords'] = len(rows)
+
+        # Real login accounts for the whole staff directory (Admin > Users), plus any demo persona
+        # whose email is not in the directory. Existing accounts are upgraded, passwords untouched.
         hq = Branch.objects.filter(tenant=tenant, is_headquarters=True).first()
-        password = settings.DEMO_USER_PASSWORD
-        for persona in data['users']:
-            email = persona['email'].lower()
+        hq_ref = hq.ref if hq else ''
+        directory = list(data.get('staffDirectory') or [])
+        known = {u['email'].lower() for u in directory}
+        directory += [p for p in data['users'] if p['email'].lower() not in known]
+        created_users = updated_users = 0
+        for person in directory:
+            email = person['email'].lower()
             if slug != 'bike-erp':
                 local, domain = email.split('@')
                 email = f'{local}+{slug}@{domain}'
-            user = User(
-                tenant=tenant, email=email, username=email, ref=persona['id'], name=persona['name'],
-                role=persona['role'], avatar=persona.get('avatar', ''), department=persona.get('department', ''),
-                two_factor_required=persona.get('twoFactorRequired', False), branch_ref=hq.ref if hq else '',
-            )
-            user.set_password(password)
+            user = User.objects.filter(email__iexact=email).first()
+            if user and user.tenant_id != tenant.pk:
+                continue  # belongs to another tenant; never touch it
+            if user is None:
+                user = User(tenant=tenant, email=email, username=email)
+                user.set_password(password)
+                created_users += 1
+            else:
+                updated_users += 1
+            apply_person(user, person, hq_ref)
             user.save()
+        added['users'] = created_users
 
-        AuditLog.objects.create(tenant=tenant, user_name='System', user_role='System', action='TENANT_SEEDED',
+        AuditLog.objects.create(tenant=tenant, user_name='System', user_role='System',
+                                action='TENANT_TOPPED_UP' if add_missing else 'TENANT_SEEDED',
                                 entity_type='TENANT', entity_id=slug, timestamp=timezone.now())
 
-        counts = ', '.join(f'{key}={model.objects.filter(tenant=tenant).count()}' for key, model in COLLECTIONS)
-        self.stdout.write(self.style.SUCCESS(f'Seeded tenant "{slug}" (dates shifted {day_shift:+d}d): {counts}'))
-        self.stdout.write(f'Login: any persona email, password "{password}"; 2FA OTP "{settings.DEMO_OTP}".')
+        summary = ', '.join(f'{k}+{v}' for k, v in added.items())
+        verb = 'Topped up' if add_missing else 'Seeded'
+        self.stdout.write(self.style.SUCCESS(f'{verb} tenant "{slug}" (dates shifted {day_shift:+d}d): {summary}'))
+        if updated_users:
+            self.stdout.write(f'Updated {updated_users} existing accounts from the staff directory (passwords kept).')
+        if created_users:
+            self.stdout.write(f'New accounts use the password from DEMO_USER_PASSWORD; ask users to change it.')

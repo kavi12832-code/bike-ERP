@@ -17,37 +17,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function ExchangePage() {
-  const [exchangeAppraisals, setExchangeAppraisals] = useState([
-    {
-      id: 'exc-001',
-      customerName: 'Karthik Narayanan',
-      phone: '+91 98840 99123',
-      oldBikeModel: 'Bajaj Discover 125cc (2018)',
-      registrationNumber: 'KA-04-ER-9921',
-      odometerKm: 48500,
-      conditionGrade: 'GOOD', // EXCELLENT, GOOD, FAIR, POOR
-      aiEstimatedPricePaise: 2850000, // ₹28,500
-      approvedValuationPaise: 3000000, // ₹30,000 (Incl. ₹1,500 bonus)
-      targetNewBike: 'Royal Enfield Hunter 350',
-      status: 'ADJUSTED_TO_INVOICE',
-      refurbishmentEstimatePaise: 350000,
-    },
-    {
-      id: 'exc-002',
-      customerName: 'Sunil Hegde',
-      phone: '+91 94480 66551',
-      oldBikeModel: 'Hero Splendor Plus (2016)',
-      registrationNumber: 'KA-05-HD-1092',
-      odometerKm: 62000,
-      conditionGrade: 'FAIR',
-      aiEstimatedPricePaise: 1800000,
-      approvedValuationPaise: 1950000,
-      targetNewBike: 'Honda SP125',
-      status: 'VALUATION_COMPLETED',
-      refurbishmentEstimatePaise: 200000,
-    },
-  ]);
+  const [exchangeAppraisals, setExchangeAppraisals] = useCollection('exchange.exchange.exchangeAppraisals');
 
   const [valuationModalOpen, setValuationModalOpen] = useState(false);
   const [custName, setCustName] = useState('Ramesh Hegde');

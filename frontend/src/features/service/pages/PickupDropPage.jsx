@@ -15,71 +15,13 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_TRIPS = [
-  {
-    id: 'trip-001',
-    type: 'PICKUP', // PICKUP or DROP
-    customerName: 'Praveen Venkatesh',
-    phone: '+91 98451 90812',
-    address: 'Flat 402, Prestige Palms, Koramangala 4th Block, Bangalore',
-    vehicleModel: 'Royal Enfield Meteor 350',
-    registrationNumber: 'KA-01-EQ-5590',
-    timeWindow: '09:00 - 11:00 AM',
-    driverName: 'Suresh Gowda',
-    status: 'EN_ROUTE', // ASSIGNED, EN_ROUTE, COLLECTED, AT_WORKSHOP, OUT_FOR_DELIVERY, DELIVERED
-    otp: '4821',
-    isAmcFree: true,
-    chargesPaise: 0,
-  },
-  {
-    id: 'trip-002',
-    type: 'PICKUP',
-    customerName: 'Deepa Hegde',
-    phone: '+91 97401 23456',
-    address: 'Villa 12, Chaithanya Smaran, Whitefield Main Road',
-    vehicleModel: 'Honda Activa 6G',
-    registrationNumber: 'KA-53-EN-8812',
-    timeWindow: '11:00 - 01:00 PM',
-    driverName: 'Ramesh Kumar',
-    status: 'ASSIGNED',
-    otp: '9103',
-    isAmcFree: false,
-    chargesPaise: 25000, // ₹250
-  },
-  {
-    id: 'trip-003',
-    type: 'DROP',
-    customerName: 'Rohit Chandran',
-    phone: '+91 98860 99441',
-    address: '14th Cross, Indiranagar 1st Stage, Bangalore',
-    vehicleModel: 'Royal Enfield Himalayan 450',
-    registrationNumber: 'KA-03-NJ-1122',
-    timeWindow: '02:00 - 04:00 PM',
-    driverName: 'Suresh Gowda',
-    status: 'AT_WORKSHOP',
-    otp: '6529',
-    isAmcFree: true,
-    chargesPaise: 0,
-  },
-  {
-    id: 'trip-004',
-    type: 'DROP',
-    customerName: 'Anil Kumar',
-    phone: '+91 98440 55112',
-    address: 'Near HDFC Bank, Bellandur Outer Ring Road',
-    vehicleModel: 'TVS iQube Electric',
-    registrationNumber: 'KA-03-EV-8840',
-    timeWindow: '04:00 - 06:00 PM',
-    driverName: 'Ramesh Kumar',
-    status: 'OUT_FOR_DELIVERY',
-    otp: '3310',
-    isAmcFree: false,
-    chargesPaise: 40000, // ₹400
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
+// SAMPLE_TRIPS: loaded from the database (collection "service.pickupDrop.trips")
 
 export function PickupDropPage() {
-  const [trips, setTrips] = useState(SAMPLE_TRIPS);
+  const [trips, setTrips] = useCollection('service.pickupDrop.trips');
   const [filterType, setFilterType] = useState('ALL'); // 'ALL', 'PICKUP', 'DROP'
   const [enteredOtp, setEnteredOtp] = useState({});
 

@@ -3,6 +3,7 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.audit.services import record_audit
@@ -47,6 +48,14 @@ class BookingViewSet(TenantScopedViewSet):
     write_roles = SALES
     filterset_fields = ('status', 'branch_id')
     search_fields = ('customer_name', 'booking_number')
+    ordering_fields = ('booking_date', 'created_at', 'customer_name', 'status', 'token_amount_paise')
+
+    def before_destroy(self, booking):
+        """A deleted booking must not keep a chassis reserved."""
+        if (booking.status or '').upper() == 'DELIVERED':
+            raise ValidationError({'detail': 'A delivered booking cannot be deleted; it is part of the sales record.'})
+        models.VehicleUnit.objects.filter(tenant=booking.tenant, allocated_booking_id=booking.ref).update(
+            status='IN_STOCK', allocated_booking_id=None)
 
 
 @extend_schema(tags=['sales'])
@@ -105,7 +114,19 @@ class JobCardViewSet(TenantScopedViewSet):
     action_roles = {'stage': SERVICE}
     filterset_fields = ('stage', 'bay_number', 'technician_id', 'appointment_id', 'service_type', 'priority')
     search_fields = ('job_card_number', 'registration_number', 'customer_name', 'customer_phone', 'chassis_number')
+    ordering_fields = ('created_at', 'in_at', 'expected_delivery_at', 'job_card_number', 'stage', 'priority')
     audit_entity = 'JOB_CARD'
+
+    def before_destroy(self, card):
+        """Free the bay and reopen the appointment the card came from."""
+        if card.stage in ('READY', 'DELIVERED') and card.grand_total_paise:
+            raise ValidationError({'detail': 'A completed, billed job card cannot be deleted.'})
+        if card.bay_number:
+            models.Bay.objects.filter(tenant=card.tenant, active_job_card_id=card.ref).update(
+                status='FREE', active_job_card_id=None, vehicle_registration=None, model_name=None,
+                technician_id=None, technician_name=None, started_at=None, sla_status='NORMAL')
+        models.ServiceAppointment.objects.filter(tenant=card.tenant, job_card_id=card.ref).update(
+            status='CONFIRMED', job_card_id=None)
 
     def perform_create(self, serializer):
         """Assigns JCYYYYMMDD-NNN, and checks the linked appointment in when the card is not a draft."""
@@ -154,7 +175,14 @@ class ServiceAppointmentViewSet(TenantScopedViewSet):
     write_roles = SERVICE
     filterset_fields = ('date', 'status', 'time_slot')
     search_fields = ('customer_name', 'phone', 'registration_number')
+    ordering_fields = ('date', 'time_slot', 'created_at', 'customer_name', 'status')
     audit_entity = 'APPOINTMENT'
+
+    def before_destroy(self, appointment):
+        if appointment.job_card_id and models.JobCard.objects.filter(
+                tenant=appointment.tenant, ref=appointment.job_card_id).exists():
+            raise ValidationError({'detail': f'Appointment is checked in on job card {appointment.job_card_id}. '
+                                             'Delete or edit the job card instead.'})
 
     @extend_schema(request=None, responses=serializers.ServiceAppointmentSerializer)
     @action(detail=True, methods=['post'])
@@ -203,11 +231,17 @@ class BayViewSet(TenantScopedViewSet):
 
 @extend_schema(tags=['billing'])
 class InvoiceViewSet(TenantScopedViewSet):
-    """Posted invoices are immutable: no update/delete. Numbers are gap-free per tenant (VI/2627/00001)."""
+    """
+    Posted invoices are immutable except for payment collection fields (PATCH). No delete:
+    cancellation is a credit note. Numbers are gap-free per tenant (VI/2627/00001).
+    """
+
+    PAYMENT_FIELDS = {'id', 'paidAmountPaise', 'balanceDuePaise', 'paymentStatus', 'paymentMode', 'paymentRef',
+                      'payments', 'lastPaymentAt'}
 
     queryset = models.Invoice.objects.all()
     serializer_class = serializers.InvoiceSerializer
-    http_method_names = ('get', 'post', 'head', 'options')
+    http_method_names = ('get', 'post', 'patch', 'head', 'options')
     write_roles = {'Accountant'}
     filterset_fields = ('type', 'status', 'payment_status', 'branch_id')
     search_fields = ('invoice_number', 'customer_name')
@@ -227,6 +261,15 @@ class InvoiceViewSet(TenantScopedViewSet):
         )
         record_audit(self.request, 'INVOICE_POSTED', 'INVOICE', instance.ref, None,
                      {'invoiceNumber': instance.invoice_number, 'grandTotalPaise': instance.grand_total_paise})
+
+    def partial_update(self, request, *args, **kwargs):
+        invoice = self.get_object()
+        changed = {k for k, v in request.data.items() if k not in self.PAYMENT_FIELDS and
+                   self.get_serializer(invoice).data.get(k) != v}
+        if changed:
+            return Response({'detail': f'Posted invoices are immutable (tried to change: {", ".join(sorted(changed))}). '
+                                       'Issue a credit note instead.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().partial_update(request, *args, **kwargs)
 
 
 @extend_schema(tags=['approvals'])

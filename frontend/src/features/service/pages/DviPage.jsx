@@ -20,6 +20,9 @@ import { useAppStore } from '../../../store';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 const DENT_MAP_PINS = [
   { pin: 1, label: 'Headlight – Scratch', color: 'bg-red-500', view: 'Front View' },
   { pin: 2, label: 'Fairing – Dent', color: 'bg-blue-500', view: 'Front / Side' },
@@ -33,63 +36,12 @@ const DENT_MAP_PINS = [
   { pin: 21, label: 'Grab Rail – Dent', color: 'bg-cyan-600', view: 'Top View' },
 ];
 
-const SAMPLE_INSPECTION_ITEMS = [
-  {
-    id: 'dvi-tyre-rear',
-    category: 'Tyres & Wheels',
-    label: 'Rear Tyre Tread Depth',
-    value: '1.2 mm',
-    status: 'RED', // GREEN, AMBER, RED
-    costPaise: 385000, // ₹3,850
-    notes: 'Tread depth worn below legal 1.6mm limit. High risk of skidding during rain.',
-    photo: true,
-  },
-  {
-    id: 'dvi-brake-front',
-    category: 'Braking System',
-    label: 'Front Disc Brake Pads',
-    value: '85% Worn',
-    status: 'RED',
-    costPaise: 145000, // ₹1,450
-    notes: 'Brake pads down to metal backing plate. Immediate replacement mandatory.',
-    photo: true,
-  },
-  {
-    id: 'dvi-battery',
-    category: 'Electricals',
-    label: 'Battery Terminal & Voltage',
-    value: '12.2 Volts',
-    status: 'AMBER',
-    costPaise: 280000, // ₹2,800
-    notes: 'Slightly low holding voltage. Recommended for testing & possible replacement before monsoon.',
-    photo: false,
-  },
-  {
-    id: 'dvi-chain',
-    category: 'Drive Transmission',
-    label: 'Drive Chain & Sprockets',
-    value: 'Normal Wear',
-    status: 'GREEN',
-    costPaise: 0,
-    notes: 'Chain cleaned, tension set to 25mm, lubricated with Motul chain lube.',
-    photo: false,
-  },
-  {
-    id: 'dvi-fluid',
-    category: 'Fluids',
-    label: 'Brake Fluid Moisture Level',
-    value: 'DOT 4 Moisture 3.5%',
-    status: 'AMBER',
-    costPaise: 45000, // ₹450
-    notes: 'Moisture content elevated. Flushed fluid recommended to prevent spongy lever.',
-    photo: false,
-  }
-];
+// SAMPLE_INSPECTION_ITEMS: loaded from the database (collection "service.dvi.inspectionItems")
 
 export function DviPage() {
   const jobCards = useAppStore((state) => state.jobCards || []);
   const [selectedJcId, setSelectedJcId] = useState(jobCards[0]?.id || 'jc-2627-001');
-  const [items, setItems] = useState(SAMPLE_INSPECTION_ITEMS);
+  const [items, setItems] = useCollection('service.dvi.inspectionItems');
   const [selectedPin, setSelectedPin] = useState(null);
   const [showFullMapModal, setShowFullMapModal] = useState(false);
 

@@ -28,58 +28,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function TestRidesPage() {
   const navigate = useNavigate();
   const bikeCatalog = useAppStore((state) => state.catalogs?.bikes || []);
   const currentUser = useAppStore((state) => state.currentUser);
 
-  const [testRides, setTestRides] = useState([
-    {
-      id: 'tr-001',
-      customerName: 'Karthik Narayanan',
-      phone: '+91 98840 99123',
-      bikeModel: 'Bajaj Pulsar NS200',
-      demoBikeReg: 'KA-05-DEMO-01',
-      scheduledDate: new Date().toISOString(),
-      timeSlot: '11:30 AM - 12:00 PM',
-      licenceVerified: true,
-      status: 'SCHEDULED', // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
-      odometerOut: null,
-      odometerIn: null,
-      feedbackRating: null,
-      feedbackComment: '',
-    },
-    {
-      id: 'tr-002',
-      customerName: 'Meera Krishnan',
-      phone: '+91 97420 55432',
-      bikeModel: 'Bajaj Chetak Premium 2024',
-      demoBikeReg: 'KA-05-EV-DEMO',
-      scheduledDate: new Date().toISOString(),
-      timeSlot: '02:00 PM - 02:30 PM',
-      licenceVerified: true,
-      status: 'COMPLETED',
-      odometerOut: 1240,
-      odometerIn: 1248,
-      feedbackRating: 5,
-      feedbackComment: 'Loved the smooth electric acceleration and regenerative braking!',
-    },
-    {
-      id: 'tr-003',
-      customerName: 'Sanjay Reddy',
-      phone: '+91 99450 67124',
-      bikeModel: 'Bajaj Dominar 400',
-      demoBikeReg: 'KA-05-ADV-DEMO',
-      scheduledDate: new Date().toISOString(),
-      timeSlot: '04:00 PM - 04:30 PM',
-      licenceVerified: true,
-      status: 'SCHEDULED',
-      odometerOut: null,
-      odometerIn: null,
-      feedbackRating: null,
-      feedbackComment: '',
-    },
-  ]);
+  const [testRides, setTestRides] = useCollection('sales.testRides.testRides');
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');

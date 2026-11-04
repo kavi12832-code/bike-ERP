@@ -27,66 +27,11 @@ import { Modal } from '../../../components/ui/Modal';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_DOCS = [
-  {
-    id: 'doc-001',
-    folder: 'KYC',
-    entityName: 'Rohit Chandran',
-    docType: 'Customer PAN Card',
-    fileName: 'PAN_RohitChandran_Masked.pdf',
-    uploadedAt: '2026-10-15',
-    expiryDate: null,
-    status: 'VERIFIED',
-    sizeKb: 480,
-  },
-  {
-    id: 'doc-002',
-    folder: 'VEHICLES',
-    entityName: 'KA-01-MJ-4050 (Hunter 350)',
-    docType: 'Comprehensive Insurance Policy',
-    fileName: 'Digit_Policy_Hunter350.pdf',
-    uploadedAt: '2026-09-28',
-    expiryDate: '2026-11-10', // Expiring in 17 days
-    status: 'EXPIRING_SOON',
-    sizeKb: 1250,
-  },
-  {
-    id: 'doc-003',
-    folder: 'VEHICLES',
-    entityName: 'KA-03-NQ-2211 (Himalayan 450)',
-    docType: 'PUC Green Certificate',
-    fileName: 'PUC_Valid_Nov2026.pdf',
-    uploadedAt: '2026-05-10',
-    expiryDate: '2026-11-05', // Expiring in 12 days
-    status: 'EXPIRING_SOON',
-    sizeKb: 310,
-  },
-  {
-    id: 'doc-004',
-    folder: 'DEALS',
-    entityName: 'SO-2627-001 (Arjun Das)',
-    docType: 'Signed Form 20 & 21 Sale Certificate',
-    fileName: 'Form20_Form21_ArjunDas.pdf',
-    uploadedAt: '2026-10-22',
-    expiryDate: null,
-    status: 'VERIFIED',
-    sizeKb: 890,
-  },
-  {
-    id: 'doc-005',
-    folder: 'COMPLIANCE',
-    entityName: 'AKASH Bajaj Dealership Karnataka',
-    docType: 'RTO Trade Certificate 2026-27',
-    fileName: 'Trade_Certificate_KA_2627.pdf',
-    uploadedAt: '2026-04-01',
-    expiryDate: '2027-03-31',
-    status: 'VERIFIED',
-    sizeKb: 1650,
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_DOCS: loaded from the database (collection "documents.documentVault.docs")
 
 export function DocumentVaultPage() {
-  const [docs, setDocs] = useState(SAMPLE_DOCS);
+  const [docs, setDocs] = useCollection('documents.documentVault.docs');
   const [selectedFolder, setSelectedFolder] = useState('ALL');
   const [search, setSearch] = useState('');
   const [viewAuditTrail, setViewAuditTrail] = useState([]);

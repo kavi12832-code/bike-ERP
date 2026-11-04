@@ -7,11 +7,13 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.models import User
 from apps.accounts.serializers import UserSerializer
 from apps.audit.models import AuditLog, RequestLog
 from apps.audit.serializers import AuditLogSerializer, RequestLogSerializer
 from apps.audit.views import LOG_VIEWER_ROLES
 from apps.erp import models as erp
+from apps.erp.collections import readable_collections
 from apps.erp import serializers as s
 from apps.tenants.models import Branch
 from apps.tenants.serializers import BranchSerializer, TenantSerializer
@@ -76,7 +78,6 @@ BOOTSTRAP_SETS = {
     'appointments': (erp.ServiceAppointment, s.ServiceAppointmentSerializer),
     'bays': (erp.Bay, s.BaySerializer),
     'invoices': (erp.Invoice, s.InvoiceSerializer),
-    'approvals': (erp.Approval, s.ApprovalSerializer),
     'notifications': (erp.Notification, s.NotificationSerializer),
 }
 
@@ -96,8 +97,11 @@ class BootstrapView(APIView):
         payload['activeBranchId'] = hq.ref if hq else None
         payload['tenant'] = TenantSerializer(tenant).data
         payload['currentUser'] = UserSerializer(request.user).data
+        # Staff directory (names/roles for assignees and Admin > Users). Never includes secrets.
+        payload['users'] = UserSerializer(User.objects.filter(tenant=tenant).order_by('ref'), many=True).data
         can_view_logs = request.user.is_superuser or request.user.role in LOG_VIEWER_ROLES
         payload['auditLogs'] = AuditLogSerializer(
             AuditLog.objects.filter(tenant=tenant).select_related('user')[:200], many=True).data if can_view_logs else []
+        payload['collections'] = readable_collections(request)
         payload['serverTime'] = timezone.now().isoformat()
         return Response(payload)

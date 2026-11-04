@@ -178,7 +178,28 @@ LeadSerializer = type('LeadSerializer', (TimestampedSerializerMixin, scoped_seri
 QuotationSerializer = scoped_serializer(models.Quotation)
 BookingSerializer = scoped_serializer(models.Booking)
 SalesOrderSerializer = scoped_serializer(models.SalesOrder)
-VehicleUnitSerializer = scoped_serializer(models.VehicleUnit, read_only=('allocated_booking_id',))
+class VehicleUnitSerializer(TenantScopedSerializer):
+    """Allocation is editable, but one chassis can never be held by two bookings (or vice versa)."""
+
+    class Meta:
+        model = models.VehicleUnit
+        exclude = _EXCLUDE
+
+    def validate(self, attrs):
+        new = attrs.get('allocated_booking_id')
+        if new:
+            current = getattr(self.instance, 'allocated_booking_id', None)
+            if current and current != new:
+                raise serializers.ValidationError({'allocatedBookingId': (
+                    f'Chassis already allocated to booking {current}. Release it first (double allocation blocked).')})
+            others = models.VehicleUnit.objects.filter(tenant=self.context['request'].tenant, allocated_booking_id=new)
+            if self.instance is not None:
+                others = others.exclude(pk=self.instance.pk)
+            if others.exists():
+                raise serializers.ValidationError({'allocatedBookingId': f'Booking {new} already holds another chassis.'})
+        return attrs
+
+
 PartSerializer = scoped_serializer(models.Part)
 BaySerializer = scoped_serializer(models.Bay)
 NotificationSerializer = scoped_serializer(models.Notification)

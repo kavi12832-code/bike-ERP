@@ -5,7 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
-import { getAvailableSlotsForDate, isDateBlockedForService } from '../../../lib/slots';
+import { getAvailableSlotsForDate, isDateBlockedForService, isSlotInPast } from '../../../lib/slots';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { formatDate } from '../../../lib/format';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { KpiCard } from '../../../components/ui/KpiCard';
@@ -22,6 +23,7 @@ import {
   XCircle,
   Plus,
   Pencil,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,6 +34,36 @@ export function AppointmentsPage() {
   const cancelAppointment = useAppStore((state) => state.cancelAppointment);
   const bookAppointment = useAppStore((state) => state.bookAppointment);
   const updateAppointment = useAppStore((state) => state.updateAppointment);
+  const deleteAppointment = useAppStore((state) => state.deleteAppointment);
+  const servicePackages = useAppStore((state) => state.catalogs?.servicePackages || []);
+  const packageNames = servicePackages.map((p) => p.name);
+  const [deletingApt, setDeletingApt] = useState(null);
+
+  // Slots with live availability for a date; `exceptId` frees the slot of the appointment being edited.
+  const slotOptions = (date, exceptId = null) =>
+    getAvailableSlotsForDate(date, appointments.filter((a) => a.id !== exceptId)).map((sl) => ({
+      ...sl,
+      isPast: isSlotInPast(date, sl.slot),
+    }));
+  const firstOpenSlot = (date) => slotOptions(date).find((sl) => !sl.isFull && !sl.isPast)?.slot || '';
+
+  // Same rules the API enforces, checked before saving so the user gets an immediate message.
+  const validateBooking = (form, exceptId = null) => {
+    const digits = String(form.phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+    if (!form.customerName.trim()) return 'Customer name is required';
+    if (!/^[6-9]\d{9}$/.test(digits)) return 'Enter a valid 10-digit mobile number';
+    if (!/^[A-Z]{2}[ -]?\d{1,2}[ -]?[A-Z]{0,3}[ -]?\d{1,4}$/.test(form.registrationNumber.trim().toUpperCase())) {
+      return 'Registration must look like KA-05-MN-4321';
+    }
+    if (isDateBlockedForService(form.date)) return 'The workshop is closed on Sundays';
+    const slot = slotOptions(form.date, exceptId).find((sl) => sl.slot === form.timeSlot);
+    if (!slot) return 'Pick a time slot';
+    if (slot.isFull) return `The ${form.timeSlot} slot is fully booked`;
+    if (slot.isPast && !(exceptId && form.timeSlot === editingApt?.timeSlot && form.date === editingApt?.date)) {
+      return 'That slot has already started';
+    }
+    return null;
+  };
 
   // Was hardcoded to 2026-10-26, which hid every booking made on any other day.
   const [selectedDate, setSelectedDate] = useState(relativeDateString(0));
@@ -47,7 +79,7 @@ export function AppointmentsPage() {
     modelName: '',
     timeSlot: '',
     packageName: '',
-    status: 'SCHEDULED',
+    status: 'CONFIRMED',
     date: '',
   });
 
@@ -58,17 +90,18 @@ export function AppointmentsPage() {
       phone: apt.phone || '',
       registrationNumber: apt.registrationNumber || '',
       modelName: apt.modelName || '',
-      timeSlot: apt.timeSlot || '09:30 - 10:30 AM',
-      packageName: apt.packageName || 'PMS Paid Service #2 (10,000 KM)',
-      status: apt.status || 'SCHEDULED',
+      timeSlot: apt.timeSlot || '',
+      packageName: apt.packageName || '',
+      status: apt.status || 'CONFIRMED',
       date: apt.date || selectedDate,
     });
     setEditModalOpen(true);
   };
 
   const handleSaveEditAppointment = () => {
-    if (!editForm.customerName.trim() || !editForm.phone.trim()) {
-      toast.error('Customer name and phone number are required');
+    const problem = editForm.status === 'CANCELLED' ? null : validateBooking(editForm, editingApt?.id);
+    if (problem) {
+      toast.error(problem);
       return;
     }
     if (updateAppointment && editingApt) {
@@ -91,32 +124,47 @@ export function AppointmentsPage() {
   const [quickForm, setQuickForm] = useState({
     customerName: '',
     phone: '',
-    registrationNumber: 'KA-05-EV-4091',
-    modelName: 'Pulsar NS200',
-    timeSlot: '09:30 - 10:30 AM',
-    packageName: 'PMS Paid Service #2 (10,000 KM)',
-    estimatedCostRupees: 1850,
+    registrationNumber: '',
+    modelName: '',
+    timeSlot: '',
+    packageName: '',
   });
 
   const handleQuickBook = async () => {
-    if (!quickForm.customerName.trim() || !quickForm.phone.trim() || !quickForm.registrationNumber.trim()) {
-      toast.error('Customer name, phone, and registration number are mandatory');
+    const form = { ...quickForm, date: selectedDate };
+    const problem = validateBooking(form);
+    if (problem) {
+      toast.error(problem);
       return;
     }
-    if (bookAppointment) {
+    try {
       await bookAppointment({
         date: selectedDate,
-        customerName: quickForm.customerName,
-        phone: quickForm.phone,
-        registrationNumber: quickForm.registrationNumber.toUpperCase(),
-        modelName: quickForm.modelName,
-        timeSlot: quickForm.timeSlot,
-        packageName: quickForm.packageName,
-        estimatedCostPaise: quickForm.estimatedCostRupees * 100,
+        customerName: form.customerName.trim(),
+        phone: form.phone.trim(),
+        registrationNumber: form.registrationNumber.trim().toUpperCase(),
+        modelName: form.modelName.trim(),
+        timeSlot: form.timeSlot,
+        packageName: form.packageName,
+        packageId: servicePackages.find((p) => p.name === form.packageName)?.id || '',
       });
-      toast.success(`Service Slot booked for ${quickForm.customerName} on ${selectedDate} at ${quickForm.timeSlot}!`);
+      toast.success(`Service slot booked for ${form.customerName} on ${selectedDate} at ${form.timeSlot}.`);
+      setQuickBookModalOpen(false);
+      setQuickForm({ customerName: '', phone: '', registrationNumber: '', modelName: '', timeSlot: '', packageName: '' });
+    } catch (err) {
+      toast.error(`Could not book: ${err.message}`);
     }
-    setQuickBookModalOpen(false);
+  };
+
+  const handleDeleteAppointment = () => {
+    const apt = deletingApt;
+    setDeletingApt(null);
+    try {
+      deleteAppointment(apt.id);
+      toast.success(`Appointment for ${apt.customerName} deleted.`);
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   // Booking opens the full Create Vehicle Service Job Card form for the selected date.
@@ -228,10 +276,10 @@ export function AppointmentsPage() {
       {!isSundayBlocked && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {slots.map((slot) => {
-            const isFull = slot.available === 0;
+            const isFull = slot.isFull; // fields from lib/slots getAvailableSlotsForDate()
             return (
               <Card
-                key={slot.time}
+                key={slot.slot}
                 className={`p-3 border transition-all ${
                   isFull
                     ? 'bg-surface-subtle border-border opacity-60'
@@ -241,7 +289,7 @@ export function AppointmentsPage() {
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="font-semibold text-text-main flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-text-muted" />
-                    {slot.time}
+                    {slot.slot}
                   </span>
                   <span
                     className={`font-mono font-bold text-[11px] px-1.5 py-0.5 rounded ${
@@ -250,13 +298,13 @@ export function AppointmentsPage() {
                         : 'bg-green-50 text-status-green'
                     }`}
                   >
-                    {slot.available} Left
+                    {slot.availableBays} Left
                   </span>
                 </div>
                 <div className="w-full bg-surface-muted rounded-full h-1.5 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${isFull ? 'bg-status-red' : 'bg-status-green'}`}
-                    style={{ width: `${(slot.booked / slot.capacity) * 100}%` }}
+                    style={{ width: `${(slot.bookedCount / slot.capacity) * 100}%` }}
                   />
                 </div>
               </Card>
@@ -321,6 +369,15 @@ export function AppointmentsPage() {
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
+                        {!apt.jobCardId && (
+                          <button
+                            onClick={() => setDeletingApt(apt)}
+                            className="p-1.5 rounded text-text-muted hover:text-status-red hover:bg-red-50"
+                            title="Delete appointment"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {apt.jobCardId ? (
                           <button
                             onClick={() => openJobCard(apt)}
@@ -335,8 +392,12 @@ export function AppointmentsPage() {
                             </Button>
                             <button
                               onClick={() => {
-                                cancelAppointment(apt.id);
-                                toast.info(`Appointment for ${apt.customerName} cancelled.`);
+                                try {
+                                  cancelAppointment(apt.id);
+                                  toast.info(`Appointment for ${apt.customerName} cancelled.`);
+                                } catch (err) {
+                                  toast.error(err.message);
+                                }
                               }}
                               className="p-1.5 rounded text-text-muted hover:text-status-red hover:bg-red-50"
                               title="Cancel appointment"
@@ -418,13 +479,12 @@ export function AppointmentsPage() {
                 onChange={(e) => setQuickForm({ ...quickForm, timeSlot: e.target.value })}
                 className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
               >
-                <option value="08:30 - 09:30 AM">08:30 - 09:30 AM</option>
-                <option value="09:30 - 10:30 AM">09:30 - 10:30 AM</option>
-                <option value="10:30 - 11:30 AM">10:30 - 11:30 AM</option>
-                <option value="11:30 - 12:30 PM">11:30 - 12:30 PM</option>
-                <option value="02:00 - 03:00 PM">02:00 - 03:00 PM</option>
-                <option value="03:00 - 04:00 PM">03:00 - 04:00 PM</option>
-                <option value="04:00 - 05:00 PM">04:00 - 05:00 PM</option>
+                <option value="">Select a slot</option>
+                {slotOptions(selectedDate).map((sl) => (
+                  <option key={sl.slot} value={sl.slot} disabled={sl.isFull || sl.isPast}>
+                    {sl.slot} ({sl.isPast ? 'started' : sl.isFull ? 'full' : `${sl.availableBays} left`})
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -434,11 +494,12 @@ export function AppointmentsPage() {
                 onChange={(e) => setQuickForm({ ...quickForm, packageName: e.target.value })}
                 className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
               >
-                <option value="PMS Free Service #1 (1,000 KM)">PMS Free Service #1 (1,000 KM)</option>
-                <option value="PMS Paid Service #2 (10,000 KM)">PMS Paid Service #2 (10,000 KM)</option>
-                <option value="Express Oil & Filter Change">Express Oil &amp; Filter Change</option>
-                <option value="General Mechanical Inspection">General Mechanical Inspection</option>
-                <option value="Chain Sprocket & Brake Overhaul">Chain Sprocket &amp; Brake Overhaul</option>
+                <option value="">Select a package</option>
+                {packageNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -521,13 +582,12 @@ export function AppointmentsPage() {
                 onChange={(e) => setEditForm({ ...editForm, timeSlot: e.target.value })}
                 className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
               >
-                <option value="08:30 - 09:30 AM">08:30 - 09:30 AM</option>
-                <option value="09:30 - 10:30 AM">09:30 - 10:30 AM</option>
-                <option value="10:30 - 11:30 AM">10:30 - 11:30 AM</option>
-                <option value="11:30 - 12:30 PM">11:30 - 12:30 PM</option>
-                <option value="02:00 - 03:00 PM">02:00 - 03:00 PM</option>
-                <option value="03:00 - 04:00 PM">03:00 - 04:00 PM</option>
-                <option value="04:00 - 05:00 PM">04:00 - 05:00 PM</option>
+                <option value="">Select a slot</option>
+                {slotOptions(editForm.date, editingApt?.id).map((sl) => (
+                  <option key={sl.slot} value={sl.slot} disabled={sl.isFull && sl.slot !== editingApt?.timeSlot}>
+                    {sl.slot} ({sl.isFull ? 'full' : `${sl.availableBays} left`})
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -537,10 +597,12 @@ export function AppointmentsPage() {
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
               >
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="IN_SERVICE">IN_SERVICE</option>
-                <option value="COMPLETED">COMPLETED</option>
-                <option value="CANCELLED">CANCELLED</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="NO_SHOW">No-show</option>
+                <option value="CANCELLED">Cancelled</option>
+                {editForm.status === 'CHECKED_IN' && (
+                  <option value="CHECKED_IN">Checked in (has a job card)</option>
+                )}
               </select>
             </div>
           </div>
@@ -552,11 +614,12 @@ export function AppointmentsPage() {
               onChange={(e) => setEditForm({ ...editForm, packageName: e.target.value })}
               className="w-full p-2.5 rounded-input border border-border bg-surface text-text-main"
             >
-              <option value="PMS Free Service #1 (1,000 KM)">PMS Free Service #1 (1,000 KM)</option>
-              <option value="PMS Paid Service #2 (10,000 KM)">PMS Paid Service #2 (10,000 KM)</option>
-              <option value="Express Oil & Filter Change">Express Oil &amp; Filter Change</option>
-              <option value="General Mechanical Inspection">General Mechanical Inspection</option>
-              <option value="Chain Sprocket & Brake Overhaul">Chain Sprocket &amp; Brake Overhaul</option>
+                <option value="">Select a package</option>
+                {packageNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -570,6 +633,16 @@ export function AppointmentsPage() {
           </div>
         </div>
       </Modal>
+      <ConfirmDialog
+        isOpen={Boolean(deletingApt)}
+        onClose={() => setDeletingApt(null)}
+        onConfirm={handleDeleteAppointment}
+        title="Delete appointment?"
+        message={deletingApt
+          ? `Delete the ${deletingApt.timeSlot} booking for ${deletingApt.customerName} (${deletingApt.registrationNumber})? To keep a record, cancel it instead.`
+          : ''}
+        confirmLabel="Delete appointment"
+      />
     </div>
   );
 }

@@ -156,9 +156,11 @@ describe('Quotations State Guards', () => {
 describe('Quotations KPI Selectors', () => {
   it('computes KPI counts strictly matching status logic', () => {
     resetSimulatedClock();
+    // Seed dates are relative to today, so the window must be too (a fixed month breaks as time passes).
+    const now = new Date();
     const dateRange = {
-      startDate: new Date(2026, 9, 1),
-      endDate: new Date(2026, 9, 31, 23, 59, 59),
+      startDate: new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000),
+      endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     };
     const kpis = getQuotationsKpis(SEEDED_QUOTATIONS, 'br-blr-central', dateRange);
 

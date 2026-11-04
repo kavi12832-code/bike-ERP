@@ -20,35 +20,16 @@ import { QRCodeSVG } from 'qrcode.react';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_PRODUCTS = [
-  { id: 'acc-01', barcode: '89012345001', name: 'Royal Enfield Urban Trooper Helmet (L)', pricePaise: 295000, category: 'Riding Gear', hsn: '6506', gstRate: 18 },
-  { id: 'acc-02', barcode: '89012345002', name: 'Alpinestars All-Weather Riding Gloves', pricePaise: 240000, category: 'Riding Gear', hsn: '6216', gstRate: 18 },
-  { id: 'acc-03', barcode: '89012345003', name: 'Himalayan Heavy-Duty Engine Crash Guard', pricePaise: 385000, category: 'Protection', hsn: '8714', gstRate: 28 },
-  { id: 'acc-04', barcode: '89012345004', name: 'BOBO Anti-Vibration Claw Mobile Holder', pricePaise: 165000, category: 'Electronics', hsn: '8529', gstRate: 18 },
-  { id: 'acc-05', barcode: '89012345005', name: 'Motul 7100 10W50 4T Synthetic Oil (1.5L)', pricePaise: 145000, category: 'Lubes & Care', hsn: '2710', gstRate: 18 },
-  { id: 'acc-06', barcode: '89012345006', name: 'Motul C1 Clean + C2 Chain Lube Combo (400ml)', pricePaise: 95000, category: 'Lubes & Care', hsn: '3403', gstRate: 18 },
-  { id: 'acc-07', barcode: '89012345007', name: 'Waterproof Touring Saddlebags (Pair 50L)', pricePaise: 420000, category: 'Luggage', hsn: '4202', gstRate: 18 },
-  { id: 'acc-08', barcode: '89012345008', name: 'Disc Brake Anti-Theft Alarm Lock (110dB)', pricePaise: 110000, category: 'Security', hsn: '8301', gstRate: 18 },
-];
+import { useCollectionItems } from '../../../hooks/useCollection';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
+// SAMPLE_PRODUCTS: loaded from the database (collection "counter.accessoriesCounter.products")
 
-const PRESET_BUNDLES = [
-  {
-    id: 'bndl-touring',
-    name: 'Touring Highway Pack',
-    description: 'Crash Guard + Mobile Holder + Saddlebags',
-    discountPaise: 120000, // ₹1,200 discount
-    items: ['acc-03', 'acc-04', 'acc-07']
-  },
-  {
-    id: 'bndl-chain-care',
-    name: 'Chain & Engine Care Kit',
-    description: 'Motul 7100 Oil + Chain Clean & Lube Combo',
-    discountPaise: 30000, // ₹300 discount
-    items: ['acc-05', 'acc-06']
-  }
-];
+// PRESET_BUNDLES: loaded from the database (collection "counter.accessoriesCounter.presetBundles")
 
 export function AccessoriesCounterPage() {
+  const SAMPLE_PRODUCTS = useCollectionItems('counter.accessoriesCounter.products');
+  const PRESET_BUNDLES = useCollectionItems('counter.accessoriesCounter.presetBundles');
   const [cart, setCart] = useState([]);
   const [barcodeQuery, setBarcodeQuery] = useState('');
   const [search, setSearch] = useState('');

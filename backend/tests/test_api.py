@@ -26,6 +26,9 @@ class ApiTestCase(TestCase):
         if otp:
             body['otp'] = otp
         res = client.post('/api/v1/auth/login/', body, format='json')
+        if res.status_code == 200 and res.data.get('otpRequired') and not otp:
+            # Directory users may have 2FA switched on; the demo code works in tests.
+            res = client.post('/api/v1/auth/login/', {**body, 'otp': OTP}, format='json')
         self.assertEqual(res.status_code, 200, res.content)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {res.data['access']}")
         return client, res.data
@@ -45,7 +48,7 @@ class AuthTests(ApiTestCase):
         self.assertEqual(bad.status_code, 401)
         _, data = self.login(ADMIN, OTP)
         self.assertEqual(data['user']['role'], 'Super Admin')
-        self.assertEqual(data['user']['id'], 'super-admin')
+        self.assertEqual(data['user']['id'], 'usr-001')  # staff directory id
 
     def test_requires_token(self):
         self.assertEqual(APIClient().get('/api/v1/leads/').status_code, 401)
@@ -54,9 +57,17 @@ class AuthTests(ApiTestCase):
         client, data = self.login(SALES_EXEC)
         me = client.get('/api/v1/auth/me/')
         self.assertEqual(me.data['email'], SALES_EXEC)
-        refreshed = APIClient().post('/api/v1/auth/refresh/', {'refresh': data['refresh']}, format='json')
+        self.assertNotIn('refresh', data)  # refresh token is only in the httpOnly cookie
+        cookie = client.cookies['bikeerp_refresh']
+        self.assertTrue(cookie['httponly'])
+        # Cookie refresh needs the anti-CSRF header.
+        self.assertEqual(client.post('/api/v1/auth/refresh/').status_code, 403)
+        refreshed = client.post('/api/v1/auth/refresh/', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(refreshed.status_code, 200)
         self.assertIn('access', refreshed.data)
+        # Rotation: the old refresh token is blacklisted.
+        stale = APIClient().post('/api/v1/auth/refresh/', {'refresh': cookie.value}, format='json')
+        self.assertEqual(stale.status_code, 401)
 
 
 class TenantIsolationTests(ApiTestCase):
@@ -93,7 +104,9 @@ class BusinessRuleTests(ApiTestCase):
         self.assertEqual(first.status_code, 201, first.content)
         self.assertEqual(first.data['invoiceNumber'], f'VI/2627/{count + 1:05d}')
         self.assertEqual(second.data['invoiceNumber'], f'VI/2627/{count + 2:05d}')
-        self.assertEqual(client.patch(f"/api/v1/invoices/{first.data['id']}/", {}, format='json').status_code, 405)
+        self.assertEqual(client.patch(f"/api/v1/invoices/{first.data['id']}/", {'customerName': 'Edited'},
+                                      format='json').status_code, 400)
+        self.assertEqual(client.delete(f"/api/v1/invoices/{first.data['id']}/").status_code, 405)
 
     def test_dual_control_blocks_self_approval(self):
         mgr, _ = self.login(SALES_MGR)
@@ -123,12 +136,18 @@ class BusinessRuleTests(ApiTestCase):
 
     def test_double_chassis_allocation_blocked(self):
         admin, _ = self.login(ADMIN, OTP)
-        allocated = admin.get('/api/v1/vehicles/?status=ALLOCATED').data['results'][0]
-        other_booking = [b for b in admin.get('/api/v1/bookings/').data['results']
-                         if b['id'] != allocated['allocatedBookingId']][0]
+        unit = admin.get('/api/v1/vehicles/?pageSize=500').data['results'][0]
+        first_booking, other_booking = admin.get('/api/v1/bookings/?pageSize=500').data['results'][:2]
+        ok = admin.post(f"/api/v1/vehicles/{unit['id']}/allocate/", {'bookingId': first_booking['id']}, format='json')
+        self.assertEqual(ok.status_code, 200, ok.content)
+        allocated = ok.data
         res = admin.post(f"/api/v1/vehicles/{allocated['id']}/allocate/", {'bookingId': other_booking['id']},
                          format='json')
         self.assertEqual(res.status_code, 400)
+        # The plain PATCH path (used by the store sync) enforces the same rule.
+        patched = admin.patch(f"/api/v1/vehicles/{allocated['id']}/", {'allocatedBookingId': other_booking['id']},
+                              format='json')
+        self.assertEqual(patched.status_code, 400)
 
 
 class DashboardAndLogTests(ApiTestCase):
@@ -145,9 +164,11 @@ class DashboardAndLogTests(ApiTestCase):
     def test_bootstrap_has_store_shape(self):
         admin, _ = self.login(ADMIN, OTP)
         data = admin.get('/api/v1/dashboard/bootstrap/').data
-        for key in ('invoices', 'bays', 'jobCards', 'vehicleStock', 'partsStock', 'leads', 'approvals', 'auditLogs',
-                    'branches', 'currentUser'):
+        for key in ('invoices', 'bays', 'jobCards', 'vehicleStock', 'partsStock', 'leads', 'auditLogs',
+                    'branches', 'currentUser', 'users', 'collections'):
             self.assertIn(key, data)
+        self.assertTrue(data['collections']['approvals.requests'])
+        self.assertTrue(data['collections']['catalog.bikes'])
         self.assertEqual(data['activeBranchId'], 'br-blr-central')
         bay = data['bays'][0]
         self.assertIn('bayNumber', bay)

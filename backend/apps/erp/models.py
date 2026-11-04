@@ -25,7 +25,10 @@ class Customer(TenantScopedModel):
     class Meta:
         ordering = ['name']
         constraints = _uniq_ref('customer')
-
+        indexes = [
+            models.Index(fields=['tenant', 'phone'], name='cust_phone'),
+            models.Index(fields=['tenant', 'name'], name='cust_name'),
+        ]
 
 class Lead(TenantScopedModel):
     REF_PREFIX = 'lead'
@@ -45,7 +48,11 @@ class Lead(TenantScopedModel):
     class Meta:
         ordering = ['-created_at']
         constraints = _uniq_ref('lead')
-
+        indexes = [
+            models.Index(fields=['tenant', 'stage', '-created_at'], name='lead_stage_created'),
+            models.Index(fields=['tenant', 'follow_up_date'], name='lead_followup'),
+            models.Index(fields=['tenant', 'phone'], name='lead_phone'),
+        ]
 
 class Quotation(TenantScopedModel):
     REF_PREFIX = 'qt'
@@ -59,7 +66,10 @@ class Quotation(TenantScopedModel):
     class Meta:
         ordering = ['-created_at']
         constraints = _uniq_ref('quotation')
-
+        indexes = [
+            models.Index(fields=['tenant', 'discount_status', '-created_at'], name='qt_status_created'),
+            models.Index(fields=['tenant', 'quotation_number'], name='qt_number'),
+        ]
 
 class Booking(TenantScopedModel):
     REF_PREFIX = 'bk'
@@ -78,7 +88,12 @@ class Booking(TenantScopedModel):
     class Meta:
         ordering = ['-booking_date', '-created_at']
         constraints = _uniq_ref('booking')
-
+        indexes = [
+            models.Index(fields=['tenant', 'status', '-booking_date'], name='bk_status_date'),
+            models.Index(fields=['tenant', '-booking_date'], name='bk_date'),
+            models.Index(fields=['tenant', 'branch_id', 'status'], name='bk_branch'),
+            models.Index(fields=['tenant', 'booking_number'], name='bk_number'),
+        ]
 
 class SalesOrder(TenantScopedModel):
     REF_PREFIX = 'so'
@@ -92,7 +107,9 @@ class SalesOrder(TenantScopedModel):
     class Meta:
         ordering = ['-created_at']
         constraints = _uniq_ref('sales_order')
-
+        indexes = [
+            models.Index(fields=['tenant', 'status', '-created_at'], name='so_status'),
+        ]
 
 class VehicleUnit(TenantScopedModel):
     REF_PREFIX = 'unit'
@@ -115,7 +132,11 @@ class VehicleUnit(TenantScopedModel):
         constraints = _uniq_ref('vehicle') + [
             models.UniqueConstraint(fields=['tenant', 'chassis_number'], name='uniq_vehicle_chassis'),
         ]
-
+        indexes = [
+            models.Index(fields=['tenant', 'status', 'branch_id'], name='veh_status_branch'),
+            models.Index(fields=['tenant', 'model_name'], name='veh_model'),
+            models.Index(fields=['tenant', 'allocated_booking_id'], name='veh_alloc'),
+        ]
 
 class Part(TenantScopedModel):
     REF_PREFIX = 'prt'
@@ -133,7 +154,10 @@ class Part(TenantScopedModel):
     class Meta:
         ordering = ['name']
         constraints = _uniq_ref('part')
-
+        indexes = [
+            models.Index(fields=['tenant', 'part_number'], name='part_number'),
+            models.Index(fields=['tenant', 'stock_qty'], name='part_stock'),
+        ]
 
 class JobCard(TenantScopedModel):
     """Vehicle service job card (the "Create Vehicle Service Job Card" form)."""
@@ -207,7 +231,13 @@ class JobCard(TenantScopedModel):
     class Meta:
         ordering = ['-created_at']
         constraints = _uniq_ref('jobcard')
-
+        indexes = [
+            models.Index(fields=['tenant', 'stage', '-created_at'], name='jc_stage_created'),
+            models.Index(fields=['tenant', 'registration_number'], name='jc_reg'),
+            models.Index(fields=['tenant', 'job_card_number'], name='jc_number'),
+            models.Index(fields=['tenant', 'appointment_id'], name='jc_appointment'),
+            models.Index(fields=['tenant', 'bay_number'], name='jc_bay'),
+        ]
 
 class ServiceAppointment(TenantScopedModel):
     """A booked workshop slot. Checking the vehicle in turns it into a job card."""
@@ -229,7 +259,11 @@ class ServiceAppointment(TenantScopedModel):
     class Meta:
         ordering = ['date', 'time_slot']
         constraints = _uniq_ref('appointment')
-
+        indexes = [
+            models.Index(fields=['tenant', 'date', 'time_slot'], name='apt_date_slot'),
+            models.Index(fields=['tenant', 'status', 'date'], name='apt_status_date'),
+            models.Index(fields=['tenant', 'registration_number'], name='apt_reg'),
+        ]
 
 class Bay(TenantScopedModel):
     REF_PREFIX = 'bay'
@@ -253,7 +287,9 @@ class Bay(TenantScopedModel):
         constraints = _uniq_ref('bay') + [
             models.UniqueConstraint(fields=['tenant', 'branch_id', 'bay_number'], name='uniq_bay_number'),
         ]
-
+        indexes = [
+            models.Index(fields=['tenant', 'branch_id', 'status'], name='bay_status'),
+        ]
 
 class Invoice(TenantScopedModel):
     REF_PREFIX = 'inv'
@@ -285,7 +321,12 @@ class Invoice(TenantScopedModel):
         constraints = _uniq_ref('invoice') + [
             models.UniqueConstraint(fields=['tenant', 'invoice_number'], name='uniq_invoice_number'),
         ]
-
+        indexes = [
+            models.Index(fields=['tenant', '-date'], name='inv_date'),
+            models.Index(fields=['tenant', 'status', '-date'], name='inv_status_date'),
+            models.Index(fields=['tenant', 'type', '-date'], name='inv_type_date'),
+            models.Index(fields=['tenant', 'payment_status'], name='inv_payment'),
+        ]
 
 class Approval(TenantScopedModel):
     REF_PREFIX = 'appr'
@@ -312,7 +353,9 @@ class Approval(TenantScopedModel):
     class Meta:
         ordering = ['-requested_at']
         constraints = _uniq_ref('approval')
-
+        indexes = [
+            models.Index(fields=['tenant', 'status', '-requested_at'], name='appr_status'),
+        ]
 
 class Notification(TenantScopedModel):
     REF_PREFIX = 'notif'
@@ -328,7 +371,9 @@ class Notification(TenantScopedModel):
     class Meta:
         ordering = ['-timestamp']
         constraints = _uniq_ref('notification')
-
+        indexes = [
+            models.Index(fields=['tenant', 'read', '-timestamp'], name='notif_read_time'),
+        ]
 
 class DocumentSequence(models.Model):
     """Gap-free per-tenant counters (e.g. invoice numbers), incremented under a row lock."""
@@ -347,3 +392,21 @@ class DocumentSequence(models.Model):
             seq.last_value += 1
             seq.save(update_fields=['last_value'])
             return seq.last_value
+
+
+class Record(TenantScopedModel):
+    """
+    Generic tenant-scoped document for module data that has no dedicated table yet
+    (complaints, warranty claims, expenses, catalogs, ...). `collection` names the list,
+    e.g. "care.complaints"; `data` holds the record exactly as the frontend uses it.
+    """
+
+    REF_PREFIX = 'rec'
+
+    collection = models.CharField(max_length=64, db_index=True)
+    position = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['collection', 'position', 'created_at']
+        constraints = [models.UniqueConstraint(fields=['tenant', 'collection', 'ref'], name='uniq_record_ref')]
+        indexes = [models.Index(fields=['tenant', 'collection', 'position'])]

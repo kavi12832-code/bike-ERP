@@ -16,85 +16,14 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_FLEET_ACCOUNTS = [
-  {
-    id: 'flt-001',
-    companyName: 'Bundl Technologies Pvt Ltd (Swiggy Instamart)',
-    corporateGstin: '29AAGCB1820M1ZO',
-    contactPerson: 'Vikram Merchant (Fleet VP)',
-    phone: '+91 99001 88442',
-    totalFleetSize: 45,
-    activeDeals: [
-      {
-        dealId: 'FD-2627-01',
-        model: 'TVS iQube Electric (Custom Cargo Rack)',
-        unitsCount: 25,
-        discountPercent: 5, // 11-25 slab
-        unitPricePaise: 11500000, // ₹1,15,000
-        totalDealValuePaise: 273125000, // After 5% discount
-        invoicingMode: 'CONSOLIDATED', // CONSOLIDATED or PER_VEHICLE
-        rcmApplicable: false,
-        bulkAmcActive: true,
-        batches: [
-          { batchNo: 1, units: 10, deliveryDate: '2026-11-05', status: 'DELIVERED' },
-          { batchNo: 2, units: 15, deliveryDate: '2026-11-20', status: 'IN_PDI' },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'flt-002',
-    companyName: 'SmartShift Logistics Solutions (Porter)',
-    corporateGstin: '29AACCP8940P1Z8',
-    contactPerson: 'Naveen Jindal (Procurement)',
-    phone: '+91 98450 77112',
-    totalFleetSize: 60,
-    activeDeals: [
-      {
-        dealId: 'FD-2627-02',
-        model: 'Honda SP125 (Commercial Courier Spec)',
-        unitsCount: 30,
-        discountPercent: 7, // 26+ slab
-        unitPricePaise: 9200000, // ₹92,000
-        totalDealValuePaise: 256680000,
-        invoicingMode: 'PER_VEHICLE',
-        rcmApplicable: false,
-        bulkAmcActive: true,
-        batches: [
-          { batchNo: 1, units: 15, deliveryDate: '2026-11-15', status: 'PENDING_ALLOCATION' },
-          { batchNo: 2, units: 15, deliveryDate: '2026-12-01', status: 'SCHEDULED' },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'flt-003',
-    companyName: 'Karnataka State Police (Traffic Division)',
-    corporateGstin: '29BLRP00122G1Z1',
-    contactPerson: 'ACP S. K. Patil',
-    phone: '+91 080 22942222',
-    totalFleetSize: 12,
-    activeDeals: [
-      {
-        dealId: 'FD-2627-03',
-        model: 'Royal Enfield Classic 350 (White / Siren Kit)',
-        unitsCount: 10,
-        discountPercent: 3, // 5-10 slab
-        unitPricePaise: 19800000,
-        totalDealValuePaise: 192060000,
-        invoicingMode: 'CONSOLIDATED',
-        rcmApplicable: true,
-        bulkAmcActive: true,
-        batches: [
-          { batchNo: 1, units: 10, deliveryDate: '2026-10-30', status: 'DELIVERED' }
-        ]
-      }
-    ]
-  }
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
+// SAMPLE_FLEET_ACCOUNTS: loaded from the database (collection "sales.fleetSales.fleetAccounts")
 
 export function FleetSalesPage() {
-  const [fleetAccounts, setFleetAccounts] = useState(SAMPLE_FLEET_ACCOUNTS);
+  const SAMPLE_FLEET_ACCOUNTS = useCollectionItems('sales.fleetSales.fleetAccounts');
+  const [fleetAccounts, setFleetAccounts] = useCollection('sales.fleetSales.fleetAccounts');
   const [selectedAccount, setSelectedAccount] = useState(SAMPLE_FLEET_ACCOUNTS[0]);
   const [showNewDealModal, setShowNewDealModal] = useState(false);
 

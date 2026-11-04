@@ -27,107 +27,15 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const INITIAL_WARRANTY_CLAIMS = [
-  {
-    id: 'wcl-001',
-    claimNumber: 'WCL/2627/00012',
-    customerName: 'Sunil Hegde',
-    registrationNumber: 'KA-05-MH-2211',
-    modelName: 'Honda SP125',
-    failedPart: 'Fuel Injector Solenoid Valve',
-    failureReason: 'Premature coil burnout at 7,600 KM within 2-year factory warranty',
-    claimAmountPaise: 380000, // ₹3,800
-    oemName: 'Honda Motorcycle & Scooter India (HMSI)',
-    status: 'REIMBURSED', // FILED, SUBMITTED, APPROVED, REJECTED, REIMBURSED
-    filedDate: new Date(Date.now() - 25 * 86400000).toISOString(),
-    ageingDays: 25,
-    creditNoteNo: 'CN/HMSI/9941',
-  },
-  {
-    id: 'wcl-002',
-    claimNumber: 'WCL/2627/00013',
-    customerName: 'Arvind V.',
-    registrationNumber: 'KA-53-NQ-3344',
-    modelName: 'Ather 450X EV',
-    failedPart: 'BMS Telematics Controller',
-    failureReason: 'Firmware sync fault under 3-year Ather Pro battery & electric warranty',
-    claimAmountPaise: 850000, // ₹8,500
-    oemName: 'Ather Energy Ltd',
-    status: 'SUBMITTED',
-    filedDate: new Date(Date.now() - 6 * 86400000).toISOString(),
-    ageingDays: 6,
-    creditNoteNo: null,
-  },
-  {
-    id: 'wcl-003',
-    claimNumber: 'WCL/2627/00014',
-    customerName: 'Meenakshi Sundaram',
-    registrationNumber: 'KA-01-EQ-9102',
-    modelName: 'Royal Enfield Classic 350',
-    failedPart: 'Alternator Stator Assembly',
-    failureReason: 'Charging voltage drop below 13.2V',
-    claimAmountPaise: 420000, // ₹4,200
-    oemName: 'Royal Enfield',
-    status: 'FILED',
-    filedDate: new Date(Date.now() - 2 * 86400000).toISOString(),
-    ageingDays: 2,
-    creditNoteNo: null,
-  },
-  {
-    id: 'wcl-004',
-    claimNumber: 'WCL/2627/00010',
-    customerName: 'Kishore Kumar',
-    registrationNumber: 'KA-04-AB-1100',
-    modelName: 'TVS Apache RTR 160 4V',
-    failedPart: 'Rear Brake Master Cylinder',
-    failureReason: 'Fluid seal weeping',
-    claimAmountPaise: 180000, // ₹1,800
-    oemName: 'TVS Motor Company',
-    status: 'REJECTED',
-    rejectionReason: 'Late filing > 30 days from job card closure',
-    filedDate: new Date(Date.now() - 40 * 86400000).toISOString(),
-    ageingDays: 40,
-    creditNoteNo: null,
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// INITIAL_WARRANTY_CLAIMS: loaded from the database (collection "warranty.warrantyAmc.warrantyClaims")
 
-const INITIAL_AMC_PLANS = [
-  {
-    id: 'amc-silver',
-    title: 'Silver Maintenance Shield',
-    tier: 'SILVER',
-    pricePaise: 249900, // ₹2,499 / year
-    servicesIncluded: '2 Free Comprehensive General Services + Engine Oil Top-Up + 5% Parts Discount',
-    redemptions: '2 of 2 services per year',
-    coverageDays: 365,
-    activeSubscribers: 215,
-  },
-  {
-    id: 'amc-gold',
-    title: 'AKASH Bajaj Gold Rider Annual Care',
-    tier: 'GOLD',
-    pricePaise: 499900, // ₹4,999 / year
-    servicesIncluded: '3 Free Comprehensive Services + 1 Teflon Machine Polish + 10% Consumables Discount',
-    redemptions: '3 services + 1 polish',
-    coverageDays: 365,
-    activeSubscribers: 142,
-  },
-  {
-    id: 'amc-platinum',
-    title: 'AKASH Bajaj Platinum Elite Care (350cc+ & EV)',
-    tier: 'PLATINUM',
-    pricePaise: 799900, // ₹7,999 / year
-    servicesIncluded: '4 Comprehensive Services + Unlimited Tubeless Punctures + Free Pick & Drop + 15% Accessories Off',
-    redemptions: '4 services + unlimited punctures',
-    coverageDays: 365,
-    activeSubscribers: 89,
-  },
-];
+// INITIAL_AMC_PLANS: loaded from the database (collection "warranty.warrantyAmc.amcPlans")
 
 export function WarrantyAmcPage() {
   const [activeTab, setActiveTab] = useState('CLAIMS'); // 'CLAIMS', 'AMC_PLANS'
-  const [warrantyClaims, setWarrantyClaims] = useState(INITIAL_WARRANTY_CLAIMS);
-  const [amcPlans, setAmcPlans] = useState(INITIAL_AMC_PLANS);
+  const [warrantyClaims, setWarrantyClaims] = useCollection('warranty.warrantyAmc.warrantyClaims');
+  const [amcPlans, setAmcPlans] = useCollection('warranty.warrantyAmc.amcPlans');
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');

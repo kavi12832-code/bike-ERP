@@ -37,9 +37,9 @@ import {
   MANUFACTURERS,
   PRIORITIES,
   REPORTED_PROBLEMS,
-  SERVICE_ADVISERS,
+  serviceAdvisersFrom,
   SERVICE_TYPES,
-  TECHNICIANS,
+  techniciansFrom,
   VARIANTS,
   VEHICLE_TYPES,
   WARRANTY_TYPES,
@@ -229,12 +229,17 @@ export default function JobCardCreatePage() {
   const appointments = useAppStore((s) => s.appointments || []);
   const jobCards = useAppStore((s) => s.jobCards || []);
   const currentUser = useAppStore((s) => s.currentUser);
+  const users = useAppStore((s) => s.users || []);
+  const SERVICE_ADVISERS = useMemo(() => serviceAdvisersFrom(users), [users]);
+  const TECHNICIANS = useMemo(() => techniciansFrom(users), [users]);
   const saveJobCard = useAppStore((s) => s.saveJobCard);
   const bookAppointment = useAppStore((s) => s.bookAppointment);
 
-  const draftId = params.get('draft');
+  // ?draft=<id> continues a draft; ?edit=<id> edits any existing job card.
+  const draftId = params.get('edit') || params.get('draft');
   const appointmentId = params.get('appointment');
   const draft = draftId ? jobCards.find((jc) => jc.id === draftId) : null;
+  const editingSaved = Boolean(draft && draft.stage !== 'DRAFT');
   const appointment = appointmentId ? appointments.find((a) => a.id === appointmentId) : null;
 
   const fromAppointment = (base, apt) => {
@@ -259,7 +264,7 @@ export default function JobCardCreatePage() {
   const [form, setForm] = useState(() => {
     if (draft) return fromJobCard(draft);
     const base = emptyJobCardForm();
-    if (SERVICE_ADVISERS.includes(currentUser?.name)) base.advisorName = currentUser.name;
+    if (serviceAdvisersFrom(users).includes(currentUser?.name)) base.advisorName = currentUser.name;
     if (appointment) return fromAppointment(base, appointment);
     if (params.get('book') === '1') {
       const date = params.get('date') || relativeDateString(0);
@@ -390,6 +395,8 @@ export default function JobCardCreatePage() {
         toast.success(
           booked
             ? `Booked ${booked.timeSlot} on ${booked.date} and created job card ${saved.jobCardNumber}.`
+            : editingSaved
+            ? `Job card ${saved.jobCardNumber} updated.`
             : `Job card ${saved.jobCardNumber} created for ${saved.registrationNumber}.`
         );
         navigate(booked ? '/service' : '/service/jobs');
@@ -431,7 +438,7 @@ export default function JobCardCreatePage() {
           { label: 'Job Cards Kanban', path: '/service/jobs' },
           { label: draft ? 'Edit Job Card' : 'Create Job Card', path: '/service/jobs/new' },
         ]}
-        title={draft ? 'Continue Vehicle Service Job Card' : 'Create Vehicle Service Job Card'}
+        title={editingSaved ? `Edit Job Card ${draft.jobCardNumber}` : draft ? 'Continue Vehicle Service Job Card' : 'Create Vehicle Service Job Card'}
         subtitle={
           appointment
             ? `Intake initialized from appointment ${appointment.timeSlot} for ${appointment.customerName}`
@@ -439,6 +446,7 @@ export default function JobCardCreatePage() {
         }
         actions={
           <div className="flex items-center gap-2">
+            {!editingSaved && (
             <button
               type="button"
               onClick={() => submit(true)}
@@ -448,6 +456,7 @@ export default function JobCardCreatePage() {
               <Save className="w-4 h-4" />
               {saving === 'draft' ? 'Saving…' : 'Save Draft'}
             </button>
+            )}
             <button
               type="button"
               onClick={() => submit(false)}
@@ -455,7 +464,13 @@ export default function JobCardCreatePage() {
               className="h-9 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-2 disabled:opacity-60 shadow-sm transition"
             >
               <Plus className="w-4 h-4" />
-              {saving === 'create' ? 'Creating…' : bookingMode ? 'Book & Create Job Card' : 'Create Job Card'}
+              {saving === 'create'
+                ? 'Saving…'
+                : editingSaved
+                ? 'Save Changes'
+                : bookingMode
+                ? 'Book & Create Job Card'
+                : 'Create Job Card'}
             </button>
           </div>
         }
@@ -764,7 +779,11 @@ export default function JobCardCreatePage() {
                 <Select
                   value={form.stage}
                   onChange={set('stage')}
-                  options={JOB_STATUSES}
+                  options={
+                    JOB_STATUSES.some((st) => st.id === form.stage)
+                      ? JOB_STATUSES
+                      : [...JOB_STATUSES, { id: form.stage, label: form.stage.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) }]
+                  }
                   className="bg-primary/5 text-primary font-semibold border-primary/30"
                 />
               </Field>

@@ -1,6 +1,5 @@
 import { useStore } from '../../store';
 import { formatMoney } from '../../lib/format';
-import { BIKE_CATALOG } from '../../data/catalogs/bikes';
 
 /**
  * Deterministic Store Tool Runner for AI Assistants & Copilot
@@ -21,7 +20,7 @@ export const AI_TOOLS = [
     },
     execute: (args) => {
       const state = useStore.getState();
-      const bikes = state.catalogBikes?.length ? state.catalogBikes : BIKE_CATALOG;
+      const bikes = state.catalogs?.bikes || [];
       const min = args.minBudgetPaise || 0;
       const max = args.maxBudgetPaise || 100000000; // default 10 Lakhs
       const fuel = args.fuelType && args.fuelType !== 'any' ? args.fuelType.toLowerCase() : null;

@@ -18,68 +18,15 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SAMPLE_INTEGRATIONS = [
-  {
-    id: 'int-tally',
-    name: 'Tally Prime (XML / ODBC)',
-    category: 'Accounting ERP',
-    description: 'Auto-sync posted sales invoices, purchase receipts and journal vouchers into Tally Prime XML port 9000.',
-    connected: true,
-    syncFreq: 'HOURLY',
-    lastSync: '15 mins ago',
-    apiKeyMasked: 'tally_live_948********************',
-  },
-  {
-    id: 'int-zoho',
-    name: 'Zoho Books Cloud',
-    category: 'Accounting ERP',
-    description: 'Bi-directional journal synchronization and vendor contact management.',
-    connected: false,
-    syncFreq: 'DAILY',
-    lastSync: 'Never',
-    apiKeyMasked: 'zoho_oauth_*********************',
-  },
-  {
-    id: 'int-razorpay',
-    name: 'Razorpay Payment Gateway',
-    category: 'Payments & UPI',
-    description: 'Generates instant dynamic UPI QR codes and receives instant webhook settlement callbacks.',
-    connected: true,
-    syncFreq: 'REALTIME',
-    lastSync: '2 mins ago',
-    apiKeyMasked: 'rzp_live_884********************',
-  },
-  {
-    id: 'int-meta',
-    name: 'Meta Lead Ads (Facebook & Instagram)',
-    category: 'Lead Ingestion',
-    description: 'Webhook listener receiving instant leads from test ride and Diwali campaign forms.',
-    connected: true,
-    syncFreq: 'REALTIME',
-    lastSync: 'Just now',
-    apiKeyMasked: 'meta_graph_eaab****************',
-  },
-  {
-    id: 'int-wa',
-    name: 'WhatsApp Cloud API (Meta Official)',
-    category: 'Customer Messaging',
-    description: 'Sends automated PDI certificates, booking receipts, service alerts and marketing broadcasts.',
-    connected: true,
-    syncFreq: 'REALTIME',
-    lastSync: '1 min ago',
-    apiKeyMasked: 'waba_auth_token_***************',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_INTEGRATIONS: loaded from the database (collection "admin.integrationsHub.integrations")
 
 export function IntegrationsHubPage() {
-  const [integrations, setIntegrations] = useState(SAMPLE_INTEGRATIONS);
+  const [integrations, setIntegrations] = useCollection('admin.integrationsHub.integrations');
   const [activeTab, setActiveTab] = useState('APPS'); // 'APPS' or 'DEVELOPER'
 
   // Developer API keys & Webhook simulator
-  const [apiKeys, setApiKeys] = useState([
-    { id: 'key-1', name: 'Mobile Technician App Key', scope: 'READ_WRITE', token: 'bike_live_8921a004921b4892c', created: '2026-10-01' },
-    { id: 'key-2', name: 'Accounting Audit Service Read-only', scope: 'READ_ONLY', token: 'bike_ro_99182348123049102', created: '2026-09-15' },
-  ]);
+  const [apiKeys, setApiKeys] = useCollection('admin.integrationsHub.apiKeys');
   const [showToken, setShowToken] = useState({});
 
   const [testEventType, setTestEventType] = useState('INVOICE_POSTED');

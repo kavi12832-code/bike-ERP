@@ -12,23 +12,24 @@ export function CreateBookingModal({
   vehicleStock = [],
   prefill = null,
   onCreateBooking,
+  // Edit mode: pass the booking to change and a handler (token & chassis have their own actions).
+  editBooking = null,
+  onUpdateBooking,
 }) {
+  const isEdit = Boolean(editBooking);
+  const inAWeek = () => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState(
-    branches[0]?.name || 'Bangalore Central Flagship'
-  );
-  const [selectedModel, setSelectedModel] = useState(
-    models[0]?.name || 'Royal Enfield Classic 350'
-  );
-  const [variant, setVariant] = useState('Standard ABS');
-  const [colour, setColour] = useState('Dark Stealth Black');
+  const [selectedBranch, setSelectedBranch] = useState(branches[0]?.name || '');
+  const [selectedModel, setSelectedModel] = useState(models[0]?.name || models[0] || '');
+  const [variant, setVariant] = useState('');
+  const [colour, setColour] = useState('');
   const [tokenAmountRupees, setTokenAmountRupees] = useState(10000);
   const [paymentMode, setPaymentMode] = useState('UPI');
-  const [paymentRef, setPaymentRef] = useState('UPI-TXN-8942');
-  const [tentativeDeliveryDate, setTentativeDeliveryDate] = useState('2026-11-05');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [tentativeDeliveryDate, setTentativeDeliveryDate] = useState(inAWeek);
   const [selectedVin, setSelectedVin] = useState('');
   const [quotationId, setQuotationId] = useState(null);
 
@@ -37,6 +38,20 @@ export function CreateBookingModal({
     const minPaise = getMinimumTokenPaise(selectedModel);
     setTokenAmountRupees(minPaise / 100);
   }, [selectedModel]);
+
+  // Edit mode: load the booking being changed each time the dialog opens.
+  useEffect(() => {
+    if (!isOpen || !editBooking) return;
+    setCustomerName(editBooking.customerName || '');
+    setCustomerPhone(editBooking.phone || editBooking.customerPhone || '');
+    setCustomerEmail(editBooking.email || editBooking.customerEmail || '');
+    setDeliveryAddress(editBooking.deliveryAddress || '');
+    setSelectedBranch(editBooking.branchName || branches[0]?.name || '');
+    setSelectedModel(editBooking.modelName || '');
+    setVariant(editBooking.variantName || editBooking.variant || '');
+    setColour(editBooking.colorName || editBooking.colour || '');
+    setTentativeDeliveryDate(String(editBooking.tentativeDeliveryDate || editBooking.estDelivery || inAWeek()).slice(0, 10));
+  }, [editBooking, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle prefill (e.g. from quotation or check availability)
   useEffect(() => {
@@ -70,8 +85,26 @@ export function CreateBookingModal({
       toast.error('Customer name is required');
       return;
     }
-    if (!customerPhone.trim() || customerPhone.length < 10) {
+    if (customerPhone.replace(/\D/g, '').length < 10) {
       toast.error('Valid contact phone is required (10 digits)');
+      return;
+    }
+
+    if (isEdit) {
+      onUpdateBooking(editBooking.id, {
+        customerName: customerName.trim(),
+        phone: customerPhone.trim(),
+        email: customerEmail.trim(),
+        deliveryAddress: deliveryAddress.trim(),
+        branchName: selectedBranch,
+        branchId: branches.find((b) => b.name === selectedBranch)?.id || editBooking.branchId,
+        modelName: selectedModel,
+        variantName: variant,
+        colorName: colour,
+        tentativeDeliveryDate,
+        estDelivery: tentativeDeliveryDate,
+      });
+      onClose();
       return;
     }
 
@@ -104,8 +137,6 @@ export function CreateBookingModal({
       quotationId: quotationId || undefined,
       status: selectedVin ? BOOKING_STATUSES.CONFIRMED : BOOKING_STATUSES.PENDING,
     });
-
-    toast.success('Reservation created successfully!');
     onClose();
   };
 
@@ -120,10 +151,12 @@ export function CreateBookingModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Create New Vehicle Reservation
+                {isEdit ? `Edit Booking ${editBooking.bookingNumber || ''}` : 'Create New Vehicle Reservation'}
               </h2>
               <p className="text-xs text-slate-500">
-                Reserve chassis, generate statutory token receipt and lock booking
+                {isEdit
+                  ? 'Update customer, vehicle and delivery details. Use Record Token / Allocate Chassis for payments and VINs.'
+                  : 'Reserve chassis, generate statutory token receipt and lock booking'}
               </p>
             </div>
           </div>
@@ -259,6 +292,8 @@ export function CreateBookingModal({
           </div>
 
           {/* Optional Chassis Allocation from Stock */}
+          {!isEdit && (
+          <>
           <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
@@ -282,8 +317,8 @@ export function CreateBookingModal({
               >
                 <option value="">-- Leave Unallocated (Allocate Later) --</option>
                 {matchingUnits.map((u) => (
-                  <option key={u.vin} value={u.vin}>
-                    {u.vin} (Colour: {u.colour})
+                  <option key={u.vin || u.chassisNumber} value={u.vin || u.chassisNumber}>
+                    {u.vin || u.chassisNumber} (Colour: {u.colour || u.colorName || '—'})
                   </option>
                 ))}
               </select>
@@ -349,6 +384,9 @@ export function CreateBookingModal({
           </div>
 
           {/* Footer Actions */}
+          </>
+          )}
+
           <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
               type="button"
@@ -361,7 +399,7 @@ export function CreateBookingModal({
               type="submit"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
             >
-              Create Reservation & Generate Receipt
+              {isEdit ? 'Save Changes' : 'Create Reservation & Generate Receipt'}
             </button>
           </div>
         </form>

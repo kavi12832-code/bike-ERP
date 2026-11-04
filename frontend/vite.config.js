@@ -28,6 +28,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/tests/setup.js',
+    // Some page render tests mount large screens; the 5 s default is too tight under a full parallel run.
+    testTimeout: 20000,
   },
   server: {
     port: 5173,

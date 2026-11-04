@@ -16,41 +16,14 @@ import { useAppStore } from '../../../store';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_BULLETINS = [
-  {
-    id: 'rc-001',
-    oemCircularNo: 'RE-SB-2026-041',
-    title: 'Himalayan 450 Throttle Body Sensor Seal Inspection & Clamp Retrofit',
-    model: 'Royal Enfield Himalayan 450',
-    affectedRange: 'ME3J450*P100001 to ME3J450*P104999',
-    partKit: 'Retrofit Kit #RE-TK-450-S',
-    labourSac: '9987 (FOC OEM Compensated)',
-    validTill: '2027-03-31',
-    matchedUnits: [
-      { id: 'u1', vin: 'ME3J450AP100234', customer: 'Rohit Chandran', phone: '+91 98860 99441', status: 'COMPLETED' },
-      { id: 'u2', vin: 'ME3J450BP100412', customer: 'Deepak Kumar', phone: '+91 98451 22334', status: 'APPOINTMENT_BOOKED' },
-      { id: 'u3', vin: 'ME3J450CP101890', customer: 'Vinod Nair', phone: '+91 97401 55667', status: 'NOTIFIED' },
-      { id: 'u4', vin: 'ME3J450DP102551', customer: 'Kiran Rao', phone: '+91 98440 77889', status: 'PENDING' },
-    ]
-  },
-  {
-    id: 'rc-002',
-    oemCircularNo: 'HMSI-RC-2026-12',
-    title: 'SP125 / Shine Front Brake Disc Bolt Torque Verification',
-    model: 'Honda SP125',
-    affectedRange: 'ME4JC84*R200001 to ME4JC84*R208000',
-    partKit: 'Flange Bolt Set M8x25 (x4)',
-    labourSac: '9987 (FOC)',
-    validTill: '2026-12-31',
-    matchedUnits: [
-      { id: 'u5', vin: 'ME4JC84AR201102', customer: 'Sunil Hegde', phone: '+91 98450 11223', status: 'COMPLETED' },
-      { id: 'u6', vin: 'ME4JC84BR203490', customer: 'Mohammed Ali', phone: '+91 99001 44556', status: 'PENDING' },
-    ]
-  }
-];
+import { useCollection, useCollectionItems } from '../../../hooks/useCollection';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
+// SAMPLE_BULLETINS: loaded from the database (collection "service.recalls.bulletins")
 
 export function RecallsPage() {
-  const [bulletins, setBulletins] = useState(SAMPLE_BULLETINS);
+  const SAMPLE_BULLETINS = useCollectionItems('service.recalls.bulletins');
+  const [bulletins, setBulletins] = useCollection('service.recalls.bulletins');
   const [selectedBulletin, setSelectedBulletin] = useState(SAMPLE_BULLETINS[0]);
   const [showNewModal, setShowNewModal] = useState(false);
 

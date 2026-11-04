@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function InsuranceRtoPage() {
   const [activeTab, setActiveTab] = useState('RTO'); // 'RTO' or 'INSURANCE'
 
@@ -50,34 +51,7 @@ export function InsuranceRtoPage() {
     },
   ]);
 
-  const [insurancePolicies, setInsurancePolicies] = useState([
-    {
-      id: 'ins-001',
-      policyNumber: 'ICICI-LOMB-2026-99120',
-      customerName: 'Rohit Chandran',
-      vehicleModel: 'Himalayan 450',
-      registrationNumber: 'KA-51-EX-0099',
-      insurer: 'ICICI Lombard General Insurance',
-      coverageType: '1-Yr OD + 5-Yr Third Party',
-      premiumPaise: 1550000,
-      commissionPaise: 232500, // 15% Dealer commission
-      expiryDate: new Date(Date.now() + 290 * 86400000).toISOString(),
-      status: 'ACTIVE',
-    },
-    {
-      id: 'ins-002',
-      policyNumber: 'HDFC-ERGO-2026-44182',
-      customerName: 'Arjun Das',
-      vehicleModel: 'Classic 350',
-      registrationNumber: 'KA-53-MJ-1049',
-      insurer: 'HDFC ERGO General Insurance',
-      coverageType: '1-Yr OD + 5-Yr Third Party',
-      premiumPaise: 980000,
-      commissionPaise: 147000,
-      expiryDate: new Date(Date.now() + 45 * 86400000).toISOString(),
-      status: 'EXPIRING_SOON', // Renewal due!
-    },
-  ]);
+  const [insurancePolicies, setInsurancePolicies] = useCollection('insurance.insuranceRto.insurancePolicies');
 
   return (
     <div className="space-y-6">

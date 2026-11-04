@@ -1,6 +1,7 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import collections, views
 
 router = DefaultRouter()
 router.register('customers', views.CustomerViewSet, basename='customer')
@@ -17,4 +18,9 @@ router.register('invoices', views.InvoiceViewSet, basename='invoice')
 router.register('approvals', views.ApprovalViewSet, basename='approval')
 router.register('notifications', views.NotificationViewSet, basename='notification')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('collections/', collections.CollectionIndexView.as_view(), name='collections'),
+    path('collections/<str:name>/', collections.CollectionView.as_view(), name='collection'),
+    path('collections/<str:name>/<str:item_id>/', collections.CollectionItemView.as_view(), name='collection-item'),
+    *router.urls,
+]

@@ -13,71 +13,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const STATUTORY_DEADLINES = [
-  {
-    id: 'cmp-01',
-    title: 'TDS Monthly Deposit (Challan 281)',
-    act: 'Income Tax Act 1961',
-    dueDate: '2026-11-07',
-    frequency: 'Monthly (7th of every month)',
-    responsible: 'Suresh Iyer (Accountant)',
-    status: 'UPCOMING', // COMPLETED, DUE_THIS_WEEK, OVERDUE, UPCOMING
-    notes: 'Mandatory deposit for 194C, 194J, 194I tax withheld in October.',
-  },
-  {
-    id: 'cmp-02',
-    title: 'GSTR-1 Outward Supplies Return',
-    act: 'CGST / KGST Act 2017',
-    dueDate: '2026-11-11',
-    frequency: 'Monthly (11th of every month)',
-    responsible: 'Suresh Iyer (Accountant)',
-    status: 'UPCOMING',
-    notes: 'B2B & B2C outward supply invoices turnover reconciliation with e-Invoicing portal.',
-  },
-  {
-    id: 'cmp-03',
-    title: 'Provident Fund (PF) & ESI Remittance',
-    act: 'EPFO & ESIC Acts',
-    dueDate: '2026-11-15',
-    frequency: 'Monthly (15th of every month)',
-    responsible: 'HR Department',
-    status: 'UPCOMING',
-    notes: 'Electronic Challan cum Return (ECR) for all dealership workshop & floor staff.',
-  },
-  {
-    id: 'cmp-04',
-    title: 'GSTR-3B Summary Return & Tax Settlement',
-    act: 'CGST / KGST Act 2017',
-    dueDate: '2026-11-20',
-    frequency: 'Monthly (20th of every month)',
-    responsible: 'R. K. Swamy CA & Suresh Iyer',
-    status: 'UPCOMING',
-    notes: 'Net cash tax payment after adjusting Input Tax Credit (ITC) from 2B.',
-  },
-  {
-    id: 'cmp-05',
-    title: 'RTO Trade Certificate Annual Renewal',
-    act: 'Central Motor Vehicles Rules (CMVR)',
-    dueDate: '2026-11-02',
-    frequency: 'Annual Renewal',
-    responsible: 'RTO Liaison Officer',
-    status: 'DUE_THIS_WEEK',
-    notes: 'Renewal for Bangalore Central Flagship demo & transit stock plates.',
-  },
-  {
-    id: 'cmp-06',
-    title: 'Karnataka State Pollution Control Board (KSPCB) Water Consent',
-    act: 'Air & Water Pollution Acts',
-    dueDate: '2026-12-31',
-    frequency: 'Annual Workshop Inspection',
-    responsible: 'Service Manager',
-    status: 'UPCOMING',
-    notes: 'Inspection of oil-water separator and bike wash effluent treatment plant.',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// STATUTORY_DEADLINES: loaded from the database (collection "gst.complianceCalendar.statutoryDeadlines")
 
 export function ComplianceCalendarPage() {
-  const [deadlines, setDeadlines] = useState(STATUTORY_DEADLINES);
+  const [deadlines, setDeadlines] = useCollection('gst.complianceCalendar.statutoryDeadlines');
   const [filter, setFilter] = useState('ALL');
 
   const handleMarkCompleted = (id) => {

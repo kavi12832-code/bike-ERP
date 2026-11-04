@@ -16,36 +16,12 @@ import {
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
-const SAMPLE_CUSTOMER_ITEMS = [
-  {
-    id: 'dvi-tyre-rear',
-    label: 'Rear Tyre Tread Replacement',
-    reason: 'Tread worn down to 1.2mm (legal minimum 1.6mm). Severe slip hazard on wet roads.',
-    costPaise: 385000, // ₹3,850
-    priority: 'RED',
-    photoUrl: 'Rear Tyre Tread Gauge 1.2mm',
-  },
-  {
-    id: 'dvi-brake-front',
-    label: 'Front Disc Brake Pads & Rotor Clean',
-    reason: 'Pads 85% worn down to backing plate. Immediate replacement recommended for stopping distance.',
-    costPaise: 145000, // ₹1,450
-    priority: 'RED',
-    photoUrl: 'Front Disc Pads Inspection',
-  },
-  {
-    id: 'dvi-battery',
-    label: 'Exide Battery Load Test & Health Rejuvenation',
-    reason: 'Terminal voltage 12.2V. Suggest charging & terminal cleaning before long ride.',
-    costPaise: 45000, // ₹450
-    priority: 'AMBER',
-    photoUrl: 'Battery Terminal Check',
-  }
-];
+import { useCollection } from '../../../hooks/useCollection';
+// SAMPLE_CUSTOMER_ITEMS: loaded from the database (collection "service.dviCustomerApproval.customerItems")
 
 export function DviCustomerApprovalPage() {
   const { token } = useParams();
-  const [items, setItems] = useState(SAMPLE_CUSTOMER_ITEMS);
+  const [items, setItems] = useCollection('service.dviCustomerApproval.customerItems');
   const [decisions, setDecisions] = useState({
     'dvi-tyre-rear': true,
     'dvi-brake-front': true,

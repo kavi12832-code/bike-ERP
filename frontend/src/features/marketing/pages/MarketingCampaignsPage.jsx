@@ -24,43 +24,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useCollection } from '../../../hooks/useCollection';
 export function MarketingCampaignsPage() {
-  const [campaigns, setCampaigns] = useState([
-    {
-      id: 'cmp-001',
-      title: 'Diwali Festive Mega Savings 2026',
-      templateCode: 'FESTIVAL_OFFER_DIWALI',
-      targetSegment: 'Enquiry Leads & Past 2-Yr Buyers',
-      totalAudience: 450,
-      optedInCount: 412, // Strict rule: No consent numbers excluded
-      optedOutCount: 38,
-      sentCount: 412,
-      deliveredCount: 405,
-      readCount: 342,
-      repliedCount: 58,
-      costEstimatePaise: 41200, // ₹412 @ ₹1/msg
-      status: 'COMPLETED',
-      roiRevenuePaise: 84500000, // ₹8.45 L booked
-      approvedBy: 'Vikram Sethi (Sales Manager)',
-    },
-    {
-      id: 'cmp-002',
-      title: 'Monsoon Free Checkup & Brake Inspection Camp',
-      templateCode: 'SERVICE_DUE_REMINDER_V2',
-      targetSegment: 'Customers with Odometer > 5,000 KM',
-      totalAudience: 220,
-      optedInCount: 198,
-      optedOutCount: 22,
-      sentCount: 198,
-      deliveredCount: 192,
-      readCount: 160,
-      repliedCount: 44,
-      costEstimatePaise: 19800,
-      status: 'COMPLETED',
-      roiRevenuePaise: 38200000,
-      approvedBy: 'Rajesh Varma (Super Admin)',
-    },
-  ]);
+  const [campaigns, setCampaigns] = useCollection('marketing.marketingCampaigns.campaigns');
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);

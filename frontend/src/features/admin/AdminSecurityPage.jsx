@@ -36,138 +36,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const DEFAULT_INTEGRATIONS = [
-  {
-    id: 'int-tally',
-    name: 'Tally Prime XML Bridge',
-    provider: 'TALLY_PRIME',
-    category: 'Accounting & Statutory',
-    status: 'ACTIVE',
-    endpoint: 'http://localhost:9000',
-    apiKey: 'tally_live_sec_8711_xml',
-    description: 'Automated export of Day Book and General Ledger vouchers in standard Tally Prime XML schema.',
-    syncFrequency: 'Real-time (On Invoice Post)',
-    lastSync: '10 mins ago',
-    successRate: '99.8%',
-  },
-  {
-    id: 'int-razorpay',
-    name: 'Razorpay UPI Webhook',
-    provider: 'RAZORPAY',
-    category: 'Payments & Settlement',
-    status: 'ACTIVE',
-    endpoint: 'https://api.akashbajaj.com/webhooks/razorpay',
-    apiKey: 'rzp_live_k7199201948',
-    description: 'Live settlement callback for counter dynamic UPI QR codes and customer portal invoices.',
-    syncFrequency: 'Instant Webhook Callback',
-    lastSync: 'Just now',
-    successRate: '100%',
-  },
-  {
-    id: 'int-meta',
-    name: 'Meta WhatsApp Cloud API',
-    provider: 'WHATSAPP_CLOUD',
-    category: 'Customer Communications',
-    status: 'ACTIVE',
-    endpoint: 'https://graph.facebook.com/v18.0/akash-bajaj-waba',
-    apiKey: 'EAAG9...waba_token_enc',
-    description: 'Official WhatsApp Business API for booking alerts, estimate approvals, and service reminders.',
-    syncFrequency: 'Event Driven',
-    lastSync: '2 mins ago',
-    successRate: '99.4%',
-  },
-  {
-    id: 'int-sms',
-    name: 'Gupshup / ValueFirst SMS DLT Gateway',
-    provider: 'SMS_GATEWAY',
-    category: 'Statutory SMS & OTP',
-    status: 'ACTIVE',
-    endpoint: 'https://enterprise.smsgupshup.com/gateway/v2',
-    apiKey: 'dlt_principal_bajaj_blr_29',
-    description: 'TRAI-compliant DLT SMS gateway for service handover OTPs and booking tokens.',
-    syncFrequency: 'Instant OTP',
-    lastSync: '15 mins ago',
-    successRate: '99.9%',
-  },
-  {
-    id: 'int-telematics',
-    name: 'KTM & Chetak OEM Telematics Cloud',
-    provider: 'OEM_TELEMATICS',
-    category: 'Connected Vehicle Telemetry',
-    status: 'TESTING',
-    endpoint: 'https://connect.bajajauto.com/telematics/v1/feed',
-    apiKey: 'bajaj_telematics_partner_991',
-    description: 'Direct ingestion of live odometer readings, battery SOC %, and DTC diagnostic trouble codes.',
-    syncFrequency: 'Hourly Batch Poll',
-    lastSync: '1 hour ago',
-    successRate: '98.5%',
-  },
-];
+import { useCollectionItems } from '../../hooks/useCollection';
+// DEFAULT_INTEGRATIONS: loaded from the database (collection "admin.adminSecurity.integrations")
 
-const DEFAULT_APPROVAL_RULES = [
-  {
-    id: 'rule-disc',
-    name: 'Executive Quotation Discount Approval',
-    category: 'Sales Commercials',
-    thresholdRupees: 5000,
-    requiredRole: 'Sales Manager',
-    slaHours: 4,
-    status: 'ACTIVE',
-    description: 'Discounts exceeding this amount mandate electronic approval by Sales Manager before quote sharing.',
-  },
-  {
-    id: 'rule-jv',
-    name: 'Accounting Journal Voucher Dual-Signature',
-    category: 'Finance & Accounts',
-    thresholdRupees: 50000,
-    requiredRole: 'Super Admin',
-    slaHours: 8,
-    status: 'ACTIVE',
-    description: 'Direct ledger journal adjustments above this limit require Super Admin counter-signature.',
-  },
-  {
-    id: 'rule-writeoff',
-    name: 'Spare Parts Stock Write-Off Ceiling',
-    category: 'Inventory & Warehousing',
-    thresholdRupees: 10000,
-    requiredRole: 'Inventory Manager',
-    slaHours: 12,
-    status: 'ACTIVE',
-    description: 'Damage or spoilage write-offs exceeding this ceiling must be signed off by Inventory Manager.',
-  },
-  {
-    id: 'rule-refund',
-    name: 'Customer Booking Cancellation & Refund',
-    category: 'Showroom Bookings',
-    thresholdRupees: 20000,
-    requiredRole: 'Sales Manager',
-    slaHours: 6,
-    status: 'ACTIVE',
-    description: 'Advance booking deposit refunds require Manager verification and reason recording.',
-  },
-  {
-    id: 'rule-labour',
-    name: 'Workshop Labour Waiver Limit',
-    category: 'Workshop Service',
-    thresholdRupees: 2500,
-    requiredRole: 'Service Manager',
-    slaHours: 2,
-    status: 'ACTIVE',
-    description: 'Service bill labour discounts above this threshold require Service Manager approval.',
-  },
-  {
-    id: 'rule-campaign',
-    name: 'Broadcast Marketing Spend Limit',
-    category: 'Growth & Campaigns',
-    thresholdRupees: 15000,
-    requiredRole: 'Super Admin',
-    slaHours: 24,
-    status: 'ACTIVE',
-    description: 'Dual-control campaign broadcast budget approval prevents unintended bulk ad spends.',
-  },
-];
+// DEFAULT_APPROVAL_RULES: loaded from the database (collection "admin.adminSecurity.approvalRules")
 
 export default function AdminSecurityPage() {
+  const DEFAULT_INTEGRATIONS = useCollectionItems('admin.adminSecurity.integrations');
+  const DEFAULT_APPROVAL_RULES = useCollectionItems('admin.adminSecurity.approvalRules');
   const [activeTab, setActiveTab] = useState('integrations'); // default to integrations as in screenshot
 
   const dealershipFromStore = useAppStore((state) => state.dealership) || {};

@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import exceptions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -17,6 +18,10 @@ class TenantJWTAuthentication(JWTAuthentication):
         if result is None:
             return None
         user, token = result
+
+        # A lock (failed logins or an admin action) also ends sessions that are already open.
+        if user.locked_until and user.locked_until > timezone.now():
+            raise exceptions.AuthenticationFailed('Account is locked.')
 
         if user.tenant_id:
             if str(token.get('tenant_id')) != str(user.tenant_id):

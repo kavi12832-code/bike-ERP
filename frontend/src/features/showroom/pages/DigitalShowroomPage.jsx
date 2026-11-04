@@ -17,10 +17,13 @@ import {
   CreditCard
 } from 'lucide-react';
 import { BikeThumb } from '../../../components/domain/BikeThumb';
-import { BIKE_CATALOG } from '../../../data/catalogs/bikes';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { useAppStore } from '../../../store';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 
+import { useCollectionItems } from '../../../hooks/useCollection';
+import { KpiCard } from '../../../components/ui/KpiCard';
 const STATE_TAX_RATES = {
   KARNATAKA: { name: 'Karnataka (Bangalore)', rtoPercent: 18, roadSafetyPaise: 100000 },
   TAMIL_NADU: { name: 'Tamil Nadu (Chennai)', rtoPercent: 12, roadSafetyPaise: 75000 },
@@ -28,19 +31,27 @@ const STATE_TAX_RATES = {
   ANDHRA: { name: 'Andhra Pradesh (Tirupati)', rtoPercent: 12, roadSafetyPaise: 60000 },
 };
 
-const SHOWROOM_ACCESSORIES = [
-  { id: 'acc-crash', name: 'Engine Crash Guard & Bash Plate', pricePaise: 385000 },
-  { id: 'acc-seat', name: 'Touring Gel Seat Upgrade', pricePaise: 240000 },
-  { id: 'acc-vis', name: 'Tall Windscreen Visor', pricePaise: 165000 },
-  { id: 'acc-saddle', name: 'Waterproof Side Saddlebags (Pair)', pricePaise: 420000 },
-];
+// SHOWROOM_ACCESSORIES: loaded from the database (collection "showroom.digitalShowroom.showroomAccessories")
 
 export function DigitalShowroomPage() {
+  const BIKE_CATALOG = useAppStore((state) => state.catalogs?.bikes || []);
+  if (!BIKE_CATALOG.length) {
+    return (
+      <div className="p-8 text-center text-sm text-text-muted">
+        No bikes in the catalogue yet. Add models under Admin before using the showroom kiosk.
+      </div>
+    );
+  }
+  return <DigitalShowroom BIKE_CATALOG={BIKE_CATALOG} />;
+}
+
+function DigitalShowroom({ BIKE_CATALOG }) {
+  const SHOWROOM_ACCESSORIES = useCollectionItems('showroom.digitalShowroom.showroomAccessories');
   const [selectedBike, setSelectedBike] = useState(BIKE_CATALOG[0]);
-  const [selectedColor, setSelectedColor] = useState(BIKE_CATALOG[0].colors[0]);
+  const [selectedColor, setSelectedColor] = useState(BIKE_CATALOG[0].colors?.[0]);
   const [selectedState, setSelectedState] = useState('KARNATAKA');
   const [selectedAccessories, setSelectedAccessories] = useState(['acc-crash']);
-  const [comparisonBikes, setComparisonBikes] = useState([BIKE_CATALOG[0], BIKE_CATALOG[1], BIKE_CATALOG[2]]);
+  const [comparisonBikes, setComparisonBikes] = useState(BIKE_CATALOG.slice(0, 3));
   const [showComparison, setShowComparison] = useState(false);
 
   // Customer Kiosk Mode with PIN Lock

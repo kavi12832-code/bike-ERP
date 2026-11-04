@@ -5,6 +5,7 @@ import { calculateEmi } from '../../../lib/emi';
 import { QUOTATION_STATUSES } from '../../../quotations/config';
 import { toast } from 'sonner';
 
+import { useCollectionItems } from '../../../hooks/useCollection';
 export function QuotationBuilderModal({
   isOpen,
   onClose,
@@ -51,12 +52,7 @@ export function QuotationBuilderModal({
   const [selectedColor, setSelectedColor] = useState(defaultColor.name);
 
   // Accessories Checklist
-  const availableAccessories = [
-    { id: 'acc-1', name: 'Engine Crash Guard', pricePaise: 385000 },
-    { id: 'acc-2', name: 'Touring Seat with Gel Cushion', pricePaise: 450000 },
-    { id: 'acc-3', name: 'All-Weather Bike Body Cover', pricePaise: 185000 },
-    { id: 'acc-4', name: 'Machined Bar-End Mirrors', pricePaise: 520000 },
-  ];
+  const availableAccessories = useCollectionItems('quotations.quotationBuilderModal.availableAccessories');
   const [selectedAccIds, setSelectedAccIds] = useState(
     initialData?.accessories?.map((a) => a.id) || ['acc-1']
   );
