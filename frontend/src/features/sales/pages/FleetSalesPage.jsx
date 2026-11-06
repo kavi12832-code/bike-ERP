@@ -14,6 +14,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { formatMoney } from '../../../lib/format';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { toast } from 'sonner';
 
 const SAMPLE_FLEET_ACCOUNTS = [

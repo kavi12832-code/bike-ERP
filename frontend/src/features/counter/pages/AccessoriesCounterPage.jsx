@@ -17,6 +17,8 @@ import {
   X
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 

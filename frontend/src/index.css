@@ -1,4 +1,5 @@
 @import './styles/tokens.css';
+@import './styles/glass-theme.css';
 @import './styles/print.css';
 
 @tailwind base;
@@ -9,19 +10,21 @@
   * {
     border-color: var(--border-color);
   }
-  
-  html, body, #root {
+
+  html,
+  body,
+  #root {
     height: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
   }
-  
+
   html {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
   }
-  
+
   body {
     background-color: var(--bg-main);
     color: var(--text-main);
@@ -29,12 +32,19 @@
   }
 
   /* JetBrains Mono ONLY for chassis, engine, registration, IDs */
-  .font-mono, [data-code="true"], .chassis-no, .engine-no, .reg-no, .doc-id {
+  .font-mono,
+  [data-code="true"],
+  .chassis-no,
+  .engine-no,
+  .reg-no,
+  .doc-id {
     font-family: 'JetBrains Mono', monospace !important;
   }
 
   /* Currency & numeric alignment */
-  .tabular-nums, .money, .currency {
+  .tabular-nums,
+  .money,
+  .currency {
     font-variant-numeric: tabular-nums;
   }
 }
@@ -44,13 +54,16 @@
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
   border-radius: 9999px;
 }
+
 [data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: #334155;
 }

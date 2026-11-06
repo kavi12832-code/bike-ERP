@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../../store';
 import { FileText, Plus, FileSpreadsheet, FileDown, Home } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, cardEntranceVariants } from '../../../lib/motion';
 
 // Config, Selectors & Engine
 import { QUOTATION_STATUSES } from '../../../quotations/config';
@@ -372,41 +374,46 @@ export function QuotationsPage() {
     .map((u) => ({ id: u.id, name: u.name }));
 
   return (
-    <div className="space-y-5 pb-12">
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="space-y-5 pb-12"
+    >
       {/* 1. Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-        <Home className="w-3.5 h-3.5 text-slate-400" />
+      <motion.div variants={cardEntranceVariants} className="flex items-center gap-1.5 text-xs text-text-glass-muted font-medium">
+        <Home className="w-3.5 h-3.5 text-text-glass-muted" />
         <span>Operations</span>
-        <span className="text-slate-300">/</span>
-        <span className="text-blue-600 font-semibold">Quotations</span>
-      </div>
+        <span className="text-text-glass-muted">/</span>
+        <span className="text-text-glass-main font-semibold">Quotations</span>
+      </motion.div>
 
       {/* 2. Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+      <motion.div variants={cardEntranceVariants} className="flex flex-wrap items-center justify-between gap-4 glass-card !p-4 !rounded-[24px]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-soft shrink-0">
+          <div className="w-10 h-10 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-blue-700 shadow-xs shrink-0">
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Quotations</h1>
-            <p className="text-xs text-slate-500">Create, manage and track customer quotations.</p>
+            <h1 className="text-xl font-black text-text-glass-main tracking-tight">Quotations</h1>
+            <p className="text-xs text-text-glass-muted">Create, manage and track customer quotations.</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setReportsModalOpen(true)}
-            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
+            className="px-4 py-2 rounded-full border border-white/30 bg-white/20 text-text-glass-main hover:bg-white/30 font-semibold text-xs inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-98"
           >
-            <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+            <FileSpreadsheet className="w-4 h-4 text-text-glass-muted" />
             <span>Reports</span>
           </button>
 
           <button
             onClick={() => setReportsModalOpen(true)}
-            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
+            className="px-4 py-2 rounded-full border border-white/30 bg-white/20 text-text-glass-main hover:bg-white/30 font-semibold text-xs inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-98"
           >
-            <FileDown className="w-4 h-4 text-slate-500" />
+            <FileDown className="w-4 h-4 text-text-glass-muted" />
             <span>Export</span>
           </button>
 
@@ -415,20 +422,22 @@ export function QuotationsPage() {
               setEditingQuotation(null);
               setBuilderOpen(true);
             }}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md transition-colors"
+            className="px-4 py-2 rounded-full bg-[#0b1220] hover:bg-[#162033] text-white font-semibold text-xs inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-98 hover:-translate-y-0.5"
           >
             <Plus className="w-4 h-4" />
             <span>New Quotation</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. Four KPI Cards */}
-      <QuotationsKpis
-        kpis={kpis}
-        activeStatus={filters.status}
-        onSelectStatus={handleKpiStatusSelect}
-      />
+      <motion.div variants={cardEntranceVariants}>
+        <QuotationsKpis
+          kpis={kpis}
+          activeStatus={filters.status}
+          onSelectStatus={handleKpiStatusSelect}
+        />
+      </motion.div>
 
       {/* 4. Filter Bar */}
       <div ref={tableRef}>
@@ -567,6 +576,6 @@ export function QuotationsPage() {
         allQuotations={rawQuotations}
         canViewPhone={canViewPhone}
       />
-    </div>
+    </motion.div>
   );
 }

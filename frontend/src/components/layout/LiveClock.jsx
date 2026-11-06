@@ -34,16 +34,16 @@ export const LiveClock = memo(function LiveClock({ className = '' }) {
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-xs text-text-main font-medium tabular-nums shrink-0 whitespace-nowrap shadow-xs ${className}`}
+      className={`flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 dark:bg-white/10 border border-white/35 dark:border-white/20 text-xs text-slate-800 dark:text-white font-medium tabular-nums shrink-0 whitespace-nowrap shadow-xs ${className}`}
       title="Indian Standard Time (IST)"
     >
-      <Clock className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-      <span aria-hidden="true">
+      <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400 shrink-0" aria-hidden="true" />
+      <span aria-hidden="true" className="font-semibold">
         {hours}
         <span className={isEvenSecond ? 'opacity-100' : 'opacity-25'}>:</span>
         {minutes}
       </span>
-      <span className="text-[10px] text-text-muted uppercase ml-0.5" aria-hidden="true">
+      <span className="text-[10px] text-slate-500 dark:text-slate-300 font-semibold uppercase ml-0.5" aria-hidden="true">
         {ampm} IST
       </span>
       {/* Screen reader only announcement that updates only once per minute */}

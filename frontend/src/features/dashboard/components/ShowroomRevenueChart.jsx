@@ -24,36 +24,36 @@ export function ShowroomRevenueChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-navy-950 text-white rounded-lg p-3 text-xs shadow-dialog border border-white/10 z-50 min-w-[210px]">
-          <div className="font-bold text-blue-200 border-b border-white/20 pb-1 mb-2">
+        <div className="glass-card !p-3 !rounded-2xl border border-white/40 shadow-2xl text-xs z-50 min-w-[210px] text-text-glass-main">
+          <div className="font-bold text-blue-900 border-b border-white/30 pb-1 mb-2">
             {data.label} ({data.date})
           </div>
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="text-slate-300">Net Revenue (Excl. GST):</span>
-              <span className="font-bold text-emerald-400 tabular-nums">
+              <span className="text-text-glass-muted">Net Revenue (Excl. GST):</span>
+              <span className="font-bold text-emerald-700 tabular-nums">
                 ₹ {data.revenueRupees.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-white/10">
+            <div className="flex justify-between items-center text-[11px] text-text-glass-muted pt-1 border-t border-white/20">
               <span>Vehicle Sales:</span>
-              <span className="tabular-nums font-medium text-slate-200">
+              <span className="tabular-nums font-medium text-text-glass-main">
                 ₹ {data.vehicleRupees.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="flex justify-between items-center text-[11px] text-slate-400">
+            <div className="flex justify-between items-center text-[11px] text-text-glass-muted">
               <span>Service Labor & Repairs:</span>
-              <span className="tabular-nums font-medium text-slate-200">
+              <span className="tabular-nums font-medium text-text-glass-main">
                 ₹ {data.serviceRupees.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="flex justify-between items-center text-[11px] text-slate-400">
+            <div className="flex justify-between items-center text-[11px] text-text-glass-muted">
               <span>Counter Parts:</span>
-              <span className="tabular-nums font-medium text-slate-200">
+              <span className="tabular-nums font-medium text-text-glass-main">
                 ₹ {data.partsRupees.toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="flex justify-between items-center text-[10px] text-blue-300 pt-1">
+            <div className="flex justify-between items-center text-[10px] text-blue-800 pt-1">
               <span>Invoices Posted:</span>
               <span className="tabular-nums font-bold">{data.invoicesCount}</span>
             </div>
@@ -65,51 +65,48 @@ export function ShowroomRevenueChart({
   };
 
   return (
-    <div className="bg-surface rounded-2xl border border-border p-5 shadow-xs flex flex-col justify-between">
+    <div className="glass-card !p-5 flex flex-col justify-between h-full shadow-card">
       {/* Header with Title, Period Tabs & Table Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+          <h2 className="text-base font-bold text-text-glass-main flex items-center gap-2">
             <span>Showroom Revenue Trajectory</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-primary">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/15 dark:bg-cyan-500/25 border border-blue-400/30 dark:border-cyan-400/40 text-blue-900 dark:text-cyan-300">
               Excl. GST
             </span>
           </h2>
-          <p className="text-xs text-text-muted mt-0.5">
-            Total Net Invoiced: <strong className="text-text-main">{formattedTotalRevenue}</strong> ({compactTotalRevenue})
+          <p className="text-xs text-text-glass-muted mt-0.5 font-medium">
+            Total Net Invoiced: <strong className="text-text-glass-main">{formattedTotalRevenue}</strong> ({compactTotalRevenue})
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Tabs: 7 Days, 30 Days, This Month */}
-          <div className="flex items-center p-0.5 rounded-lg bg-surface-subtle border border-border text-xs font-medium">
+          <div className="flex items-center p-1 rounded-full bg-white/20 dark:bg-white/10 border border-white/30 dark:border-white/20 text-xs font-medium">
             <button
               onClick={() => onTabChange('7_days')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                filterTab === '7_days'
-                  ? 'bg-primary text-white font-semibold shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
+              className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer ${filterTab === '7_days'
+                  ? 'bg-[#0b1220] dark:bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-text-glass-muted hover:text-text-glass-main'
+                }`}
             >
               7 Days
             </button>
             <button
               onClick={() => onTabChange('30_days')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                filterTab === '30_days'
-                  ? 'bg-primary text-white font-semibold shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
+              className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer ${filterTab === '30_days'
+                  ? 'bg-[#0b1220] dark:bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-text-glass-muted hover:text-text-glass-main'
+                }`}
             >
               30 Days
             </button>
             <button
               onClick={() => onTabChange('this_month')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                filterTab === 'this_month'
-                  ? 'bg-primary text-white font-semibold shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
+              className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer ${filterTab === 'this_month'
+                  ? 'bg-[#0b1220] dark:bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-text-glass-muted hover:text-text-glass-main'
+                }`}
             >
               This Month
             </button>
@@ -118,11 +115,11 @@ export function ShowroomRevenueChart({
           {/* Toggle Table */}
           <button
             onClick={() => setShowTable(!showTable)}
-            className="p-1.5 rounded-lg border border-border bg-surface-subtle text-text-muted hover:text-text-main hover:bg-surface-muted transition-colors"
+            className="p-2 rounded-full border border-white/30 bg-white/20 text-text-glass-muted hover:text-text-glass-main hover:bg-white/30 transition-colors cursor-pointer"
             title={showTable ? 'Switch to Area Chart' : 'Switch to Table View'}
             aria-label={showTable ? 'Switch to Area Chart' : 'Switch to Table View'}
           >
-            {showTable ? <ChartIcon className="w-4 h-4 text-primary" /> : <Table className="w-4 h-4" />}
+            {showTable ? <ChartIcon className="w-4 h-4 text-blue-600" /> : <Table className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -134,31 +131,31 @@ export function ShowroomRevenueChart({
             <AreaChart data={points} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#2bb8e0" stopOpacity={0.45} />
+                  <stop offset="95%" stopColor="#2bb8e0" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.25)" opacity={0.6} />
               <XAxis
                 dataKey="label"
-                stroke="var(--text-muted)"
+                stroke="#94a3b8"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'rgba(255, 255, 255, 0.3)' }}
               />
               <YAxis
                 tickFormatter={(val) => formatIndianCompact(val)}
-                stroke="var(--text-muted)"
+                stroke="#94a3b8"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--border)' }}
+                axisLine={{ stroke: 'rgba(255, 255, 255, 0.3)' }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="revenueRupees"
                 name="Net Invoiced Revenue"
-                stroke="#2563eb"
+                stroke="#2bb8e0"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#revenueGradient)"

@@ -47,7 +47,7 @@ export function PromoCarousel() {
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative rounded-2xl overflow-hidden p-6 text-white shadow-soft flex flex-col justify-between min-h-[160px] transition-all bg-gradient-to-r from-navy-950 via-slate-900 to-blue-950 border border-white/10"
+      className="relative rounded-[24px] overflow-hidden p-5 text-white shadow-card flex flex-col justify-between h-full transition-all bg-gradient-to-r from-navy-950 via-slate-900 to-blue-950 border border-white/20"
       role="region"
       aria-roledescription="carousel"
       aria-label="Festive promotional showcase"

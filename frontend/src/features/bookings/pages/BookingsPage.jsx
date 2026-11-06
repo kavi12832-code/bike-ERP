@@ -35,8 +35,8 @@ import { BookingStatusDistribution } from '../components/BookingStatusDistributi
 import { BookingActivityTable } from '../components/BookingActivityTable';
 import { BookingQuickActions } from '../components/BookingQuickActions';
 
-// Modals & Drawers
-import { BookingDetailsDrawer } from '../components/BookingDetailsDrawer';
+// Modals & Panels
+import { BookingDetailsPanel } from '../components/BookingDetailsPanel';
 import { CheckAvailabilityDialog } from '../components/CheckAvailabilityDialog';
 import { CreateBookingModal } from '../components/CreateBookingModal';
 import { AllocateChassisDialog } from '../components/AllocateChassisDialog';
@@ -46,6 +46,8 @@ import { CancelBookingModal } from '../components/CancelBookingModal';
 import { BookingsReportModal } from '../components/BookingsReportModal';
 
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, cardEntranceVariants } from '../../../lib/motion';
 
 export function BookingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -242,10 +244,19 @@ export function BookingsPage() {
     toast.success('Simulated clock reset to current time');
   };
 
-  // Booking actions
+  // Booking actions - Toggle view under the table
   const handleViewDetails = (booking) => {
-    setSelectedBooking(booking);
-    setDetailsDrawerOpen(true);
+    if (selectedBooking?.id === booking.id) {
+      setSelectedBooking(null);
+    } else {
+      setSelectedBooking(booking);
+      setTimeout(() => {
+        const el = document.getElementById('booking-detail-panel');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 60);
+    }
   };
 
   const handleOpenRecordToken = (booking) => {
@@ -296,25 +307,30 @@ export function BookingsPage() {
   };
 
   return (
-    <div className="space-y-5 pb-12 animate-in fade-in duration-200">
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="space-y-5 pb-12"
+    >
       {/* Breadcrumb & Header */}
-      <div>
-        <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium">
-          <span className="hover:text-slate-700 cursor-pointer">Operations</span>
+      <motion.div variants={cardEntranceVariants}>
+        <div className="text-xs text-text-glass-muted mb-1 flex items-center gap-1.5 font-medium">
+          <span className="hover:text-black cursor-pointer">Operations</span>
           <span>&gt;</span>
-          <span className="text-slate-800 font-semibold">Bookings</span>
+          <span className="text-text-glass-main font-semibold">Bookings</span>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-white/40 border border-white/50 text-blue-700 flex items-center justify-center shadow-xs">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-text-glass-main tracking-tight">
                 Vehicle Reservations & Bookings
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500">
+              <p className="text-xs sm:text-sm text-text-glass-muted">
                 Token receipts, single-unit chassis allocation gates and delivery reservations.
               </p>
             </div>
@@ -327,7 +343,7 @@ export function BookingsPage() {
                 setCreatePrefill(null);
                 setCreateModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0b1220] hover:bg-[#162033] text-white rounded-full text-xs font-semibold shadow-xs transition-all cursor-pointer hover:-translate-y-0.5 active:scale-98"
             >
               <Plus className="w-4 h-4" />
               <span>Create Booking</span>
@@ -336,30 +352,32 @@ export function BookingsPage() {
             <button
               type="button"
               onClick={() => setReportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-98"
             >
-              <Download className="w-4 h-4 text-slate-500" />
+              <Download className="w-4 h-4 text-text-glass-muted" />
               <span>Export</span>
             </button>
 
             <button
               type="button"
               onClick={() => toast.info('Delivery Calendar view available under Tasks & Calendar')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-98"
             >
-              <CalendarDays className="w-4 h-4 text-slate-500" />
+              <CalendarDays className="w-4 h-4 text-text-glass-muted" />
               <span>View Calendar</span>
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* KPI Cards (No Graph Design: Plain, Reconciled) */}
-      <BookingsKpis
-        kpis={kpis}
-        activeTab={activeTab}
-        onSelectTab={handleTabChange}
-      />
+      <motion.div variants={cardEntranceVariants}>
+        <BookingsKpis
+          kpis={kpis}
+          activeTab={activeTab}
+          onSelectTab={handleTabChange}
+        />
+      </motion.div>
 
       {/* Filter Bar with Dev Clock */}
       <BookingsFilterBar
@@ -391,6 +409,7 @@ export function BookingsPage() {
       <BookingsTable
         bookings={paginatedList}
         selectedIds={selectedIds}
+        activeBookingId={selectedBooking?.id}
         onSelectRow={handleSelectRow}
         onSelectAll={handleSelectAll}
         onViewDetails={handleViewDetails}
@@ -416,6 +435,23 @@ export function BookingsPage() {
           setCurrentPage(1);
         }}
       />
+
+      {/* Selected Booking Details (Rendered Directly Under the Table) */}
+      {selectedBooking && (
+        <BookingDetailsPanel
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onRecordToken={handleOpenRecordToken}
+          onAllocateChassis={handleOpenAllocate}
+          onRescheduleDelivery={handleOpenReschedule}
+          onConfirmBooking={handleConfirmBooking}
+          onDeliverBooking={handleDeliverBooking}
+          onCancelBooking={handleOpenCancel}
+          canViewFullPhone={canViewFullPhone}
+          canAllocateChassis={canAllocateChassis}
+          canCancel={canCancel}
+        />
+      )}
 
       {/* Bottom 3-Card Row (Replaces Line & Donut Graphs strictly with structured information) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -444,22 +480,7 @@ export function BookingsPage() {
         </div>
       </div>
 
-      {/* Modals & Drawers */}
-      <BookingDetailsDrawer
-        booking={selectedBooking}
-        isOpen={detailsDrawerOpen}
-        onClose={() => setDetailsDrawerOpen(false)}
-        onRecordToken={handleOpenRecordToken}
-        onAllocateChassis={handleOpenAllocate}
-        onRescheduleDelivery={handleOpenReschedule}
-        onConfirmBooking={handleConfirmBooking}
-        onDeliverBooking={handleDeliverBooking}
-        onCancelBooking={handleOpenCancel}
-        canViewFullPhone={canViewFullPhone}
-        canAllocateChassis={canAllocateChassis}
-        canCancel={canCancel}
-      />
-
+      {/* Dialogs & Modals */}
       <CheckAvailabilityDialog
         isOpen={availabilityDialogOpen}
         onClose={() => setAvailabilityDialogOpen(false)}
@@ -544,6 +565,6 @@ export function BookingsPage() {
         bookings={filteredList}
         filteredCount={filteredList.length}
       />
-    </div>
+    </motion.div>
   );
 }

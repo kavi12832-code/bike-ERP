@@ -13,6 +13,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../../../store';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { formatDate } from '../../../lib/format';
 import { toast } from 'sonner';
 

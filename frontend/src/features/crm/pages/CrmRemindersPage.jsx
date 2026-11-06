@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../../store';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
+import { Tabs } from '../../../components/ui/Tabs';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatDate, formatPhone } from '../../../lib/format';
@@ -87,26 +88,18 @@ export function CrmRemindersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border space-x-2">
-        {[
+      {/* Tabs */}
+      <Tabs
+        tabs={[
           { id: 'SERVICE_REMINDERS', label: 'Service Due Reminders (KM / Date)' },
           { id: 'COMPLAINTS', label: 'Complaint Tickets & SLAs' },
           { id: 'INSURANCE_EXPIRY', label: 'Insurance & PUC Expiries' },
           { id: 'TASKS', label: 'Daily Sales Follow-up Tasks' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-semibold text-xs border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary text-primary bg-primary/5 rounded-t'
-                : 'border-transparent text-text-muted hover:text-text-main'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        layoutId="crmActiveTab"
+      />
 
       {activeTab === 'SERVICE_REMINDERS' && (
         <Card className="overflow-hidden">

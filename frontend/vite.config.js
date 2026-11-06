@@ -11,6 +11,36 @@ export default defineConfig({
     // Exactly one React instance, even if a dependency resolves its own copy.
     dedupe: ['react', 'react-dom', 'react-router-dom'],
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('xlsx')) {
+              return 'vendor-export';
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('@faker-js')) {
+              return 'vendor-faker';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('zustand')) {
+              return 'vendor-core';
+            }
+            return 'vendor-misc';
+          }
+        },
+      },
+    },
+  },
   // Pre-bundle every runtime dependency at startup. Otherwise Vite discovers some of them
   // mid-session (e.g. after login), re-optimizes, and an open tab can end up with two React
   // copies -> "Cannot read properties of null (reading 'useContext')".

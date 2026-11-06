@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store';
 import { NAVIGATION_GROUPS } from '../../config/navigation';
 import { hasPermission } from '../../lib/rbac';
@@ -9,15 +10,15 @@ import { getActionableQuotationsCount } from '../../quotations/selectors';
 import { getActionableBookingsCount } from '../../bookings/selectors';
 import { BrandLogo } from '../domain/BrandLogo';
 import * as LucideIcons from 'lucide-react';
+import { springTransition, sidebarEntranceVariants, sidebarItemVariants } from '../../lib/motion';
 
 export function Sidebar() {
   const { t } = useTranslation();
+  const location = useLocation();
   const state = useAppStore();
   const currentUser = state.currentUser;
-  const dealership = state.dealership;
   const sidebarCollapsed = state.sidebarCollapsed;
   const toggleSidebar = state.toggleSidebar;
-  const setCommandPaletteOpen = state.setCommandPaletteOpen;
 
   // Live count badges computed from store
   const approvals = state.approvals || [];
@@ -62,7 +63,7 @@ export function Sidebar() {
       const next = { ...prev, [groupId]: !prev[groupId] };
       try {
         localStorage.setItem('bikeerp_collapsed_nav_groups', JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -86,7 +87,7 @@ export function Sidebar() {
       try {
         const storageKey = `bikeerp_pinned_nav_items_${currentUser?.id || 'default'}`;
         localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -97,42 +98,66 @@ export function Sidebar() {
     (item) => pinnedIds.includes(item.id) && (!item.permission || hasPermission(currentUser, item.permission))
   );
 
-  // Helper for badge display - Approvals badge is orange with pending count, hidden if 0
+  // Deterministically find the single best matching navigation item for current path
+  const activeNavItemId = useMemo(() => {
+    const currentPath = location.pathname;
+    if (currentPath === '/' || currentPath === '/dashboard') {
+      return allNavItems.find((item) => item.path === '/' || item.path === '/dashboard')?.id || 'dashboard';
+    }
+
+    // 1. Check exact match
+    const exactMatch = allNavItems.find((item) => item.path === currentPath);
+    if (exactMatch) return exactMatch.id;
+
+    // 2. Otherwise find longest prefix match on a segment boundary
+    const prefixMatches = allNavItems
+      .filter((item) => item.path !== '/' && item.path !== '/dashboard')
+      .filter((item) => currentPath.startsWith(`${item.path}/`))
+      .sort((a, b) => b.path.length - a.path.length);
+
+    return prefixMatches[0]?.id || null;
+  }, [location.pathname, allNavItems]);
+
+  // Helper for badge display
   const getItemBadge = (itemId) => {
     if (itemId === 'approvals' && pendingApprovalsCount > 0) {
-      return { text: pendingApprovalsCount, color: 'bg-amber-500 text-slate-900 font-bold' };
+      return { text: pendingApprovalsCount, color: 'bg-amber-400 text-slate-900 font-bold' };
     }
     if (itemId === 'complaints' && openComplaintsCount > 0) {
-      return { text: openComplaintsCount, color: 'bg-red-500 text-white font-bold' };
+      return { text: openComplaintsCount, color: 'bg-rose-500 text-white font-bold' };
     }
     if (itemId === 'leads' && overdueFollowupsCount > 0) {
-      return { text: overdueFollowupsCount, color: 'bg-blue-500 text-white font-medium' };
+      return { text: overdueFollowupsCount, color: 'bg-cyan-500 text-white font-medium' };
     }
     if (itemId === 'quotations' && actionableQuotationsCount > 0) {
-      return { text: actionableQuotationsCount, color: 'bg-blue-600 text-white font-semibold' };
+      return { text: actionableQuotationsCount, color: 'bg-blue-500 text-white font-semibold' };
     }
     if (itemId === 'bookings' && actionableBookingsCount > 0) {
-      return { text: actionableBookingsCount, color: 'bg-blue-600 text-white font-semibold' };
+      return { text: actionableBookingsCount, color: 'bg-blue-500 text-white font-semibold' };
     }
     return null;
   };
 
   return (
-    <aside
-      className={`bg-sidebar text-white flex flex-col shrink-0 transition-all duration-200 z-40 ${
-        sidebarCollapsed ? 'w-16' : 'w-64'
-      } h-full`}
+    <motion.aside
+      variants={sidebarEntranceVariants}
+      initial="initial"
+      animate="animate"
+      className={`glass-sidebar text-white flex flex-col shrink-0 z-40 transition-all duration-200 select-none ${sidebarCollapsed ? 'w-16' : 'w-[240px]'
+        } h-full relative overflow-hidden`}
     >
-      {/* Brand Header */}
-      <div className="h-14 flex items-center justify-between px-3 sm:px-4 border-b border-white/10 shrink-0">
+      {/* Brand Header Chip */}
+      <div className="h-16 flex items-center justify-between px-3.5 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <BrandLogo className="w-8 h-8 rounded-lg shadow-soft shrink-0" />
+          <div className="p-1 rounded-xl bg-white/10 border border-white/20 shadow-soft shrink-0 backdrop-blur-md">
+            <BrandLogo className="w-7 h-7 rounded-lg" />
+          </div>
           {!sidebarCollapsed && (
             <div className="flex flex-col truncate">
-              <span className="font-bold text-xs tracking-tight text-white uppercase truncate">
+              <span className="font-extrabold text-xs tracking-wider text-white uppercase truncate">
                 AKASH BAJAJ
               </span>
-              <span className="text-[10px] text-blue-200/70 font-medium tracking-tight truncate">
+              <span className="text-[10px] text-cyan-200/80 font-medium tracking-tight truncate">
                 ERP & Service Hub
               </span>
             </div>
@@ -142,7 +167,7 @@ export function Sidebar() {
         {/* Toggle Collapse Desktop / Close Drawer Mobile */}
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -156,20 +181,20 @@ export function Sidebar() {
 
       {/* Menu Search Box (when expanded) */}
       {!sidebarCollapsed && (
-        <div className="px-3 pt-3 pb-1 border-b border-white/5">
+        <div className="px-3 pt-3 pb-1 border-b border-white/5 shrink-0">
           <div className="relative">
-            <LucideIcons.Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-blue-200/50" />
+            <LucideIcons.Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-white/40" />
             <input
               type="text"
               placeholder="Filter menu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full bg-white/10 border border-white/15 rounded-full pl-8 pr-7 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:bg-white/15 transition-all"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2 text-blue-200/50 hover:text-white text-xs"
+                className="absolute right-2.5 top-2 text-white/40 hover:text-white text-xs"
                 title="Clear filter"
               >
                 ✕
@@ -180,24 +205,25 @@ export function Sidebar() {
       )}
 
       {/* Nav Scroll Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
-        {/* Pinned Section (if not searching and items are pinned) */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-2.5 py-3 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+        {/* Pinned Quick Access */}
         {!searchQuery && pinnedItems.length > 0 && (
           <div className="space-y-1 pb-3 border-b border-white/10">
             {!sidebarCollapsed && (
-              <div className="flex items-center justify-between px-2 py-0.5 text-[10px] font-bold text-amber-300/80 uppercase tracking-wider">
+              <div className="flex items-center justify-between px-2.5 py-0.5 text-[10px] font-bold text-amber-300/90 uppercase tracking-widest">
                 <span className="flex items-center gap-1.5">
-                  <LucideIcons.Pin className="w-3 h-3 rotate-45" />
+                  <LucideIcons.Pin className="w-3 h-3 rotate-45 text-amber-300" />
                   Quick Access
                 </span>
-                <span className="text-[9px] text-white/40">{pinnedItems.length}</span>
+                <span className="text-[9px] text-white/40 font-mono">{pinnedItems.length}</span>
               </div>
             )}
 
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {pinnedItems.map((item) => {
                 const IconComponent = LucideIcons[item.icon] || LucideIcons.Circle;
                 const badge = getItemBadge(item.id);
+                const isActive = activeNavItemId === item.id;
 
                 return (
                   <NavLink
@@ -205,15 +231,23 @@ export function Sidebar() {
                     to={item.path}
                     end={item.path === '/' || item.path === '/dashboard'}
                     title={sidebarCollapsed ? t(item.labelKey, item.label) : undefined}
-                    className={({ isActive }) =>
-                      `group flex items-center justify-between px-2.5 py-1.5 rounded-button text-xs font-medium transition-all duration-150 select-none ${
-                        isActive
-                          ? 'bg-sidebar-active text-white font-semibold shadow-soft'
-                          : 'text-slate-200 hover:bg-sidebar-hover hover:text-white'
-                      }`
-                    }
+                    className="relative group flex items-center justify-between px-3 py-2 rounded-full text-xs font-medium transition-colors select-none"
                   >
-                    <div className="flex items-center gap-2.5 truncate">
+                    {/* Sliding Bright Blue Active Pill */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="pinnedSidebarActivePill"
+                        className="absolute inset-0 rounded-full bg-gradient-to-r from-[#1496e8] to-[#0a74c9] border border-white/40 shadow-[0_0_20px_rgba(20,150,232,0.45)] -z-10"
+                        transition={springTransition}
+                      />
+                    )}
+
+                    <div
+                      className={`flex items-center gap-2.5 truncate ${isActive
+                          ? 'text-white font-semibold'
+                          : 'text-white/80 group-hover:text-white'
+                        }`}
+                    >
                       <IconComponent className="w-4 h-4 shrink-0 text-current" />
                       {!sidebarCollapsed && (
                         <span className="truncate">{t(item.labelKey, item.label)}</span>
@@ -223,9 +257,14 @@ export function Sidebar() {
                     {!sidebarCollapsed && (
                       <div className="flex items-center gap-1">
                         {badge && (
-                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${badge.color}`}>
+                          <motion.span
+                            initial={{ scale: 0.6 }}
+                            animate={{ scale: 1 }}
+                            transition={springTransition}
+                            className={`px-1.5 py-0.5 rounded-full text-[10px] ${badge.color}`}
+                          >
                             {badge.text}
-                          </span>
+                          </motion.span>
                         )}
                         <button
                           onClick={(e) => togglePin(e, item.id)}
@@ -243,15 +282,13 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Regular Nav Groups (OPERATIONS, WORKSHOP, ADMINISTRATION, etc.) */}
+        {/* Regular Nav Groups (DASHBOARD, OPERATIONS, WORKSHOP, BUSINESS, SYSTEM) */}
         {NAVIGATION_GROUPS.map((group) => {
-          // Strictly filter items by permission
           let visibleItems = group.items.filter((item) => {
             if (!item.permission) return true;
             return hasPermission(currentUser, item.permission);
           });
 
-          // Filter by search query if present
           if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             visibleItems = visibleItems.filter((item) => {
@@ -268,18 +305,16 @@ export function Sidebar() {
               {!sidebarCollapsed && (
                 <button
                   onClick={() => toggleGroup(group.id)}
-                  className="w-full flex items-center justify-between px-2 py-1 text-[11px] font-bold text-blue-200/70 uppercase tracking-wider hover:text-blue-100 transition-colors"
+                  className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] font-bold text-white/50 uppercase tracking-widest hover:text-white/80 transition-colors"
                 >
                   <span>{t(group.titleKey, group.title)}</span>
                   <div className="flex items-center gap-1.5">
-                    {/* Computed count matching only visible items for user's role */}
-                    <span className="text-[10px] text-blue-300/60 tabular-nums font-mono">
+                    <span className="text-[9px] text-white/40 tabular-nums font-mono">
                       {visibleItems.length}
                     </span>
                     <LucideIcons.ChevronDown
-                      className={`w-3 h-3 transition-transform duration-150 ${
-                        isGroupCollapsed ? '-rotate-90' : ''
-                      }`}
+                      className={`w-3 h-3 transition-transform duration-150 ${isGroupCollapsed ? '-rotate-90' : ''
+                        }`}
                     />
                   </div>
                 </button>
@@ -291,6 +326,7 @@ export function Sidebar() {
                     const IconComponent = LucideIcons[item.icon] || LucideIcons.Circle;
                     const badge = getItemBadge(item.id);
                     const isPinned = pinnedIds.includes(item.id);
+                    const isActive = activeNavItemId === item.id;
 
                     return (
                       <NavLink
@@ -298,15 +334,23 @@ export function Sidebar() {
                         to={item.path}
                         end={item.path === '/' || item.path === '/dashboard'}
                         title={t(item.labelKey, item.label)}
-                        className={({ isActive }) =>
-                          `group flex items-center justify-between px-2.5 py-1.5 rounded-button text-xs font-medium transition-all duration-150 select-none ${
-                            isActive
-                              ? 'bg-sidebar-active text-white font-semibold shadow-soft'
-                              : 'text-slate-200 hover:bg-sidebar-hover hover:text-white'
-                          }`
-                        }
+                        className="relative group flex items-center justify-between px-3 py-2 rounded-full text-xs font-medium transition-colors select-none"
                       >
-                        <div className="flex items-center gap-2.5 truncate">
+                        {/* Gliding Active Pill with Spring Animation */}
+                        {isActive && (
+                          <motion.div
+                            layoutId="sidebarActivePill"
+                            className="absolute inset-0 rounded-full bg-gradient-to-r from-[#1496e8] to-[#0a74c9] border border-white/40 shadow-[0_0_20px_rgba(20,150,232,0.45)] -z-10"
+                            transition={springTransition}
+                          />
+                        )}
+
+                        <div
+                          className={`flex items-center gap-2.5 truncate ${isActive
+                              ? 'text-white font-semibold'
+                              : 'text-white/80 group-hover:text-white'
+                            }`}
+                        >
                           <IconComponent className="w-4 h-4 shrink-0 text-current" />
                           {!sidebarCollapsed && (
                             <span className="truncate">{t(item.labelKey, item.label)}</span>
@@ -316,17 +360,19 @@ export function Sidebar() {
                         {!sidebarCollapsed && (
                           <div className="flex items-center gap-1.5">
                             {badge && (
-                              <span
+                              <motion.span
+                                initial={{ scale: 0.6 }}
+                                animate={{ scale: 1 }}
+                                transition={springTransition}
                                 className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${badge.color}`}
                               >
                                 {badge.text}
-                              </span>
+                              </motion.span>
                             )}
                             <button
                               onClick={(e) => togglePin(e, item.id)}
-                              className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 ${
-                                isPinned ? 'text-amber-300' : 'text-blue-300/40 hover:text-white'
-                              }`}
+                              className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 ${isPinned ? 'text-amber-300' : 'text-white/40 hover:text-white'
+                                }`}
                               title={isPinned ? 'Unpin item' : 'Pin to top'}
                             >
                               <LucideIcons.Pin className="w-3 h-3" />
@@ -343,16 +389,37 @@ export function Sidebar() {
         })}
       </div>
 
+      {/* Plan-Usage Progress Block pinned to bottom */}
+      {!sidebarCollapsed && (
+        <div className="px-3 pt-2 pb-1 shrink-0">
+          <div className="p-2.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md shadow-sm">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-white/90 mb-1.5">
+              <span>Cloud Enterprise ERP</span>
+              <span className="text-cyan-300 font-mono">88% Quota</span>
+            </div>
+            {/* Animated Progress Bar */}
+            <div className="w-full h-1.5 bg-white/15 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '88%' }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* User Persona Footer with Initials Avatar & Green Online Dot */}
-      <div className="p-3 border-t border-white/10 shrink-0 bg-navy-950/50">
+      <div className="p-3 border-t border-white/10 shrink-0 bg-white/5">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 text-primary-light flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-full bg-white/15 border border-white/30 text-white flex items-center justify-center font-bold text-xs shadow-xs">
               {currentUser?.avatar || 'RV'}
             </div>
             {/* Green Online Dot */}
             <span
-              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-navy-950"
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#06182c]"
               title="Online"
             />
           </div>
@@ -361,12 +428,14 @@ export function Sidebar() {
               <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
                 <span>{currentUser?.name || 'Rajesh Varma'}</span>
               </div>
-              <div className="text-[10px] text-blue-200/70 truncate">{currentUser?.role || 'Super Admin'}</div>
+              <div className="text-[10px] text-cyan-200/70 truncate">
+                {currentUser?.role || 'Super Admin'}
+              </div>
             </div>
           )}
         </div>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
 

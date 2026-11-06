@@ -51,47 +51,48 @@
   --radius-input: 8px;
 }
 
-[data-theme="dark"] {
-  --bg-main: #0B132B;
-  --bg-surface: #111C44;
-  --bg-surface-subtle: #162252;
-  --bg-surface-muted: #1E293B;
+[data-theme="dark"],
+.dark {
+  --bg-main: #06182c;
+  --bg-surface: rgba(14, 38, 68, 0.70);
+  --bg-surface-subtle: rgba(255, 255, 255, 0.08);
+  --bg-surface-muted: rgba(255, 255, 255, 0.12);
   
-  --bg-sidebar: #07132E;
-  --bg-sidebar-hover: #0E1E45;
-  --bg-sidebar-active: #2563EB;
+  --bg-sidebar: #06182c;
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.10);
+  --bg-sidebar-active: #1496e8;
   
-  --border-color: #1E293B;
-  --border-subtle: #27354A;
+  --border-color: rgba(255, 255, 255, 0.20);
+  --border-subtle: rgba(255, 255, 255, 0.12);
   
-  --primary: #3B82F6;
-  --primary-hover: #2563EB;
-  --primary-active: #1D4ED8;
-  --primary-light: #1E293B;
-  --primary-foreground: #FFFFFF;
+  --primary: #38bdf8;
+  --primary-hover: #0ea5e9;
+  --primary-active: #0284c7;
+  --primary-light: rgba(56, 189, 248, 0.15);
+  --primary-foreground: #0b1220;
   
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
-  --text-subtle: #64748B;
-  --text-inverse: #0F172A;
+  --text-main: #ffffff;
+  --text-muted: #e2e8f0;
+  --text-subtle: #cbd5e1;
+  --text-inverse: #0b1220;
   
-  --status-green: #22C55E;
-  --status-green-bg: #052E16;
-  --status-green-border: #14532D;
+  --status-green: #4ade80;
+  --status-green-bg: rgba(74, 222, 128, 0.20);
+  --status-green-border: rgba(74, 222, 128, 0.45);
   
-  --status-amber: #F59E0B;
-  --status-amber-bg: #451A03;
-  --status-amber-border: #78350F;
+  --status-amber: #fbbf24;
+  --status-amber-bg: rgba(251, 191, 36, 0.20);
+  --status-amber-border: rgba(251, 191, 36, 0.45);
   
-  --status-blue: #3B82F6;
-  --status-blue-bg: #172554;
-  --status-blue-border: #1E3A8A;
+  --status-blue: #38bdf8;
+  --status-blue-bg: rgba(56, 189, 248, 0.20);
+  --status-blue-border: rgba(56, 189, 248, 0.45);
   
-  --status-red: #EF4444;
-  --status-red-bg: #450A0A;
-  --status-red-border: #7F1D1D;
+  --status-red: #f87171;
+  --status-red-bg: rgba(248, 113, 113, 0.20);
+  --status-red-border: rgba(248, 113, 113, 0.45);
   
-  --status-grey: #94A3B8;
-  --status-grey-bg: #1E293B;
-  --status-grey-border: #334155;
+  --status-grey: #cbd5e1;
+  --status-grey-bg: rgba(203, 213, 225, 0.20);
+  --status-grey-border: rgba(203, 213, 225, 0.45);
 }

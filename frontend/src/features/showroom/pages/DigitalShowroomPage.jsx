@@ -17,6 +17,8 @@ import {
   CreditCard
 } from 'lucide-react';
 import { BikeThumb } from '../../../components/domain/BikeThumb';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { BIKE_CATALOG } from '../../../data/catalogs/bikes';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';

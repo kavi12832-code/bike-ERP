@@ -25,26 +25,26 @@ export function NotificationPanel() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-button text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors"
+        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 border border-white/35 text-slate-700 hover:text-slate-900 transition-all shadow-xs"
         title="Operational Alerts & Notifications"
         aria-label={`Notifications, ${unreadCount} unread`}
         aria-expanded={open}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-status-red text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-surface shadow-xs">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white/80 shadow-xs">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface rounded-card border border-border shadow-dialog z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
-          <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/85 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-2xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-4 py-2.5 border-b border-slate-200/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text-main">Operational Notifications</span>
+              <span className="text-xs font-bold text-slate-900">Operational Notifications</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] bg-red-100 text-status-red font-bold px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] bg-rose-100 text-rose-600 font-bold px-2 py-0.5 rounded-full">
                   {unreadCount} unread
                 </span>
               )}
@@ -71,9 +71,8 @@ export function NotificationPanel() {
                     if (markNotificationRead) markNotificationRead(notif.id);
                     setOpen(false);
                   }}
-                  className={`block px-4 py-3 hover:bg-surface-subtle transition-colors text-xs ${
-                    !notif.read ? 'bg-primary/5' : ''
-                  }`}
+                  className={`block px-4 py-3 hover:bg-surface-subtle transition-colors text-xs ${!notif.read ? 'bg-primary/5' : ''
+                    }`}
                 >
                   <div className="flex items-start gap-2.5">
                     {notif.severity === 'HIGH' ? (

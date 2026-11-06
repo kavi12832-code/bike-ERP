@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, ShieldCheck, XCircle } from 'lucide-react';
 import { calculateCancellationRefund } from '../../../bookings/engine';
 import { toast } from 'sonner';
@@ -33,9 +34,12 @@ export function CancelBookingModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <div className="fixed inset-0" onClick={onClose} />
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative z-10">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-rose-50/80">
           <div className="flex items-center gap-2.5">
@@ -145,7 +149,8 @@ export function CancelBookingModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

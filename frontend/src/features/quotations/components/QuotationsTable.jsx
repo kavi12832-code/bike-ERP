@@ -35,11 +35,11 @@ export function QuotationsTable({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div className="glass-card !p-0 overflow-hidden shadow-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider select-none">
+            <tr className="bg-white/10 dark:bg-white/5 border-b border-white/20 text-[11px] font-bold text-text-glass-muted dark:text-slate-300 uppercase tracking-wider select-none">
               <th className="py-3 px-3.5 w-10">
                 <input
                   type="checkbox"
@@ -104,12 +104,12 @@ export function QuotationsTable({
               <th className="py-3 px-3 text-center w-28">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-xs">
+          <tbody className="divide-y divide-white/15 text-xs text-text-glass-main dark:text-white">
             {quotations.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-12 text-center text-slate-400">
-                  <p className="text-sm font-semibold text-slate-600">No quotations found</p>
-                  <p className="text-xs text-slate-400 mt-1">Try adjusting your filters, search term or date range.</p>
+                <td colSpan={11} className="py-12 text-center text-text-glass-muted dark:text-slate-400">
+                  <p className="text-sm font-semibold text-text-glass-main dark:text-white">No quotations found</p>
+                  <p className="text-xs text-text-glass-muted dark:text-slate-300 mt-1">Try adjusting your filters, search term or date range.</p>
                 </td>
               </tr>
             ) : (
@@ -124,8 +124,8 @@ export function QuotationsTable({
                 return (
                   <tr
                     key={q.id}
-                    className={`hover:bg-blue-50/40 transition-colors ${
-                      isSelected ? 'bg-blue-50/60' : ''
+                    className={`hover:bg-white/20 dark:hover:bg-white/10 transition-colors ${
+                      isSelected ? 'bg-white/25 dark:bg-white/15' : ''
                     }`}
                   >
                     {/* Checkbox */}
@@ -135,7 +135,7 @@ export function QuotationsTable({
                         checked={isSelected}
                         onChange={() => onToggleSelect(q.id)}
                         aria-label={`Select quotation ${q.quotationNumber}`}
-                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-blue-600 rounded border-white/40 focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
 
@@ -143,7 +143,7 @@ export function QuotationsTable({
                     <td className="py-3 px-3 font-semibold">
                       <button
                         onClick={() => onViewQuotation(q)}
-                        className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-mono text-[12px]"
+                        className="text-blue-700 dark:text-cyan-400 hover:text-blue-900 dark:hover:text-cyan-300 hover:underline flex items-center gap-1 font-mono text-[12px]"
                       >
                         {q.quotationNumber}
                       </button>
@@ -151,40 +151,40 @@ export function QuotationsTable({
 
                     {/* Customer */}
                     <td className="py-3 px-3">
-                      <div className="font-semibold text-slate-900">{q.customerName}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">
+                      <div className="font-semibold text-text-glass-main dark:text-white">{q.customerName}</div>
+                      <div className="text-[11px] text-text-glass-muted dark:text-slate-300 font-mono">
                         {formatPhone(q.phone, { mask: !canViewPhone })}
                       </div>
                     </td>
 
                     {/* Bike Model & Variant */}
                     <td className="py-3 px-3">
-                      <div className="font-semibold text-slate-800">{q.modelName}</div>
-                      <div className="text-[11px] text-slate-500">{q.variantName || 'Standard Variant'}</div>
+                      <div className="font-semibold text-text-glass-main dark:text-white">{q.modelName}</div>
+                      <div className="text-[11px] text-text-glass-muted dark:text-slate-300">{q.variantName || 'Standard Variant'}</div>
                     </td>
 
                     {/* Colour */}
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/10"
+                          className="w-2.5 h-2.5 rounded-full shrink-0 border border-white/30"
                           style={{ backgroundColor: q.colorHex || '#94a3b8' }}
                         />
-                        <span className="text-slate-700 font-medium truncate max-w-[110px]">{q.colorName || 'Default'}</span>
+                        <span className="text-text-glass-main dark:text-white font-medium truncate max-w-[110px]">{q.colorName || 'Default'}</span>
                       </div>
                     </td>
 
                     {/* Amount */}
-                    <td className="py-3 px-3 text-right font-medium text-slate-700">
+                    <td className="py-3 px-3 text-right font-medium text-text-glass-main dark:text-white tabular-nums">
                       ₹ {totals.amountRupees.toLocaleString('en-IN')}
                     </td>
 
                     {/* Discount */}
-                    <td className="py-3 px-3 text-right font-medium text-emerald-600">
+                    <td className="py-3 px-3 text-right font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums">
                       {totals.discountRupees > 0 ? (
                         <span>₹ {totals.discountRupees.toLocaleString('en-IN')}</span>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-text-glass-muted/60 dark:text-slate-500">—</span>
                       )}
                     </td>
 
@@ -193,10 +193,10 @@ export function QuotationsTable({
                       <div
                         onMouseEnter={() => setHoveredNetId(q.id)}
                         onMouseLeave={() => setHoveredNetId(null)}
-                        className="inline-flex items-center gap-1 justify-end font-bold text-slate-900 cursor-help"
+                        className="inline-flex items-center gap-1 justify-end font-bold text-text-glass-main dark:text-white tabular-nums cursor-help"
                       >
                         <span>₹ {totals.netAmountRupees.toLocaleString('en-IN')}</span>
-                        <Info className="w-3 h-3 text-slate-400 hover:text-slate-600" />
+                        <Info className="w-3 h-3 text-text-glass-muted dark:text-slate-400" />
                       </div>
 
                       {/* Tooltip */}
@@ -260,7 +260,7 @@ export function QuotationsTable({
 
                     {/* Valid Until */}
                     <td className="py-3 px-3">
-                      <div className="font-medium text-slate-800">{expiry.formattedDate}</div>
+                      <div className="font-semibold text-text-glass-main dark:text-white">{expiry.formattedDate}</div>
                       {expiry.badgeText && (
                         <div className="mt-0.5">
                           <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] ${expiry.badgeClass}`}>

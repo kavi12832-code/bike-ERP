@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../../store';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
+import { Tabs } from '../../../components/ui/Tabs';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../../lib/format';
@@ -127,27 +128,20 @@ export function AccountingPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border space-x-2 overflow-x-auto">
-        {[
-          { id: 'JOURNALS', label: 'Journal Vouchers' },
-          { id: 'COA', label: 'Chart of Accounts' },
-          { id: 'DAYBOOK', label: 'Day Book' },
-          { id: 'TRIAL_BALANCE', label: 'Trial Balance' },
-          { id: 'PL', label: 'Profit & Loss Statement' },
-          { id: 'BANK_RECON', label: 'Bank Reconciliation' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-semibold text-xs border-b-2 whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary text-primary bg-primary/5 rounded-t'
-                : 'border-transparent text-text-muted hover:text-text-main'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="overflow-x-auto pb-1">
+        <Tabs
+          tabs={[
+            { id: 'JOURNALS', label: 'Journal Vouchers' },
+            { id: 'COA', label: 'Chart of Accounts' },
+            { id: 'DAYBOOK', label: 'Day Book' },
+            { id: 'TRIAL_BALANCE', label: 'Trial Balance' },
+            { id: 'PL', label: 'Profit & Loss Statement' },
+            { id: 'BANK_RECON', label: 'Bank Reconciliation' },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          layoutId="accountingActiveTab"
+        />
       </div>
 
       {/* Tab 1: Journal Vouchers */}
@@ -184,13 +178,13 @@ export function AccountingPage() {
                             </td>
                           </>
                         )}
-                        <td className="p-3.5">
+                        <td className="p-3.5 text-text-main dark:text-slate-100">
                           <span className="font-mono font-semibold text-primary">{line.accountCode}</span> - {line.accountName}
                         </td>
-                        <td className="p-3.5 text-right font-mono tabular-nums">
+                        <td className="p-3.5 text-right font-mono tabular-nums font-semibold text-text-main dark:text-white">
                           {line.debitPaise > 0 ? formatMoney(line.debitPaise) : '—'}
                         </td>
-                        <td className="p-3.5 text-right font-mono tabular-nums">
+                        <td className="p-3.5 text-right font-mono tabular-nums font-semibold text-text-main dark:text-white">
                           {line.creditPaise > 0 ? formatMoney(line.creditPaise) : '—'}
                         </td>
                         {idx === 0 && (

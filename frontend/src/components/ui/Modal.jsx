@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { modalOverlayVariants, modalPanelVariants } from '../../lib/motion';
 
 export function Modal({ isOpen, onClose, title, children, size = 'md', className = '' }) {
   useEffect(() => {
@@ -11,8 +14,6 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -21,26 +22,50 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
     full: 'max-w-6xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className={clsx(
-          'w-full bg-surface rounded-card border border-border shadow-dialog overflow-hidden flex flex-col max-h-[90vh]',
-          sizeClasses[size],
-          className
-        )}
-      >
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface-subtle">
-          <h3 className="text-base font-semibold text-text-main">{title}</h3>
-          <button
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop Blur Fade In 250ms */}
+          <motion.div
+            variants={modalOverlayVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             onClick={onClose}
-            className="p-1 text-text-muted hover:text-text-main rounded-button hover:bg-surface-muted transition-colors"
+            className="fixed inset-0 glass-modal-overlay"
+          />
+
+          {/* Frosted Glass Modal Panel Scale 0.96 -> 1, 300ms (exit 180ms) */}
+          <motion.div
+            variants={modalPanelVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={clsx(
+              'w-full glass-modal-panel overflow-hidden flex flex-col max-h-[90vh] z-10 relative select-none',
+              sizeClasses[size],
+              className
+            )}
           >
-            <X className="w-5 h-5" />
-          </button>
+            <div className="px-6 py-4.5 border-b border-white/20 flex items-center justify-between bg-white/20">
+              <h3 className="text-base font-bold text-[#0b1b2b]">{title}</h3>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 border border-white/30 text-slate-700 hover:text-slate-900 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 text-slate-900">{children}</div>
+          </motion.div>
         </div>
-        <div className="p-5 overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }
+
+export default Modal;

@@ -8,6 +8,7 @@ import { GlobalSearchInput } from './GlobalSearchInput';
 import { LiveClock } from './LiveClock';
 import { hasPermission } from '../../lib/rbac';
 import { Sun, Moon, Menu } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function Topbar() {
   const { i18n } = useTranslation();
@@ -32,12 +33,12 @@ export function Topbar() {
     currentUser?.role?.toLowerCase().includes('account');
 
   return (
-    <header className="h-14 shrink-0 bg-surface border-b border-border px-3 sm:px-4 flex items-center justify-between sticky top-0 z-30 transition-colors gap-2 sm:gap-4">
+    <header className="glass-topbar h-14 shrink-0 px-3.5 sm:px-4 flex items-center justify-between z-30 transition-all gap-2 sm:gap-4 rounded-[24px]">
       {/* Left: Mobile hamburger & Branch & GSTIN */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <button
           onClick={toggleSidebar}
-          className="p-1.5 rounded-button text-text-muted hover:text-text-main hover:bg-surface-subtle lg:hidden shrink-0"
+          className="p-1.5 rounded-full text-slate-700 hover:text-slate-900 hover:bg-white/30 lg:hidden shrink-0 transition-colors"
           aria-label="Toggle navigation drawer"
         >
           <Menu className="w-5 h-5" />
@@ -45,11 +46,11 @@ export function Topbar() {
 
         <BranchSwitcher />
 
-        {/* GSTIN Badge Chip - Visible only for accounting, billing & admin roles */}
+        {/* GSTIN Badge Chip */}
         {showGstin && (
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-subtle border border-border text-[11px] font-mono text-text-muted shrink-0 shadow-xs">
-            <span className="font-sans font-medium text-text-subtle text-[10px]">GSTIN:</span>
-            <span className="text-text-main font-semibold tracking-tight text-[11px]">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 dark:bg-white/10 border border-white/35 dark:border-white/20 text-[11px] font-mono text-slate-700 dark:text-slate-200 shrink-0 shadow-xs">
+            <span className="font-sans font-medium text-slate-500 dark:text-slate-400 text-[10px]">GSTIN:</span>
+            <span className="text-slate-900 dark:text-white font-semibold tracking-tight text-[11px]">
               {currentBranch?.gstin || '29AABCB1829M1ZK'}
             </span>
           </div>
@@ -61,19 +62,21 @@ export function Topbar() {
         <GlobalSearchInput />
       </div>
 
-      {/* Right Tools: Isolated Live Clock, Language, Theme, Notifications, Role Switcher */}
+      {/* Right Tools: Live Clock, Language, Theme, Notifications, Role Switcher */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {/* Isolated Live IST Clock */}
+        {/* Live Clock Pill */}
         <div className="hidden md:flex">
           <LiveClock />
         </div>
 
-        {/* Language Switcher */}
-        <div className="flex items-center border border-border rounded-button overflow-hidden text-xs bg-surface-subtle shrink-0">
+        {/* Language Switcher Glass Pill */}
+        <div className="flex items-center border border-white/35 dark:border-white/20 rounded-full overflow-hidden text-xs bg-white/20 dark:bg-white/10 p-0.5 shrink-0 shadow-xs">
           <button
             onClick={() => i18n.changeLanguage('en')}
-            className={`px-2 py-1 font-semibold transition-colors ${
-              i18n.language === 'en' ? 'bg-primary text-white' : 'text-text-muted hover:text-text-main'
+            className={`px-2.5 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
+              i18n.language === 'en'
+                ? 'bg-[#0b1220] dark:bg-blue-600 text-white shadow-xs'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
             title="English"
           >
@@ -81,8 +84,10 @@ export function Topbar() {
           </button>
           <button
             onClick={() => i18n.changeLanguage('ta')}
-            className={`px-2 py-1 font-semibold transition-colors ${
-              i18n.language === 'ta' ? 'bg-primary text-white' : 'text-text-muted hover:text-text-main'
+            className={`px-2.5 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
+              i18n.language === 'ta'
+                ? 'bg-[#0b1220] dark:bg-blue-600 text-white shadow-xs'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
             title="Tamil (தமிழ்)"
           >
@@ -90,8 +95,10 @@ export function Topbar() {
           </button>
           <button
             onClick={() => i18n.changeLanguage('hi')}
-            className={`px-2 py-1 font-semibold transition-colors ${
-              i18n.language === 'hi' ? 'bg-primary text-white' : 'text-text-muted hover:text-text-main'
+            className={`px-2.5 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
+              i18n.language === 'hi'
+                ? 'bg-[#0b1220] dark:bg-blue-600 text-white shadow-xs'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
             title="Hindi (हिन्दी)"
           >
@@ -99,10 +106,10 @@ export function Topbar() {
           </button>
         </div>
 
-        {/* Theme Toggle */}
+        {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-button text-text-muted hover:text-text-main hover:bg-surface-subtle transition-colors shrink-0"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 dark:bg-white/10 hover:bg-white/35 border border-white/35 dark:border-white/20 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all shadow-xs shrink-0 cursor-pointer"
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} theme`}
           aria-label="Toggle light or dark theme"
         >

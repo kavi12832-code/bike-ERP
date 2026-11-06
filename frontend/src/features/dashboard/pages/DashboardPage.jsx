@@ -35,6 +35,8 @@ import { TechnicianDashboardView } from '../components/TechnicianDashboardView';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, cardEntranceVariants } from '../../../lib/motion';
 
 export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -167,75 +169,86 @@ export function DashboardPage() {
       {isTechnician ? (
         <TechnicianDashboardView />
       ) : (
-        <>
+        <motion.div
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+          className="space-y-5"
+        >
           {/* 1. Breadcrumb & Date Range Header */}
-          <DashboardHeader dateRange={dateRange} onDateRangeChange={setDateRange} />
+          <motion.div variants={cardEntranceVariants}>
+            <DashboardHeader dateRange={dateRange} onDateRangeChange={setDateRange} />
+          </motion.div>
 
-      {/* 2. Hero Operational Banner */}
-      <HeroBanner onQuickBayAssign={openBayModal} />
+          {/* 2. Hero Operational Banner */}
+          <motion.div variants={cardEntranceVariants}>
+            <HeroBanner onQuickBayAssign={openBayModal} />
+          </motion.div>
 
-      {/* 3. Four Pastel KPI Cards (Always Today's IST figures) */}
-      <DashboardKpiCards
-        grossSales={grossSalesToday}
-        invoicesVsTarget={invoicesVsTarget}
-        bayUtilisation={serviceBayUtilisation}
-        gstOutput={gstOutputToday}
-        hasFinancePermission={hasFinancePermission}
-      />
-
-      {/* 4. Row 2: Sales Performance, Lead Source Donut, Top Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Sales Performance (Visible with Finance permission) */}
-        {hasFinancePermission ? (
-          <div className="lg:col-span-7 flex flex-col">
-            <SalesPerformanceChart
-              performanceData={salesPerformance}
-              selectedPeriod={salesPeriod}
-              onPeriodChange={setSalesPeriod}
+          {/* 3. Four Pastel KPI Cards (Always Today's IST figures) */}
+          <motion.div variants={cardEntranceVariants}>
+            <DashboardKpiCards
+              grossSales={grossSalesToday}
+              invoicesVsTarget={invoicesVsTarget}
+              bayUtilisation={serviceBayUtilisation}
+              gstOutput={gstOutputToday}
+              hasFinancePermission={hasFinancePermission}
             />
-          </div>
-        ) : null}
+          </motion.div>
 
-        {/* Lead Source Donut Chart */}
-        <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col' : 'lg:col-span-7 flex flex-col'}>
-          <LeadSourceDonutChart leadSourceData={leadSourceDistribution} />
-        </div>
+          {/* 4. Row 2: Sales Performance, Lead Source Donut, Top Performers */}
+          <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            {/* Sales Performance (Visible with Finance permission) */}
+            {hasFinancePermission ? (
+              <div className="lg:col-span-7 flex flex-col h-full">
+                <SalesPerformanceChart
+                  performanceData={salesPerformance}
+                  selectedPeriod={salesPeriod}
+                  onPeriodChange={setSalesPeriod}
+                />
+              </div>
+            ) : null}
 
-        {/* Top Performers (Visible with Team permission) */}
-        {hasTeamPermission && (
-          <div className={hasFinancePermission ? 'lg:col-span-12 xl:col-span-12 mt-1' : 'lg:col-span-5'}>
-            <TopPerformersCard performersData={topPerformers} hasTeamPermission={hasTeamPermission} />
-          </div>
-        )}
-      </div>
+            {/* Lead Source Donut Chart */}
+            <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col h-full' : 'lg:col-span-7 flex flex-col h-full'}>
+              <LeadSourceDonutChart leadSourceData={leadSourceDistribution} />
+            </div>
 
-      {/* 5. Row 3: AI Copilot Insights, Upcoming Tasks, Quick Actions, Promo Carousel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <AiCopilotInsights insights={aiInsights} />
-        <UpcomingTasksCard tasks={upcomingTasks} />
-        <QuickActionsCard canPerformQuickActions={hasQuickActionsPermission} />
-        <PromoCarousel />
-      </div>
+            {/* Top Performers (Visible with Team permission) */}
+            {hasTeamPermission && (
+              <div className={hasFinancePermission ? 'lg:col-span-12 xl:col-span-12' : 'lg:col-span-5'}>
+                <TopPerformersCard performersData={topPerformers} hasTeamPermission={hasTeamPermission} />
+              </div>
+            )}
+          </motion.div>
 
-      {/* 6. Row 4: Showroom Revenue Trajectory & Booking Trends */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Showroom Revenue Area Chart (Finance Protected) */}
-        {hasFinancePermission ? (
-          <div className="lg:col-span-7 flex flex-col">
-            <ShowroomRevenueChart
-              revenueData={showroomRevenue}
-              filterTab={revenueTab}
-              onTabChange={setRevenueTab}
-            />
-          </div>
-        ) : null}
+          {/* 5. Row 3: AI Copilot Insights, Upcoming Tasks, Quick Actions, Promo Carousel */}
+          <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+            <div className="flex flex-col h-full"><AiCopilotInsights insights={aiInsights} /></div>
+            <div className="flex flex-col h-full"><UpcomingTasksCard tasks={upcomingTasks} /></div>
+            <div className="flex flex-col h-full"><QuickActionsCard canPerformQuickActions={hasQuickActionsPermission} /></div>
+            <div className="flex flex-col h-full"><PromoCarousel /></div>
+          </motion.div>
 
-        {/* Booking vs Cancellation Trends */}
-        <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col' : 'lg:col-span-12 flex flex-col'}>
-          <BookingTrendsChart bookingTrendsData={bookingTrends} />
-        </div>
-      </div>
-      </>
+          {/* 6. Row 4: Showroom Revenue Trajectory & Booking Trends */}
+          <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            {/* Showroom Revenue Area Chart (Finance Protected) */}
+            {hasFinancePermission ? (
+              <div className="lg:col-span-7 flex flex-col h-full">
+                <ShowroomRevenueChart
+                  revenueData={showroomRevenue}
+                  filterTab={revenueTab}
+                  onTabChange={setRevenueTab}
+                />
+              </div>
+            ) : null}
+
+            {/* Booking vs Cancellation Trends */}
+            <div className={hasFinancePermission ? 'lg:col-span-5 flex flex-col h-full' : 'lg:col-span-12 flex flex-col h-full'}>
+              <BookingTrendsChart bookingTrendsData={bookingTrends} />
+            </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Quick Bay Assignment Modal */}

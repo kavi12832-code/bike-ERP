@@ -33,22 +33,22 @@ export function UpcomingTasksCard({ tasks = [] }) {
   };
 
   return (
-    <div className="bg-surface rounded-2xl border border-border p-5 shadow-xs flex flex-col justify-between">
+    <div className="glass-card !p-5 flex flex-col justify-between h-full shadow-card">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+          <h2 className="text-base font-bold text-text-glass-main flex items-center gap-2">
             <span>Upcoming Tasks</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 dark:bg-white/10 text-text-glass-muted border border-white/25">
               {tasks.length} due
             </span>
           </h2>
-          <p className="text-xs text-text-muted mt-0.5">Assigned to you in current branch scope</p>
+          <p className="text-xs text-text-glass-muted mt-0.5">Assigned to you in current branch scope</p>
         </div>
 
         <button
           onClick={() => navigate('/tasks')}
-          className="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1 group"
+          className="text-xs font-semibold text-blue-700 dark:text-cyan-400 hover:text-blue-900 dark:hover:text-cyan-200 flex items-center gap-1 group cursor-pointer"
         >
           <span>View Calendar</span>
           <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -58,7 +58,7 @@ export function UpcomingTasksCard({ tasks = [] }) {
       {/* Task List (Top 3) */}
       <div className="space-y-2.5 my-2">
         {tasks.length === 0 ? (
-          <div className="p-6 text-center text-xs text-text-muted border border-dashed border-border rounded-xl">
+          <div className="p-6 text-center text-xs text-text-glass-muted border border-dashed border-white/25 rounded-xl">
             No pending tasks due for you today.
           </div>
         ) : (
@@ -66,21 +66,21 @@ export function UpcomingTasksCard({ tasks = [] }) {
             <div
               key={task.id}
               onClick={() => navigate(task.entityLink || '/tasks')}
-              className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-subtle/70 border border-border/50 hover:bg-surface-subtle hover:border-primary/30 transition-all cursor-pointer group"
+              className="flex items-center gap-3 p-2.5 rounded-xl bg-white/20 dark:bg-white/10 border border-white/25 dark:border-white/15 hover:bg-white/35 dark:hover:bg-white/20 transition-all cursor-pointer group"
             >
               {/* Date Badge: e.g. 31 OCT */}
-              <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-surface border border-border shadow-2xs shrink-0 text-center">
-                <span className="text-xs font-black text-text-main leading-tight">
+              <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-white/60 dark:bg-white/15 border border-white/40 dark:border-white/20 shadow-2xs shrink-0 text-center">
+                <span className="text-xs font-black text-text-glass-main leading-tight">
                   {task.dateBadge.day}
                 </span>
-                <span className="text-[9px] font-bold text-primary uppercase tracking-wider">
+                <span className="text-[9px] font-bold text-blue-700 dark:text-cyan-300 uppercase tracking-wider">
                   {task.dateBadge.month}
                 </span>
               </div>
 
               {/* Task Details */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] text-text-muted mb-0.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-text-glass-muted mb-0.5">
                   {getModuleIcon(task.module)}
                   <span className="font-semibold uppercase tracking-wider">{task.module}</span>
                   <span>•</span>
@@ -89,7 +89,7 @@ export function UpcomingTasksCard({ tasks = [] }) {
                     <span>{task.time}</span>
                   </span>
                 </div>
-                <div className="text-xs font-semibold text-text-main group-hover:text-primary transition-colors truncate">
+                <div className="text-xs font-semibold text-text-glass-main group-hover:text-blue-700 dark:group-hover:text-cyan-300 transition-colors truncate">
                   {task.title}
                 </div>
               </div>

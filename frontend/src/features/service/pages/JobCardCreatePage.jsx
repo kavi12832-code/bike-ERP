@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CalendarClock,
   Car,
+  CheckCircle,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -438,24 +439,31 @@ export default function JobCardCreatePage() {
             : 'Record customer details, vehicle information and service requirements to create a new job card.'
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => navigate('/service/jobs')}
+              className="px-3.5 py-2 rounded-full border border-white/40 dark:border-white/20 bg-white/20 hover:bg-white/40 text-text-glass-main dark:text-white font-semibold text-xs transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
             <button
               type="button"
               onClick={() => submit(true)}
               disabled={Boolean(saving)}
-              className="h-9 px-4 rounded-md bg-surface text-text-main border border-border hover:bg-surface-subtle text-xs font-semibold flex items-center gap-2 disabled:opacity-60 shadow-xs transition"
+              className="px-4 py-2 rounded-full border border-white/40 dark:border-white/20 bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 text-text-glass-main dark:text-white font-semibold text-xs inline-flex items-center gap-2 disabled:opacity-50 shadow-xs transition-colors cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              {saving === 'draft' ? 'Saving…' : 'Save Draft'}
+              <span>{saving === 'draft' ? 'Saving…' : 'Save Draft'}</span>
             </button>
             <button
               type="button"
               onClick={() => submit(false)}
               disabled={Boolean(saving)}
-              className="h-9 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-2 disabled:opacity-60 shadow-sm transition"
+              className="px-5 py-2.5 rounded-full bg-[#0b1220] dark:bg-blue-600 hover:bg-[#162033] dark:hover:bg-blue-500 text-white font-semibold text-xs inline-flex items-center gap-2 disabled:opacity-50 shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              {saving === 'create' ? 'Creating…' : bookingMode ? 'Book & Create Job Card' : 'Create Job Card'}
+              <CheckCircle className="w-4 h-4" />
+              <span>{saving === 'create' ? 'Saving…' : bookingMode ? 'Book & Save Job Card' : 'Save Job Card'}</span>
             </button>
           </div>
         }
@@ -960,6 +968,44 @@ export default function JobCardCreatePage() {
           </table>
         </div>
       </Section>
+
+      {/* Common Save & Action Bar (Bottom of Page) */}
+      <div className="glass-card rounded-[24px] p-4 sm:p-5 border border-white/40 dark:border-white/10 shadow-xl flex flex-wrap items-center justify-between gap-4 mt-6">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/service/jobs')}
+            className="px-4 py-2 rounded-full border border-white/40 dark:border-white/20 bg-white/20 hover:bg-white/40 text-text-glass-main dark:text-white font-semibold text-xs transition-colors cursor-pointer"
+          >
+            Cancel & Return
+          </button>
+          <span className="text-xs text-text-glass-muted dark:text-slate-400 hidden sm:inline">
+            Unsaved changes will be lost unless saved as draft.
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => submit(true)}
+            disabled={Boolean(saving)}
+            className="px-4 py-2 rounded-full border border-white/40 dark:border-white/20 bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 text-text-glass-main dark:text-white font-semibold text-xs inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving === 'draft' ? 'Saving Draft…' : 'Save Draft'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => submit(false)}
+            disabled={Boolean(saving)}
+            className="px-6 py-2.5 rounded-full bg-[#0b1220] dark:bg-blue-600 hover:bg-[#162033] dark:hover:bg-blue-500 text-white font-semibold text-xs inline-flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span>{saving === 'create' ? 'Saving…' : bookingMode ? 'Book & Save Job Card' : 'Save & Create Job Card'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -156,9 +156,10 @@ describe('Quotations State Guards', () => {
 describe('Quotations KPI Selectors', () => {
   it('computes KPI counts strictly matching status logic', () => {
     resetSimulatedClock();
+    const now = new Date();
     const dateRange = {
-      startDate: new Date(2026, 9, 1),
-      endDate: new Date(2026, 9, 31, 23, 59, 59),
+      startDate: new Date(now.getTime() - 60 * 86400000),
+      endDate: new Date(now.getTime() + 60 * 86400000),
     };
     const kpis = getQuotationsKpis(SEEDED_QUOTATIONS, 'br-blr-central', dateRange);
 

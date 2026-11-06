@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { staggerContainer, cardEntranceVariants } from '../../../lib/motion';
 import { useAppStore } from '../../../store';
 import { computeLineTax, computeInvoiceTaxTotals } from '../../../lib/tax';
 import { isValidGstin } from '../../../lib/gst';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { Button } from '../../../components/ui/Button';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { Modal } from '../../../components/ui/Modal';
@@ -19,6 +22,10 @@ import {
   ShieldCheck,
   CheckCircle,
   Download,
+  IndianRupee,
+  Layers,
+  Banknote,
+  FileCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -125,58 +132,68 @@ export function BillingPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-xl font-bold text-text-main">Billing, GST Invoices & Settlements</h1>
-          <p className="text-xs text-text-muted mt-0.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0b1b2b]">Billing, GST Invoices &amp; Settlements</h1>
+          <p className="text-xs sm:text-sm text-[#0b1b2b]/65 font-medium mt-0.5">
             Immutable invoice series, CGST/SGST/IGST tax splits, Section 269ST cash warnings and UPI receipts
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button
-            variant="primary"
-            size="sm"
-            icon={PlusCircle}
+          <motion.button
+            whileHover={{ y: -1, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setNewInvoiceModalOpen(true)}
+            className="px-5 py-2.5 rounded-full bg-[#0b1220] hover:bg-[#162033] text-white font-semibold text-xs inline-flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
-            Create Tax Invoice
-          </Button>
+            <PlusCircle className="w-4 h-4 text-white" />
+            <span>Create Tax Invoice</span>
+          </motion.button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Total Invoices Posted</div>
-          <div className="text-2xl font-bold text-text-main mt-1 tabular-nums">{invoices.length} Invoices</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Total Gross Collections</div>
-          <div className="text-2xl font-bold text-primary mt-1 tabular-nums">
-            {formatMoney(invoices.reduce((s, i) => s + i.grandTotalPaise, 0))}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">GST Output Collected</div>
-          <div className="text-2xl font-bold text-status-green mt-1 tabular-nums">
-            {formatMoney(invoices.reduce((s, i) => s + i.totalTaxPaise, 0))}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-text-muted uppercase font-semibold">Credit Notes Issued</div>
-          <div className="text-2xl font-bold text-text-muted mt-1 tabular-nums">0 Notes</div>
-        </Card>
-      </div>
+      <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          icon={Layers}
+          label="Total Invoices Posted"
+          value={invoices.length}
+          subtitle="All finalized series"
+        />
+        <KpiCard
+          icon={IndianRupee}
+          label="Total Collections"
+          value={formatMoney(invoices.reduce((s, i) => s + i.grandTotalPaise, 0))}
+          subtitle="Gross ledger value"
+        />
+        <KpiCard
+          icon={Banknote}
+          label="GST Output Collected"
+          value={formatMoney(invoices.reduce((s, i) => s + i.totalTaxPaise, 0))}
+          subtitle="CGST, SGST & IGST"
+        />
+        <KpiCard
+          icon={FileCheck}
+          label="Credit Notes Issued"
+          value="0 Notes"
+          subtitle="Statutory reversals"
+        />
+      </motion.div>
 
       {/* Invoices Master Table */}
-      <Card className="overflow-hidden">
+      <motion.div variants={cardEntranceVariants} className="glass-card !p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-surface-subtle border-b border-border text-text-muted font-semibold uppercase text-[11px]">
+              <tr className="bg-white/20 border-b border-white/20 text-[#0b1b2b]/70 font-semibold uppercase text-[11px]">
                 <th className="p-3.5">Invoice #</th>
                 <th className="p-3.5">Customer Name</th>
                 <th className="p-3.5">Type</th>
@@ -189,33 +206,33 @@ export function BillingPage() {
                 <th className="p-3.5 text-right">Print Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-white/15">
               {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-surface-subtle/70 transition-colors">
-                  <td className="p-3.5 font-mono font-bold text-primary">{inv.invoiceNumber}</td>
+                <tr key={inv.id} className="hover:bg-white/25 transition-colors">
+                  <td className="p-3.5 font-mono font-bold text-blue-800">{inv.invoiceNumber}</td>
                   <td className="p-3.5">
-                    <div className="font-bold text-text-main">{inv.customerName}</div>
-                    <div className="text-[10px] text-text-muted">{inv.customerPhone}</div>
+                    <div className="font-bold text-[#0b1b2b]">{inv.customerName}</div>
+                    <div className="text-[10px] text-[#0b1b2b]/60">{inv.customerPhone}</div>
                   </td>
                   <td className="p-3.5">
-                    <span className="font-semibold text-text-muted uppercase text-[10px]">
+                    <span className="font-semibold text-[#0b1b2b]/70 uppercase text-[10px]">
                       {inv.type.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="p-3.5 text-text-muted">{formatDate(inv.date)}</td>
-                  <td className="p-3.5 tabular-nums text-text-muted font-medium">
+                  <td className="p-3.5 text-[#0b1b2b]/65">{formatDate(inv.date)}</td>
+                  <td className="p-3.5 tabular-nums text-[#0b1b2b]/70 font-medium">
                     {formatMoney(inv.taxableAmountPaise)}
                   </td>
-                  <td className="p-3.5 tabular-nums text-text-muted">
+                  <td className="p-3.5 tabular-nums text-[#0b1b2b]/70">
                     {inv.cgstPaise > 0
                       ? `C: ${formatMoney(inv.cgstPaise)} | S: ${formatMoney(inv.sgstPaise)}`
                       : `IGST: ${formatMoney(inv.igstPaise)}`}
                   </td>
-                  <td className="p-3.5 tabular-nums font-bold text-text-main">
+                  <td className="p-3.5 tabular-nums font-bold text-[#0b1b2b]">
                     {formatMoney(inv.grandTotalPaise)}
                   </td>
                   <td className="p-3.5">
-                    <span className="font-semibold text-text-muted text-[10px] uppercase">
+                    <span className="font-semibold text-[#0b1b2b]/70 text-[10px] uppercase">
                       {inv.paymentMode}
                     </span>
                   </td>
@@ -224,28 +241,30 @@ export function BillingPage() {
                   </td>
                   <td className="p-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        icon={FileText}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => {
                           setActiveInvoice(inv);
                           setPrintModalOpen(true);
                         }}
+                        className="px-3 py-1 text-xs font-semibold rounded-full bg-white/40 hover:bg-white/60 text-[#0b1b2b] border border-white/40 inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                       >
-                        A4 PDF
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={Printer}
+                        <FileText className="w-3.5 h-3.5 text-[#0b1b2b]/70" />
+                        <span>A4 PDF</span>
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => {
                           setActiveInvoice(inv);
                           setThermalModalOpen(true);
                         }}
+                        className="px-3 py-1 text-xs font-semibold rounded-full bg-white/20 hover:bg-white/40 text-[#0b1b2b] border border-white/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                       >
-                        80mm Thermal
-                      </Button>
+                        <Printer className="w-3.5 h-3.5 text-[#0b1b2b]/70" />
+                        <span>Thermal</span>
+                      </motion.button>
                     </div>
                   </td>
                 </tr>
@@ -253,7 +272,7 @@ export function BillingPage() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </motion.div>
 
       {/* New Invoice Generator Modal */}
       <Modal
@@ -615,6 +634,6 @@ export function BillingPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </motion.div>
   );
 }

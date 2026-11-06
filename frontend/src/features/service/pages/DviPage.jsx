@@ -17,6 +17,8 @@ import {
   X
 } from 'lucide-react';
 import { useAppStore } from '../../../store';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { KpiCard } from '../../../components/ui/KpiCard';
 import { formatMoney } from '../../../lib/format';
 import { toast } from 'sonner';
 

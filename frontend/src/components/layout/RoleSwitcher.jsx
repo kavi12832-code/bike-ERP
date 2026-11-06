@@ -37,27 +37,27 @@ export function RoleSwitcher() {
       {/* Profile Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full border border-border hover:bg-surface-subtle bg-surface transition-colors"
+        className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-white/35 hover:bg-white/30 bg-white/20 transition-all shadow-xs"
         title="User profile & settings"
         aria-label="User profile menu"
         aria-expanded={open}
       >
         <Avatar name={currentUser?.name || 'Staff User'} size="sm" />
         <div className="text-left hidden sm:block max-w-[120px] truncate leading-tight">
-          <div className="text-xs font-semibold text-text-main truncate">
+          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
             {currentUser?.name || 'User'}
           </div>
-          <div className="text-[10px] text-text-muted truncate">
+          <div className="text-[10px] text-slate-500 dark:text-slate-300 truncate">
             {currentUser?.role || 'Staff'}
           </div>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-surface rounded-card border border-border shadow-dialog z-50 py-1 divide-y divide-border animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 mt-2 w-72 bg-white/85 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-2xl z-50 py-1.5 divide-y divide-slate-200/60 animate-in fade-in zoom-in-95 duration-100">
           {/* User Details Header */}
-          <div className="p-3 bg-surface-subtle/50">
+          <div className="p-3 bg-white/30">
             <div className="flex items-center gap-3">
               <Avatar name={currentUser?.name || 'User'} size="md" />
               <div className="flex-1 min-w-0">

@@ -14,6 +14,10 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught exception:', error, errorInfo);
+    if (import.meta.env?.DEV) {
+      console.error('[ErrorBoundary dev-log] Component Stack:', errorInfo?.componentStack);
+      if (error?.stack) console.error('[ErrorBoundary dev-log] Error Stack:', error.stack);
+    }
   }
 
   render() {

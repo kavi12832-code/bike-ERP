@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { BOOKING_STATUSES } from '../../../bookings/config';
+import { springTransition } from '../../../lib/motion';
 
 export function BookingsTabs({ activeTab, onTabChange, counts }) {
   const tabs = [
@@ -11,8 +13,8 @@ export function BookingsTabs({ activeTab, onTabChange, counts }) {
   ];
 
   return (
-    <div className="border-b border-slate-200">
-      <nav className="-mb-px flex space-x-6 overflow-x-auto no-scrollbar" aria-label="Tabs">
+    <div className="flex items-center overflow-x-auto no-scrollbar py-1">
+      <nav className="p-1 rounded-full bg-white/20 border border-white/30 backdrop-blur-md flex items-center gap-1 shadow-xs" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -20,19 +22,24 @@ export function BookingsTabs({ activeTab, onTabChange, counts }) {
               key={tab.key}
               type="button"
               onClick={() => onTabChange(tab.key)}
-              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer ${
-                isActive
-                  ? 'border-blue-600 text-blue-600 font-semibold'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+              className={`relative whitespace-nowrap py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer z-10 ${isActive
+                  ? 'text-white'
+                  : 'text-text-glass-main hover:text-black hover:bg-white/10'
+                }`}
             >
+              {isActive && (
+                <motion.div
+                  layoutId="bookingsActiveTab"
+                  transition={springTransition}
+                  className="absolute inset-0 bg-[#0b1220] rounded-full shadow-sm -z-10"
+                />
+              )}
               <span>{tab.label}</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  isActive
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white/30 text-text-glass-main'
+                  }`}
               >
                 {tab.count}
               </span>

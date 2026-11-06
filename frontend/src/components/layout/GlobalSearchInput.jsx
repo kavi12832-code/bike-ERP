@@ -221,7 +221,7 @@ export function GlobalSearchInput() {
   return (
     <div className="relative w-full">
       <div className="relative flex items-center">
-        <Search className="w-4 h-4 absolute left-3 text-text-muted pointer-events-none" />
+        <Search className="w-4 h-4 absolute left-3 text-slate-400 dark:text-slate-300 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -233,7 +233,7 @@ export function GlobalSearchInput() {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search leads, VIN, jobs, invoices..."
-          className="w-full h-9 pl-9 pr-14 text-xs bg-surface-subtle border border-border rounded-input text-text-main placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+          className="w-full h-9 pl-9 pr-14 text-xs bg-white/30 dark:bg-white/10 hover:bg-white/40 dark:hover:bg-white/15 focus:bg-white/50 dark:focus:bg-white/20 border border-white/40 dark:border-white/25 rounded-full text-text-glass-main dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all shadow-xs"
           aria-label="Global search across Leads, VIN, Jobs, and Invoices"
           aria-expanded={isOpen}
           role="combobox"
@@ -245,13 +245,13 @@ export function GlobalSearchInput() {
               setQuery('');
               inputRef.current?.focus();
             }}
-            className="absolute right-2.5 p-1 text-text-muted hover:text-text-main rounded"
+            className="absolute right-2.5 p-1 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-full"
             title="Clear search"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         ) : (
-          <kbd className="absolute right-2.5 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-surface text-[10px] font-mono text-text-muted shadow-xs pointer-events-none">
+          <kbd className="absolute right-2.5 hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-white/40 bg-white/40 dark:bg-white/15 text-[10px] font-mono text-slate-700 dark:text-slate-200 shadow-2xs pointer-events-none font-bold">
             Ctrl K
           </kbd>
         )}
@@ -261,7 +261,7 @@ export function GlobalSearchInput() {
       {isOpen && query.trim().length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 mt-1.5 bg-surface rounded-card border border-border shadow-dialog z-50 overflow-hidden max-h-96 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
+          className="absolute left-0 right-0 mt-2 bg-white/80 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-2xl z-50 overflow-hidden max-h-96 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
           role="listbox"
         >
           {flatItems.length === 0 ? (

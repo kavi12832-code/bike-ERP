@@ -19,6 +19,8 @@ import {
   Layers,
   UserCheck
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, cardEntranceVariants } from '../../../lib/motion';
 import { useAppStore } from '../../../store';
 import { formatDate } from '../../../lib/format';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -144,38 +146,48 @@ export function AuditPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
       {/* 1. Page Header */}
       <PageHeader
         breadcrumbs={[
-          { label: 'Administration', path: '/admin' },
-          { label: 'Audit Trail', path: '/admin/audit' },
+          { label: 'Administration', href: '/admin' },
+          { label: 'Audit Trail' },
         ]}
         title="Immutable Audit Trail & Anomaly Radar"
         subtitle="Complete tamper-evident log of system mutations, access events, and financial authorizations adhering to Section 128 of the Companies Act 2013."
-        actions={[
+        secondaryActions={[
           {
             label: 'Export Audit CSV',
             icon: Download,
-            variant: 'outline',
             onClick: handleExportCsv,
           },
         ]}
       />
 
       {/* Statutory Retention Banner */}
-      <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 shadow-xs">
-        <ShieldAlert className="w-5 h-5 text-blue-700 dark:text-blue-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-blue-900 dark:text-blue-200">
-          <p className="font-bold text-xs uppercase tracking-wider">Statutory Audit Compliance (Companies Act 2013, Section 128)</p>
-          <p className="mt-0.5 text-blue-800/80 dark:text-blue-300/80 text-[11px] leading-relaxed">
+      <motion.div 
+        variants={cardEntranceVariants}
+        className="p-4 glass-card !rounded-2xl border border-blue-400/30 flex items-start gap-3 shadow-xs bg-blue-500/10 backdrop-blur-md"
+      >
+        <ShieldAlert className="w-5 h-5 text-blue-800 dark:text-blue-300 shrink-0 mt-0.5" />
+        <div className="text-xs text-[#0b1b2b]">
+          <p className="font-bold text-xs uppercase tracking-wider text-blue-900">Statutory Audit Compliance (Companies Act 2013, Section 128)</p>
+          <p className="mt-0.5 text-[#0b1b2b]/75 text-[11px] leading-relaxed">
             All database mutations are write-once, cryptographically sequenced and stamped in IST. Audit records cannot be deleted or modified and are retained for a minimum of 8 financial years.
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* 2. Plain KPI Cards (Strictly no charts/arrows) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div 
+        variants={cardEntranceVariants}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
         <KpiCard
           icon={Layers}
           label="Total Audit Records"
@@ -200,45 +212,50 @@ export function AuditPage() {
           value={kpis.chainIntegrity}
           subtitle="SHA-256 hash verification"
         />
-      </div>
+      </motion.div>
 
       {/* 3. Filter Bar */}
-      <FilterBar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search action, user name, entity ID, or values..."
-        filters={[
-          {
-            label: 'Entity Type',
-            value: entityFilter,
-            onChange: setEntityFilter,
-            options: [
-              { label: 'All Entity Types', value: 'ALL' },
-              ...uniqueEntityTypes.map((t) => ({ label: t, value: t })),
-            ],
-          },
-          {
-            label: 'Anomaly Filter',
-            value: anomalyFilter ? 'ANOMALIES_ONLY' : 'ALL',
-            onChange: (val) => setAnomalyFilter(val === 'ANOMALIES_ONLY'),
-            options: [
-              { label: 'All Log Entries', value: 'ALL' },
-              { label: 'Show Anomalies Only', value: 'ANOMALIES_ONLY' },
-            ],
-          },
-        ]}
-        onClear={() => {
-          setSearch('');
-          setEntityFilter('ALL');
-          setAnomalyFilter(false);
-        }}
-      />
+      <motion.div variants={cardEntranceVariants}>
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search action, user name, entity ID, or values..."
+          filters={[
+            {
+              label: 'Entity Type',
+              value: entityFilter,
+              onChange: setEntityFilter,
+              options: [
+                { label: 'All Entity Types', value: 'ALL' },
+                ...uniqueEntityTypes.map((t) => ({ label: t, value: t })),
+              ],
+            },
+            {
+              label: 'Anomaly Filter',
+              value: anomalyFilter ? 'ANOMALIES_ONLY' : 'ALL',
+              onChange: (val) => setAnomalyFilter(val === 'ANOMALIES_ONLY'),
+              options: [
+                { label: 'All Log Entries', value: 'ALL' },
+                { label: 'Show Anomalies Only', value: 'ANOMALIES_ONLY' },
+              ],
+            },
+          ]}
+          onClear={() => {
+            setSearch('');
+            setEntityFilter('ALL');
+            setAnomalyFilter(false);
+          }}
+        />
+      </motion.div>
 
       {/* 4. Logs Table */}
-      <div className="bg-surface rounded-card border border-border shadow-xs overflow-hidden">
+      <motion.div 
+        variants={cardEntranceVariants}
+        className="glass-card !p-0 overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-subtle text-text-muted font-semibold uppercase text-[11px] border-b border-border">
+            <thead className="bg-white/20 text-[#0b1b2b]/70 font-semibold uppercase text-[11px] border-b border-white/20">
               <tr>
                 <th className="p-3.5">Timestamp (IST)</th>
                 <th className="p-3.5">User &amp; Role</th>
@@ -248,10 +265,10 @@ export function AuditPage() {
                 <th className="p-3.5 text-right">Inspect Diff</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-white/15">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-text-muted">
+                  <td colSpan={6} className="p-8 text-center text-[#0b1b2b]/60">
                     No audit records matching your criteria.
                   </td>
                 </tr>
@@ -262,49 +279,51 @@ export function AuditPage() {
                   return (
                     <tr
                       key={log.id}
-                      className={`hover:bg-surface-subtle/70 transition-colors ${
-                        anomaly ? 'bg-amber-500/5' : ''
+                      className={`hover:bg-white/25 transition-colors ${
+                        anomaly ? 'bg-amber-500/10' : ''
                       }`}
                     >
-                      <td className="p-3.5 whitespace-nowrap font-mono text-text-muted">
+                      <td className="p-3.5 whitespace-nowrap font-mono text-[#0b1b2b]/70">
                         <DateText date={log.timestamp} />
                       </td>
                       <td className="p-3.5">
-                        <div className="font-semibold text-text-main">{log.userName || 'System'}</div>
-                        <div className="text-[10px] text-text-muted">{log.userRole || 'Automated Service'}</div>
+                        <div className="font-semibold text-[#0b1b2b]">{log.userName || 'System'}</div>
+                        <div className="text-[10px] text-[#0b1b2b]/60">{log.userRole || 'Automated Service'}</div>
                       </td>
                       <td className="p-3.5">
-                        <span className="font-mono text-[11px] font-semibold text-primary">
+                        <span className="font-mono text-[11px] font-semibold text-blue-700 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-400/20">
                           {log.action}
                         </span>
                       </td>
                       <td className="p-3.5">
-                        <div className="font-semibold text-text-main">{log.entityType}</div>
-                        <div className="text-[10px] font-mono text-text-muted">{log.entityId}</div>
+                        <div className="font-semibold text-[#0b1b2b]">{log.entityType}</div>
+                        <div className="text-[10px] font-mono text-[#0b1b2b]/60">{log.entityId}</div>
                       </td>
                       <td className="p-3.5">
                         {anomaly ? (
-                          <div className="flex items-center gap-1.5 text-status-amber font-semibold text-[11px]">
+                          <div className="flex items-center gap-1.5 text-amber-700 font-semibold text-[11px]">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate max-w-[180px]" title={reason}>
                               {reason}
                             </span>
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-status-green font-medium">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
                             <CheckCircle2 className="w-3 h-3" />
                             Normal
                           </span>
                         )}
                       </td>
                       <td className="p-3.5 text-right">
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={() => setSelectedEntry(log)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-surface-subtle hover:bg-surface-muted text-primary border border-border inline-flex items-center gap-1.5 transition-colors"
+                          className="px-3 py-1 text-xs font-semibold rounded-full bg-white/40 hover:bg-white/60 text-[#0b1b2b] border border-white/40 inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5 text-[#0b1b2b]/70" />
                           <span>Inspect</span>
-                        </button>
+                        </motion.button>
                       </td>
                     </tr>
                   );
@@ -313,7 +332,7 @@ export function AuditPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       {/* 5. Inspection Modal with Before/After Diff & Hash Chain */}
       {selectedEntry && (
@@ -328,41 +347,41 @@ export function AuditPage() {
             return (
               <div className="space-y-4 text-xs">
                 {/* Header Metadata */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-surface-subtle border border-border">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-white/30 border border-white/30 backdrop-blur-md">
                   <div>
-                    <span className="text-text-muted block text-[10px]">Actor:</span>
-                    <strong className="text-text-main">{selectedEntry.userName}</strong>
-                    <span className="text-text-subtle block text-[10px]">{selectedEntry.userRole}</span>
+                    <span className="text-[#0b1b2b]/60 block text-[10px]">Actor:</span>
+                    <strong className="text-[#0b1b2b]">{selectedEntry.userName}</strong>
+                    <span className="text-[#0b1b2b]/50 block text-[10px]">{selectedEntry.userRole}</span>
                   </div>
                   <div>
-                    <span className="text-text-muted block text-[10px]">Timestamp:</span>
-                    <strong className="text-text-main font-mono text-[11px]">
+                    <span className="text-[#0b1b2b]/60 block text-[10px]">Timestamp:</span>
+                    <strong className="text-[#0b1b2b] font-mono text-[11px]">
                       {formatDate(selectedEntry.timestamp)}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-text-muted block text-[10px]">Entity / Target:</span>
-                    <strong className="text-text-main">{selectedEntry.entityType}</strong>
-                    <span className="text-text-subtle block font-mono text-[10px]">{selectedEntry.entityId}</span>
+                    <span className="text-[#0b1b2b]/60 block text-[10px]">Entity / Target:</span>
+                    <strong className="text-[#0b1b2b]">{selectedEntry.entityType}</strong>
+                    <span className="text-[#0b1b2b]/50 block font-mono text-[10px]">{selectedEntry.entityId}</span>
                   </div>
                   <div>
-                    <span className="text-text-muted block text-[10px]">IP / Network:</span>
-                    <strong className="text-text-main font-mono">{selectedEntry.ipAddress || '192.168.1.104'}</strong>
+                    <span className="text-[#0b1b2b]/60 block text-[10px]">IP / Network:</span>
+                    <strong className="text-[#0b1b2b] font-mono">{selectedEntry.ipAddress || '192.168.1.104'}</strong>
                   </div>
                 </div>
 
                 {/* Cryptographic SHA-256 Proof */}
-                <div className="p-3 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 font-mono text-[11px] space-y-1.5">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                <div className="p-3.5 rounded-2xl bg-[#06182c]/90 text-slate-200 border border-white/20 font-mono text-[11px] space-y-1.5 shadow-md">
+                  <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
                     <Hash className="w-3.5 h-3.5" />
                     <span>Cryptographic Block Verification</span>
                   </div>
                   <div className="truncate">
-                    <span className="text-slate-500">Record Hash: </span>
-                    <span className="text-slate-300">{hashes.currentHash}</span>
+                    <span className="text-slate-400">Record Hash: </span>
+                    <span className="text-slate-200">{hashes.currentHash}</span>
                   </div>
                   <div className="truncate">
-                    <span className="text-slate-500">Parent Hash: </span>
+                    <span className="text-slate-400">Parent Hash: </span>
                     <span className="text-slate-400">{hashes.prevHash}</span>
                   </div>
                 </div>
@@ -370,21 +389,21 @@ export function AuditPage() {
                 {/* Before / After Diff */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Before */}
-                  <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
-                    <div className="flex items-center gap-1.5 text-status-red font-bold text-xs pb-1.5 border-b border-red-500/20">
+                  <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs pb-1.5 border-b border-rose-500/20">
                       <span>Previous State (Before Mutation)</span>
                     </div>
-                    <pre className="mt-2 p-2 rounded bg-surface font-mono text-[11px] text-text-muted overflow-x-auto max-h-48 whitespace-pre-wrap">
+                    <pre className="mt-2 p-2.5 rounded-xl bg-white/40 border border-white/30 font-mono text-[11px] text-[#0b1b2b]/80 overflow-x-auto max-h-48 whitespace-pre-wrap">
                       {selectedEntry.oldValue ? JSON.stringify(selectedEntry.oldValue, null, 2) : '(Initial Creation - No previous state)'}
                     </pre>
                   </div>
 
                   {/* After */}
-                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                    <div className="flex items-center gap-1.5 text-status-green font-bold text-xs pb-1.5 border-b border-emerald-500/20">
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs pb-1.5 border-b border-emerald-500/20">
                       <span>Committed State (After Mutation)</span>
                     </div>
-                    <pre className="mt-2 p-2 rounded bg-surface font-mono text-[11px] text-text-main font-semibold overflow-x-auto max-h-48 whitespace-pre-wrap">
+                    <pre className="mt-2 p-2.5 rounded-xl bg-white/40 border border-white/30 font-mono text-[11px] text-[#0b1b2b] font-semibold overflow-x-auto max-h-48 whitespace-pre-wrap">
                       {selectedEntry.newValue ? JSON.stringify(selectedEntry.newValue, null, 2) : '(Record Purged)'}
                     </pre>
                   </div>
@@ -394,7 +413,7 @@ export function AuditPage() {
           })()}
         </Modal>
       )}
-    </div>
+    </motion.div>
   );
 }
 

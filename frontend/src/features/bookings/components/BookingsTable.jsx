@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 export function BookingsTable({
   bookings = [],
   selectedIds = [],
+  activeBookingId = null,
   onSelectRow,
   onSelectAll,
   onViewDetails,
@@ -75,17 +76,17 @@ export function BookingsTable({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div className="glass-card !p-0 overflow-hidden shadow-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+            <tr className="bg-white/10 dark:bg-white/5 border-b border-white/20 text-text-glass-muted dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px]">
               <th className="py-3 px-3 w-10 text-center">
                 <input
                   type="checkbox"
                   checked={allSelected}
                   onChange={onSelectAll}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="rounded border-white/40 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
               </th>
               <th className="py-3 px-3">Booking #</th>
@@ -98,14 +99,14 @@ export function BookingsTable({
               <th className="py-3 px-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700">
+          <tbody className="divide-y divide-white/15 text-text-glass-main dark:text-white">
             {bookings.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-slate-400">
+                <td colSpan={9} className="py-12 text-center text-text-glass-muted dark:text-slate-400">
                   <div className="flex flex-col items-center justify-center">
-                    <Bike className="w-10 h-10 text-slate-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-600">No bookings found</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <Bike className="w-10 h-10 text-text-glass-muted/60 dark:text-slate-400 mb-2" />
+                    <p className="text-sm font-semibold text-text-glass-main dark:text-white">No bookings found</p>
+                    <p className="text-xs text-text-glass-muted dark:text-slate-300 mt-0.5">
                       Try clearing filters or search query to see reservations
                     </p>
                   </div>
@@ -116,18 +117,24 @@ export function BookingsTable({
                 const isSelected = selectedIds.includes(b.id);
                 const statusMeta = STATUS_CONFIG[b.status] || {
                   label: b.status,
-                  badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+                  badgeClass: 'bg-white/20 text-text-glass-main border-white/30',
                 };
                 const tokenAmount = ((b.tokenPaidPaise || 0) / 100).toLocaleString('en-IN');
                 const deliveryTiming = getDeliveryFlag(b);
                 const holdExpired = isHoldExpired(b);
 
+                const isActive = activeBookingId === b.id;
+
                 return (
                   <tr
                     key={b.id}
                     onClick={() => onViewDetails(b)}
-                    className={`hover:bg-blue-50/40 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-blue-50/60' : ''
+                    className={`transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-blue-500/20 dark:bg-blue-500/30 ring-1 ring-blue-500/60 shadow-xs'
+                        : isSelected
+                        ? 'bg-white/25 dark:bg-white/15'
+                        : 'hover:bg-white/20 dark:hover:bg-white/10'
                     }`}
                   >
                     {/* Checkbox */}
@@ -148,10 +155,10 @@ export function BookingsTable({
 
                     {/* Booking Number */}
                     <td className="py-3.5 px-3 whitespace-nowrap">
-                      <div className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                      <div className="font-semibold text-blue-700 dark:text-cyan-400 hover:text-blue-900 dark:hover:text-cyan-300 hover:underline">
                         {b.bookingNumber}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-text-glass-muted dark:text-slate-400">
                         {b.branchName || 'Bangalore Central'}
                       </div>
                     </td>
@@ -167,8 +174,8 @@ export function BookingsTable({
                           {getInitials(b.customerName)}
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">{b.customerName}</div>
-                          <div className="text-[11px] text-slate-500 font-mono">
+                          <div className="font-semibold text-text-glass-main dark:text-white">{b.customerName}</div>
+                          <div className="text-[11px] text-text-glass-muted dark:text-slate-300 font-mono">
                             {canViewFullPhone
                               ? b.customerPhone || 'N/A'
                               : maskPhone(b.customerPhone)}
@@ -179,21 +186,21 @@ export function BookingsTable({
 
                     {/* Model & Colour */}
                     <td className="py-3.5 px-3">
-                      <div className="font-medium text-slate-900 line-clamp-1">{b.modelName}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 line-clamp-1">
-                        <span className="w-2 h-2 rounded-full bg-slate-600 inline-block"></span>
+                      <div className="font-semibold text-text-glass-main dark:text-white line-clamp-1">{b.modelName}</div>
+                      <div className="text-[11px] text-text-glass-muted dark:text-slate-300 flex items-center gap-1.5 line-clamp-1">
+                        <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
                         <span>{b.colour || 'Standard'}</span>
                         {b.variant && (
-                          <span className="text-slate-400">· {b.variant}</span>
+                          <span className="text-text-glass-muted/80 dark:text-slate-400">· {b.variant}</span>
                         )}
                       </div>
                     </td>
 
                     {/* Token Paid */}
                     <td className="py-3.5 px-3 whitespace-nowrap">
-                      <div className="font-semibold text-slate-900">₹ {tokenAmount}</div>
-                      <div className="text-[10px] text-slate-500 flex items-center gap-1">
-                        <Receipt className="w-3 h-3 text-slate-400" />
+                      <div className="font-bold text-text-glass-main dark:text-white tabular-nums">₹ {tokenAmount}</div>
+                      <div className="text-[10px] text-text-glass-muted dark:text-slate-300 flex items-center gap-1">
+                        <Receipt className="w-3 h-3 text-text-glass-muted/70 dark:text-slate-400" />
                         <span>{b.tokenReceipts?.length || 1} receipt(s)</span>
                       </div>
                     </td>

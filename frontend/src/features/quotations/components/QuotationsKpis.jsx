@@ -1,6 +1,9 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { QUOTATION_STATUSES } from '../../../quotations/config';
+import { CountUp } from '../../../components/ui/CountUp';
+import { cardHoverProps } from '../../../lib/motion';
 
 export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
   const cards = [
@@ -11,9 +14,8 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
       value: kpis.totalCount ?? 0,
       subtext: 'In selected period',
       icon: FileText,
-      bgClass: 'bg-blue-50/80 border-blue-200/80 hover:border-blue-400',
-      iconBg: 'bg-blue-100 text-blue-700',
-      activeRing: activeStatus === 'ALL' ? 'ring-2 ring-blue-500 shadow-md' : '',
+      iconColor: 'text-blue-700',
+      activeBorder: activeStatus === 'ALL' ? 'border-blue-500 ring-2 ring-blue-400/40' : '',
     },
     {
       id: 'converted',
@@ -22,9 +24,8 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
       value: kpis.convertedCount ?? 0,
       subtext: `${kpis.conversionRatePercent ?? 0}% of quotations converted`,
       icon: CheckCircle2,
-      bgClass: 'bg-emerald-50/80 border-emerald-200/80 hover:border-emerald-400',
-      iconBg: 'bg-emerald-100 text-emerald-700',
-      activeRing: activeStatus === QUOTATION_STATUSES.CONVERTED ? 'ring-2 ring-emerald-500 shadow-md' : '',
+      iconColor: 'text-emerald-700',
+      activeBorder: activeStatus === QUOTATION_STATUSES.CONVERTED ? 'border-emerald-500 ring-2 ring-emerald-400/40' : '',
     },
     {
       id: 'pending',
@@ -33,9 +34,8 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
       value: kpis.pendingApprovalCount ?? 0,
       subtext: 'Awaiting approval',
       icon: Clock,
-      bgClass: 'bg-purple-50/80 border-purple-200/80 hover:border-purple-400',
-      iconBg: 'bg-purple-100 text-purple-700',
-      activeRing: activeStatus === QUOTATION_STATUSES.PENDING_APPROVAL ? 'ring-2 ring-purple-500 shadow-md' : '',
+      iconColor: 'text-purple-700',
+      activeBorder: activeStatus === QUOTATION_STATUSES.PENDING_APPROVAL ? 'border-purple-500 ring-2 ring-purple-400/40' : '',
     },
     {
       id: 'expired',
@@ -44,9 +44,8 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
       value: kpis.expiredCount ?? 0,
       subtext: `${kpis.expiringSoonCount ?? 0} more expire within 3 days`,
       icon: AlertCircle,
-      bgClass: 'bg-rose-50/80 border-rose-200/80 hover:border-rose-400',
-      iconBg: 'bg-rose-100 text-rose-700',
-      activeRing: activeStatus === QUOTATION_STATUSES.EXPIRED ? 'ring-2 ring-rose-500 shadow-md' : '',
+      iconColor: 'text-rose-700',
+      activeBorder: activeStatus === QUOTATION_STATUSES.EXPIRED ? 'border-rose-500 ring-2 ring-rose-400/40' : '',
     },
   ];
 
@@ -55,8 +54,9 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
       {cards.map((c) => {
         const IconComponent = c.icon;
         return (
-          <div
+          <motion.div
             key={c.id}
+            {...cardHoverProps}
             role="button"
             tabIndex={0}
             onClick={() => onSelectStatus(c.statusTarget)}
@@ -66,19 +66,21 @@ export function QuotationsKpis({ kpis, activeStatus, onSelectStatus }) {
                 onSelectStatus(c.statusTarget);
               }
             }}
-            className={`p-4 rounded-xl border transition-all duration-150 cursor-pointer ${c.bgClass} ${c.activeRing}`}
+            className={`w-full text-left glass-card glass-card-interactive !rounded-[24px] !p-5 h-full min-h-[145px] flex flex-col justify-between cursor-pointer shadow-card hover:shadow-card-hover ${c.activeBorder}`}
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">{c.title}</p>
-                <p className="text-3xl font-extrabold text-slate-900 mt-1">{c.value}</p>
+                <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">{c.title}</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                  <CountUp value={c.value} />
+                </p>
               </div>
-              <div className={`p-2.5 rounded-lg ${c.iconBg}`}>
-                <IconComponent className="w-5 h-5" />
+              <div className={`w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center shadow-xs ${c.iconColor}`}>
+                <IconComponent className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-xs text-slate-600 font-medium mt-3">{c.subtext}</p>
-          </div>
+            <p className="text-xs text-text-glass-muted font-medium mt-3">{c.subtext}</p>
+          </motion.div>
         );
       })}
     </div>

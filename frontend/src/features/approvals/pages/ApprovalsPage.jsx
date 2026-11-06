@@ -1,8 +1,11 @@
 // src/features/approvals/pages/ApprovalsPage.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
+import { CountUp } from '../../../components/ui/CountUp';
+import { staggerContainer, cardEntranceVariants, cardHoverProps } from '../../../lib/motion';
 import { useAppStore } from '../../../store';
 import {
   APPROVAL_STATUS,
@@ -395,27 +398,32 @@ export function ApprovalsPage() {
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="p-2 sm:p-4 max-w-[1600px] mx-auto space-y-6"
+    >
       {/* 1. Breadcrumb & Header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <Home className="w-3.5 h-3.5 text-slate-400" />
+      <motion.div variants={cardEntranceVariants} className="space-y-1">
+        <div className="flex items-center gap-2 text-xs text-text-glass-muted font-medium">
+          <Home className="w-3.5 h-3.5 text-text-glass-muted" />
           <span>&gt;</span>
           <span>Dashboard</span>
           <span>&gt;</span>
-          <span className="text-slate-800 font-semibold">Approvals Center</span>
+          <span className="text-text-glass-main font-semibold">Approvals Center</span>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-sm">
+            <div className="w-11 h-11 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-emerald-700 shadow-xs">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-text-glass-main tracking-tight flex items-center gap-2">
                 Dual-Control Approvals Center
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-text-glass-muted">
                 Strict statutory governance: discounts, refunds, write-offs, journal entries, and campaigns.
               </p>
             </div>
@@ -423,13 +431,13 @@ export function ApprovalsPage() {
 
           <div className="flex items-center gap-2.5">
             {/* Dev Clock helper (subtle, clearly marked for testing) */}
-            <div className="hidden lg:flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1 text-[11px] font-semibold text-slate-600">
-              <span className="px-2 text-slate-500">Dev Clock:</span>
+            <div className="hidden lg:flex items-center bg-white/20 border border-white/30 rounded-full p-1 text-[11px] font-semibold text-text-glass-main shadow-xs">
+              <span className="px-2 text-text-glass-muted">Dev Clock:</span>
               <button
                 type="button"
                 onClick={() => handleAdvanceClock(60)}
                 title="Advance clock by 1 hour to test SLA countdown and reminders"
-                className="px-2 py-0.5 bg-white hover:bg-slate-50 rounded border border-slate-200 text-blue-600 mr-1"
+                className="px-2.5 py-0.5 bg-white/40 hover:bg-white/60 rounded-full border border-white/40 text-blue-900 mr-1 cursor-pointer transition-colors"
               >
                 +1h
               </button>
@@ -437,7 +445,7 @@ export function ApprovalsPage() {
                 type="button"
                 onClick={() => handleAdvanceClock(240)}
                 title="Advance clock by 4 hours to test SLA breach and auto-escalation"
-                className="px-2 py-0.5 bg-white hover:bg-slate-50 rounded border border-slate-200 text-orange-600 mr-1"
+                className="px-2.5 py-0.5 bg-white/40 hover:bg-white/60 rounded-full border border-white/40 text-amber-900 mr-1 cursor-pointer transition-colors"
               >
                 +4h (Breach)
               </button>
@@ -448,175 +456,193 @@ export function ApprovalsPage() {
                   window.location.reload();
                 }}
                 title="Reset simulated clock back to current time"
-                className="px-1.5 py-0.5 text-slate-400 hover:text-slate-700"
+                className="px-2 py-0.5 text-text-glass-muted hover:text-black cursor-pointer transition-colors"
               >
                 Reset
               </button>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setIsGuideOpen(true)}
-              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+              className="px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-98"
             >
-              <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-              Approval Policy Guide
-            </Button>
+              <BookOpen className="w-3.5 h-3.5 text-blue-700" />
+              <span>Approval Policy Guide</span>
+            </button>
 
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setIsExportOpen(true)}
-              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+              className="px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-98"
             >
               <Download className="w-3.5 h-3.5" />
-              Export Report
-            </Button>
+              <span>Export Report</span>
+            </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 2. Four KPI Cards (Plain Design: Icon, Label, Big Number, Subtext. No Graphs/Rings/Arrows) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Pending for Me */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => handleTabChange('PENDING_ME')}
-          className={`p-4 bg-white border hover:border-blue-400 cursor-pointer transition-all hover:shadow-sm ${
-            activeTab === 'PENDING_ME' ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'
-          }`}
+          className={`glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover ${activeTab === 'PENDING_ME' ? 'border-blue-500 ring-2 ring-blue-400/40' : ''
+            }`}
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Pending for Me</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.pendingForMeCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">Requires your approval</p>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Pending for Me</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.pendingForMeCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">Requires your approval</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-              <Clock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-blue-700 shadow-xs">
+              <Clock className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* Card 2: Requested by Me */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => handleTabChange('REQUESTED_ME')}
-          className={`p-4 bg-white border hover:border-emerald-400 cursor-pointer transition-all hover:shadow-sm ${
-            activeTab === 'REQUESTED_ME' ? 'border-emerald-500 ring-1 ring-emerald-500/20' : 'border-slate-200'
-          }`}
+          className={`glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover ${activeTab === 'REQUESTED_ME' ? 'border-emerald-500 ring-2 ring-emerald-400/40' : ''
+            }`}
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Requested by Me</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.requestedByMeCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">Awaiting other approval</p>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Requested by Me</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.requestedByMeCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">Awaiting other approval</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-              <Users className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-emerald-700 shadow-xs">
+              <Users className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* Card 3: Approved Today */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => {
             handleTabChange('HISTORY');
             updateParams({ status: APPROVAL_STATUS.APPROVED, dateRange: 'TODAY' });
           }}
-          className="p-4 bg-white border-slate-200 hover:border-purple-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Approved Today</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.approvedTodayCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">Decisions made today (IST)</p>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Approved Today</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.approvedTodayCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">Decisions made today (IST)</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-purple-700 shadow-xs">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* Card 4: Rejected Today */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => {
             handleTabChange('HISTORY');
             updateParams({ status: APPROVAL_STATUS.REJECTED, dateRange: 'TODAY' });
           }}
-          className="p-4 bg-white border-slate-200 hover:border-red-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Rejected Today</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.rejectedTodayCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">Decisions made today (IST)</p>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Rejected Today</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.rejectedTodayCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">Decisions made today (IST)</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
-              <XCircle className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-rose-700 shadow-xs">
+              <XCircle className="w-4 h-4" />
             </div>
           </div>
-        </Card>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* 3. Navigation Tabs */}
-      <div className="flex items-center gap-3 border-b border-slate-200 pb-px">
-        {canViewPendingTab && (
+      <motion.div variants={cardEntranceVariants} className="flex items-center overflow-x-auto no-scrollbar py-1">
+        <nav className="p-1 rounded-full bg-white/20 border border-white/30 backdrop-blur-md flex items-center gap-1 shadow-xs" aria-label="Approvals Tabs">
+          {canViewPendingTab && (
+            <button
+              type="button"
+              onClick={() => handleTabChange('PENDING_ME')}
+              className={`relative whitespace-nowrap py-1.5 px-4 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer z-10 ${activeTab === 'PENDING_ME' ? 'text-white' : 'text-text-glass-main hover:text-black hover:bg-white/10'
+                }`}
+            >
+              {activeTab === 'PENDING_ME' && (
+                <motion.div
+                  layoutId="approvalsActiveTab"
+                  transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                  className="absolute inset-0 bg-[#0b1220] rounded-full shadow-sm -z-10"
+                />
+              )}
+              <span>Pending for Me</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${kpis.pendingForMeCount > 0 ? 'bg-amber-400 text-slate-950' : 'bg-white/30 text-text-glass-main'
+                  }`}
+              >
+                {kpis.pendingForMeCount}
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => handleTabChange('PENDING_ME')}
-            className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
-              activeTab === 'PENDING_ME'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <span>Pending for Me</span>
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                kpis.pendingForMeCount > 0 ? 'bg-amber-500 text-slate-900' : 'bg-slate-100 text-slate-600'
+            onClick={() => handleTabChange('REQUESTED_ME')}
+            className={`relative whitespace-nowrap py-1.5 px-4 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer z-10 ${activeTab === 'REQUESTED_ME' ? 'text-white' : 'text-text-glass-main hover:text-black hover:bg-white/10'
               }`}
+          >
+            {activeTab === 'REQUESTED_ME' && (
+              <motion.div
+                layoutId="approvalsActiveTab"
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                className="absolute inset-0 bg-[#0b1220] rounded-full shadow-sm -z-10"
+              />
+            )}
+            <span>Requested by Me</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${kpis.requestedByMeCount > 0 ? 'bg-blue-500/30 text-blue-900' : 'bg-white/30 text-text-glass-main'
+                }`}
             >
-              {kpis.pendingForMeCount}
+              {kpis.requestedByMeCount}
             </span>
           </button>
-        )}
 
-        <button
-          type="button"
-          onClick={() => handleTabChange('REQUESTED_ME')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'REQUESTED_ME'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <span>Requested by Me</span>
-          <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              kpis.requestedByMeCount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
-            }`}
+          <button
+            type="button"
+            onClick={() => handleTabChange('HISTORY')}
+            className={`relative whitespace-nowrap py-1.5 px-4 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer z-10 ${activeTab === 'HISTORY' ? 'text-white' : 'text-text-glass-main hover:text-black hover:bg-white/10'
+              }`}
           >
-            {kpis.requestedByMeCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('HISTORY')}
-          className={`pb-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'HISTORY'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <span>Approval History</span>
-          {filterExceptionsOnly && (
-            <span className="text-[10px] bg-red-100 text-red-800 font-bold px-1.5 py-0.2 rounded">
-              Exceptions
-            </span>
-          )}
-        </button>
-      </div>
+            {activeTab === 'HISTORY' && (
+              <motion.div
+                layoutId="approvalsActiveTab"
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                className="absolute inset-0 bg-[#0b1220] rounded-full shadow-sm -z-10"
+              />
+            )}
+            <span>Approval History</span>
+            {filterExceptionsOnly && (
+              <span className="text-[10px] bg-red-500/20 text-red-900 font-bold px-2 py-0.5 rounded-full border border-red-400/30">
+                Exceptions
+              </span>
+            )}
+          </button>
+        </nav>
+      </motion.div>
 
       {/* 4. Filter Bar */}
       <Card className="p-3.5 bg-white border-slate-200">
@@ -853,8 +879,8 @@ export function ApprovalsPage() {
                       {activeTab === 'PENDING_ME'
                         ? 'Nothing waiting for you'
                         : activeTab === 'REQUESTED_ME'
-                        ? 'No open requests initiated by you'
-                        : 'No approval history found'}
+                          ? 'No open requests initiated by you'
+                          : 'No approval history found'}
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {activeTab === 'PENDING_ME'
@@ -874,9 +900,8 @@ export function ApprovalsPage() {
                     <tr
                       key={req.id}
                       onClick={() => updateParams({ request: req.id })}
-                      className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-blue-50/40' : ''
-                      }`}
+                      className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/40' : ''
+                        }`}
                     >
                       {/* Checkbox */}
                       <td
@@ -909,9 +934,8 @@ export function ApprovalsPage() {
                       {/* Type Chip */}
                       <td className="py-3.5 px-3">
                         <span
-                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${
-                            TYPE_COLORS[req.type] || 'bg-slate-100 text-slate-700'
-                          }`}
+                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${TYPE_COLORS[req.type] || 'bg-slate-100 text-slate-700'
+                            }`}
                         >
                           {req.type}
                         </span>
@@ -968,9 +992,9 @@ export function ApprovalsPage() {
                           <td className="py-3.5 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
                             {req.decidedAt
                               ? new Date(req.decidedAt).toLocaleString([], {
-                                  dateStyle: 'short',
-                                  timeStyle: 'short',
-                                })
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })
                               : '—'}
                           </td>
                           <td className="py-3.5 px-3">
@@ -996,9 +1020,8 @@ export function ApprovalsPage() {
                       {/* Status */}
                       <td className="py-3.5 px-3">
                         <span
-                          className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded border ${
-                            STATUS_COLORS[req.status] || 'bg-slate-100 text-slate-700'
-                          }`}
+                          className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[req.status] || 'bg-slate-100 text-slate-700'
+                            }`}
                         >
                           {req.status}
                         </span>
@@ -1183,11 +1206,10 @@ export function ApprovalsPage() {
                     <button
                       key={pageNum}
                       onClick={() => updateParams({ page: pageNum })}
-                      className={`min-w-[28px] h-7 px-2 rounded text-xs font-semibold ${
-                        safeCurrentPage === pageNum
+                      className={`min-w-[28px] h-7 px-2 rounded text-xs font-semibold ${safeCurrentPage === pageNum
                           ? 'bg-blue-600 text-white'
                           : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -1250,11 +1272,10 @@ export function ApprovalsPage() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500">Policy Compliance</span>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                  bottomMetrics.compliance.complianceRate === 100
+                className={`text-[10px] px-2 py-0.5 rounded font-bold ${bottomMetrics.compliance.complianceRate === 100
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'bg-amber-50 text-amber-700'
-                }`}
+                  }`}
               >
                 {bottomMetrics.compliance.complianceRate === 100 ? '100% Verified' : 'Exceptions Found'}
               </span>
@@ -1368,7 +1389,7 @@ export function ApprovalsPage() {
           filteredApprovals={filteredApprovals}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

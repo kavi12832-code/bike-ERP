@@ -14,6 +14,19 @@
       rel="stylesheet"
     />
     <title>AKASH BAJAJ | Showroom & Service ERP</title>
+    <script>
+      (function() {
+        try {
+          const raw = localStorage.getItem('akash-bajaj-app-storage');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const theme = parsed?.state?.theme || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-background text-text-main font-sans antialiased h-full overflow-hidden">
     <div id="root" class="h-full w-full overflow-hidden"></div>

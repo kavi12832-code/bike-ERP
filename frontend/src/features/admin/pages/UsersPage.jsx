@@ -1,7 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
+import { CountUp } from '../../../components/ui/CountUp';
+import { staggerContainer, cardEntranceVariants, cardHoverProps } from '../../../lib/motion';
 import { useAppStore } from '../../../store';
 import { ROLES } from '../../../config/roles';
 import { BRANCHES } from '../../../config/constants';
@@ -488,157 +491,169 @@ export function UsersPage() {
   }, [auditLogs]);
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="p-2 sm:p-4 max-w-[1600px] mx-auto space-y-6"
+    >
       {/* 1. Breadcrumb & Header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+      <motion.div variants={cardEntranceVariants} className="space-y-1">
+        <div className="flex items-center gap-2 text-xs text-text-glass-muted font-medium">
           <span>Dashboard</span>
           <span>&gt;</span>
-          <span className="text-slate-800 font-semibold">Users &amp; Staff Administration</span>
+          <span className="text-text-glass-main font-semibold">Users &amp; Staff Administration</span>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600 shadow-sm">
+            <div className="w-11 h-11 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-blue-700 shadow-xs">
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-text-glass-main tracking-tight">
                 Users &amp; Staff Account Administration
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-text-glass-muted">
                 Manage staff credentials, 2-Factor Authentication enforcement, lockout states and branch allocations.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => setIsExportModalOpen(true)}
-              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+              className="px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-98"
             >
-              <Download className="w-3.5 h-3.5" />
-              Export Users
-            </Button>
+              <Download className="w-3.5 h-3.5 text-text-glass-muted" />
+              <span>Export Users</span>
+            </button>
 
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => navigate('/admin/audit')}
-              className="text-xs font-semibold gap-1.5 h-9 text-slate-700 hover:bg-slate-50 border-slate-300"
+              className="px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 text-text-glass-main text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-98"
             >
-              <History className="w-3.5 h-3.5" />
-              Activity Logs
-            </Button>
+              <History className="w-3.5 h-3.5 text-text-glass-muted" />
+              <span>Activity Logs</span>
+            </button>
 
-            <Button
-              size="sm"
+            <button
               onClick={() => {
                 setEditingUser(null);
                 setIsAddModalOpen(true);
               }}
-              className="text-xs font-semibold gap-1.5 h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+              className="px-4 py-2 rounded-full bg-[#0b1220] hover:bg-[#162033] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-98"
             >
               <Plus className="w-4 h-4" />
-              Add Staff User
-            </Button>
+              <span>Add Staff User</span>
+            </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 2. KPI Cards (Plain Text & Numbers Only, No Graph / Ring / Arrow) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={cardEntranceVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Staff Users */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => updateParams({ status: 'ALL', role: 'ALL' })}
-          className="p-4 bg-white border-slate-200 hover:border-blue-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Total Staff Users</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.total}</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Active: <span className="font-semibold text-emerald-600">{kpis.activeCount}</span>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Total Staff Users</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.total} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">
+                Active: <span className="font-semibold text-emerald-700">{kpis.activeCount}</span>
                 {' · '}
-                Inactive: <span className="font-semibold text-slate-600">{kpis.inactiveCount}</span>
+                Inactive: <span className="font-semibold text-text-glass-muted">{kpis.inactiveCount}</span>
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-              <Users className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-blue-700 shadow-xs">
+              <Users className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* 2FA Enabled */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => updateParams({ twoFactor: 'Enabled' })}
-          className="p-4 bg-white border-slate-200 hover:border-emerald-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">2FA Enabled</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.twoFactorCount}</h3>
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">2FA Enabled</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.twoFactorCount} />
+              </h3>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-text-glass-muted font-medium">
                   {kpis.twoFactorPct}% of users
                 </span>
                 {kpis.privilegedWithout2FA > 0 && (
-                  <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
+                  <span className="text-[10px] bg-amber-500/20 text-amber-900 border border-amber-400/30 px-2 py-0.5 rounded-full font-medium">
                     {kpis.privilegedWithout2FA} privileged without 2FA
                   </span>
                 )}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-emerald-700 shadow-xs">
+              <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* Locked Accounts */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => updateParams({ status: 'Locked' })}
-          className="p-4 bg-white border-slate-200 hover:border-red-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Locked Accounts</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.lockedCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Locked Accounts</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.lockedCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">
                 {kpis.lockedCount > 0 ? (
-                  <span className="text-red-600 font-medium">Require review</span>
+                  <span className="text-rose-700 font-semibold">Require review</span>
                 ) : (
-                  <span className="text-slate-500">All accounts normal</span>
+                  <span className="text-text-glass-muted">All accounts normal</span>
                 )}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-              <Lock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-purple-700 shadow-xs">
+              <Lock className="w-4 h-4" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
         {/* Last Active Today */}
-        <Card
+        <motion.div
+          {...cardHoverProps}
           onClick={() => updateParams({ dateMode: 'lastActive', dateRange: 'TODAY' })}
-          className="p-4 bg-white border-slate-200 hover:border-orange-400 cursor-pointer transition-all hover:shadow-sm"
+          className="glass-card glass-card-interactive !rounded-[24px] !p-5 transition-all cursor-pointer shadow-card hover:shadow-card-hover"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">Last Active Today</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpis.todayActiveCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                <span className="font-medium text-slate-700">{kpis.todayActivePct}%</span> of staff
+              <p className="text-xs font-bold text-text-glass-main uppercase tracking-wider">Last Active Today</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-text-glass-main mt-1 tabular-nums">
+                <CountUp value={kpis.todayActiveCount} />
+              </h3>
+              <p className="text-xs text-text-glass-muted mt-1">
+                <span className="font-semibold text-text-glass-main">{kpis.todayActivePct}%</span> of staff
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
-              <Calendar className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center text-amber-700 shadow-xs">
+              <Calendar className="w-4 h-4" />
             </div>
           </div>
-        </Card>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* 3. Filter Bar & Search */}
       <Card className="p-3.5 bg-white border-slate-200">
@@ -1647,7 +1662,7 @@ export function UsersPage() {
           filteredUsers={selectedUserIds.length > 0 ? users.filter((u) => selectedUserIds.includes(u.id)) : sortedUsers}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

@@ -134,88 +134,108 @@ export function QuickActionsCard({ canPerformQuickActions = true }) {
 
   return (
     <>
-      <div className="bg-surface rounded-2xl border border-border p-5 shadow-xs flex flex-col justify-between">
+      <div className="glass-card !p-5 flex flex-col justify-between h-full shadow-card">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-base font-bold text-text-main">Quick Actions</h2>
-            <p className="text-xs text-text-muted mt-0.5">Dual-control audited administrative tasks</p>
+            <h2 className="text-base font-bold text-text-glass-main">Quick Actions</h2>
+            <p className="text-xs text-text-glass-muted mt-0.5">Dual-control audited administrative tasks</p>
           </div>
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">
+          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-cyan-300 border border-blue-400/30">
             Audit Trail Active
           </span>
         </div>
 
-        {/* 4 Action Tiles Grid */}
-        <div className="grid grid-cols-2 gap-2.5 my-2">
+        {/* 4 Clean Full-Width Action Rows */}
+        <div className="space-y-2 my-2">
           {/* 1. Reset Password */}
           <button
             onClick={() => openAction('RESET_PASSWORD')}
-            className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-subtle/80 border border-border/60 hover:bg-surface-subtle hover:border-primary/40 transition-all text-left group"
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-white/20 dark:bg-white/10 hover:bg-white/35 dark:hover:bg-white/20 border border-white/30 dark:border-white/20 text-left transition-colors cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <KeyRound className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-text-main group-hover:text-primary transition-colors truncate">
-                Reset Password
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-700 dark:text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <KeyRound className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-text-muted truncate">Dispatch temp key</div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-text-glass-main group-hover:text-blue-700 dark:group-hover:text-cyan-300 transition-colors">
+                  Reset Password
+                </div>
+                <div className="text-[10px] text-text-glass-muted">Dispatch temp credentials</div>
+              </div>
             </div>
+            <span className="text-[10px] font-semibold text-text-glass-muted px-2 py-0.5 rounded bg-white/25 dark:bg-white/10 border border-white/20 shrink-0">
+              Reset
+            </span>
           </button>
 
           {/* 2. Enable 2FA */}
           <button
             onClick={() => openAction('ENABLE_2FA')}
-            className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-subtle/80 border border-border/60 hover:bg-surface-subtle hover:border-primary/40 transition-all text-left group"
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-white/20 dark:bg-white/10 hover:bg-white/35 dark:hover:bg-white/20 border border-white/30 dark:border-white/20 text-left transition-colors cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-text-main group-hover:text-emerald-700 transition-colors truncate">
-                Enable 2FA
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <ShieldCheck className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-text-muted truncate">Enforce security</div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-text-glass-main group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                  Enable 2FA
+                </div>
+                <div className="text-[10px] text-text-glass-muted">Enforce security policy</div>
+              </div>
             </div>
+            <span className="text-[10px] font-semibold text-text-glass-muted px-2 py-0.5 rounded bg-white/25 dark:bg-white/10 border border-white/20 shrink-0">
+              Enforce
+            </span>
           </button>
 
           {/* 3. Unlock Account */}
           <button
             onClick={() => openAction('UNLOCK_ACCOUNT')}
-            className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-subtle/80 border border-border/60 hover:bg-surface-subtle hover:border-primary/40 transition-all text-left group"
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-white/20 dark:bg-white/10 hover:bg-white/35 dark:hover:bg-white/20 border border-white/30 dark:border-white/20 text-left transition-colors cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-              <LockKeyholeOpen className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-text-main group-hover:text-amber-700 transition-colors truncate">
-                Unlock Account
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <LockKeyholeOpen className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-text-muted truncate">Clear lock state</div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-text-glass-main group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors">
+                  Unlock Account
+                </div>
+                <div className="text-[10px] text-text-glass-muted">Clear failed lockout state</div>
+              </div>
             </div>
+            <span className="text-[10px] font-semibold text-text-glass-muted px-2 py-0.5 rounded bg-white/25 dark:bg-white/10 border border-white/20 shrink-0">
+              Unlock
+            </span>
           </button>
 
           {/* 4. Export Report */}
           <button
             onClick={() => openAction('EXPORT_REPORT')}
-            className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-subtle/80 border border-border/60 hover:bg-surface-subtle hover:border-primary/40 transition-all text-left group"
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-white/20 dark:bg-white/10 hover:bg-white/35 dark:hover:bg-white/20 border border-white/30 dark:border-white/20 text-left transition-colors cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-              <FileDown className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-text-main group-hover:text-purple-700 transition-colors truncate">
-                Export Report
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <FileDown className="w-4 h-4" />
               </div>
-              <div className="text-[10px] text-text-muted truncate">Data Exchange</div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-text-glass-main group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+                  Export Report
+                </div>
+                <div className="text-[10px] text-text-glass-muted">Data Exchange Center</div>
+              </div>
             </div>
+            <span className="text-[10px] font-semibold text-text-glass-muted px-2 py-0.5 rounded bg-white/25 dark:bg-white/10 border border-white/20 shrink-0">
+              Export
+            </span>
           </button>
         </div>
 
-        <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
-          <span>Requires authorized administrative role</span>
-          <span className="font-semibold text-text-main">Audit Logged</span>
+        <div className="pt-2 border-t border-white/20 flex items-center justify-between text-[11px] text-text-glass-muted">
+          <span>Requires authorized role</span>
+          <span className="font-semibold text-text-glass-main">Audit Logged</span>
         </div>
       </div>
 

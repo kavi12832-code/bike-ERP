@@ -20,6 +20,15 @@ export function RouteErrorBoundary({ error: propsError }) {
   const location = useLocation();
   const resetToDefaultSeed = useAppStore((s) => s.resetToDefaultSeed);
 
+  // In development mode, log full error and stack trace so errors are never hidden
+  React.useEffect(() => {
+    if (import.meta.env?.DEV) {
+      console.error('[RouteErrorBoundary dev-log] Active route:', location.pathname);
+      console.error('[RouteErrorBoundary dev-log] Exception:', error);
+      if (error?.stack) console.error('[RouteErrorBoundary dev-log] Stack trace:\n', error.stack);
+    }
+  }, [error, location.pathname]);
+
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 

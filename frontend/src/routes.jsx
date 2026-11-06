@@ -94,7 +94,7 @@ import AdminSecurityPage from './features/admin/AdminSecurityPage';
 import { TaxRulesPage } from './features/admin/pages/TaxRulesPage';
 import HelpCenterPage from './features/help/pages/HelpCenterPage';
 
-export const router = createBrowserRouter([
+export const routesConfig = [
   {
     path: '/login',
     element: <LoginPage />,
@@ -713,4 +713,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+];
+
+export const router = createBrowserRouter(routesConfig);

@@ -1,16 +1,17 @@
 import React from 'react';
+import clsx from 'clsx';
 
 /**
- * Standard StatusChip component with dot indicator and accessible color semantic tokens
+ * Glass StatusChip with dot indicator and tinted glass pill
  */
 export function StatusChip({ status, label, className = '' }) {
   const norm = (status || '').toUpperCase().replace(/[\s-]/g, '_');
 
   let style = {
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
-    border: 'border-slate-200',
-    dot: 'bg-slate-400',
+    bg: 'bg-slate-500/15 dark:bg-slate-400/20',
+    text: 'text-slate-800 dark:text-slate-200',
+    border: 'border-slate-400/30 dark:border-slate-400/40',
+    dot: 'bg-slate-500 dark:bg-slate-300',
   };
 
   if (
@@ -29,10 +30,10 @@ export function StatusChip({ status, label, className = '' }) {
     ].includes(norm)
   ) {
     style = {
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200',
-      dot: 'bg-emerald-500',
+      bg: 'bg-emerald-500/15 dark:bg-emerald-500/25',
+      text: 'text-emerald-800 dark:text-emerald-300',
+      border: 'border-emerald-500/30 dark:border-emerald-400/40',
+      dot: 'bg-emerald-500 dark:bg-emerald-400',
     };
   } else if (
     [
@@ -50,10 +51,10 @@ export function StatusChip({ status, label, className = '' }) {
     ].includes(norm)
   ) {
     style = {
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200',
-      dot: 'bg-amber-500',
+      bg: 'bg-amber-500/15 dark:bg-amber-500/25',
+      text: 'text-amber-800 dark:text-amber-300',
+      border: 'border-amber-500/30 dark:border-amber-400/40',
+      dot: 'bg-amber-500 dark:bg-amber-400',
     };
   } else if (
     [
@@ -68,10 +69,10 @@ export function StatusChip({ status, label, className = '' }) {
     ].includes(norm)
   ) {
     style = {
-      bg: 'bg-blue-50',
-      text: 'text-blue-700',
-      border: 'border-blue-200',
-      dot: 'bg-blue-500',
+      bg: 'bg-blue-500/15 dark:bg-cyan-500/25',
+      text: 'text-blue-800 dark:text-cyan-300',
+      border: 'border-blue-500/30 dark:border-cyan-400/40',
+      dot: 'bg-blue-500 dark:bg-cyan-400',
     };
   } else if (
     [
@@ -79,30 +80,36 @@ export function StatusChip({ status, label, className = '' }) {
       'REJECTED',
       'OVERDUE',
       'BREACHED',
+      'LOST',
+      'FAILED',
       'COLD',
       'HIGH',
-      'URGENT',
-      'EXPIRED',
-      'INACTIVE',
-      'DAMAGED',
     ].includes(norm)
   ) {
     style = {
-      bg: 'bg-rose-50',
-      text: 'text-rose-700',
-      border: 'border-rose-200',
-      dot: 'bg-rose-500',
+      bg: 'bg-rose-500/15 dark:bg-rose-500/25',
+      text: 'text-rose-800 dark:text-rose-300',
+      border: 'border-rose-500/30 dark:border-rose-400/40',
+      dot: 'bg-rose-500 dark:bg-rose-400',
     };
   }
 
-  const displayText = label || (status || '').replace(/_/g, ' ');
+  const displayText = label || (status ? String(status).replace(/_/g, ' ') : '—');
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border tracking-wide whitespace-nowrap ${style.bg} ${style.text} ${style.border} ${className}`}
+      className={clsx(
+        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-md shadow-2xs select-none',
+        style.bg,
+        style.text,
+        style.border,
+        className
+      )}
     >
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
-      <span className="capitalize">{displayText}</span>
+      <span className={clsx('w-1.5 h-1.5 rounded-full', style.dot)} />
+      <span>{displayText}</span>
     </span>
   );
 }
+
+export default StatusChip;
